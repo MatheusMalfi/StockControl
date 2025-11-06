@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro</title>
+    <link rel="stylesheet" href="/acesso/register/register.css" />
+  </head>
+  <body>
+    <div class="logo">
+      <h1>StockControl</h1>
+      <h5 class="subtitulo">CONTROLE DE ESTOQUE</h5>
+
+      <div class="register-box">
+        <h2>Cadastro</h2>
+        <form action="#" method="POST" class="form-register">
+          <input
+            type="email"
+            name="email_institucional"
+            placeholder="E-MAIL INSTITUCIONAL"
+            required
+          />
+          <input
+            type="email"
+            name="confirma_email"
+            placeholder="CONFIRME SEU E-MAIL"
+            required
+          />
+          <input type="password" name="senha" placeholder="SENHA" required />
+          <input
+            type="password"
+            name="confirma_senha"
+            placeholder="CONFIRME SUA SENHA"
+            required
+          />
+          <input
+            type="text"
+            name="nome_empresa"
+            placeholder="NOME DA EMPRESA"
+            required
+          />
+          <input type="text" name="cnpj" placeholder="CNPJ" required />
+          <input type="text" name="endereco" placeholder="ENDEREÇO" required />
+          <input type="tel" name="telefone" placeholder="TELEFONE" required />
+          <input type="tel" name="celular" placeholder="CELULAR" required />
+
+          <div class="buttons">
+            <a href="/login" class="btn-back">VOLTAR</a>
+            <button type="submit" class="btn-click-register">CADASTRAR</button>
+          </div>
+        </form>
+      </div>
+
+      <!--
+        * Se você quisesse colocar um link de volta para a tela de Login:
+        <div class="noRegister-box">
+          <p>Já tem uma conta?
+            <a href="/login" class="link-secundario">FAÇA LOGIN</a>
+          </p>
+        </div>
+      -->
+    </div>
+  </body>
+</html>
