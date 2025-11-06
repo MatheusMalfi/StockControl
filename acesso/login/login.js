@@ -52,13 +52,45 @@ app.post("/recover-password", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const filePath = path.join(projectRoot, "acesso", "login", "login.html");
+  const filePath = path.resolve(projectRoot, "acesso", "login", "login.html");
+
+  console.log(`Tentando servir arquivo em: ${filePath}`);
 
   res.sendFile(filePath, (err) => {
     if (err) {
+      console.error(`ERRO REAL DO SISTEMA: ${err.message}`);
       res.status(404).send("Página de Login não encontrada.");
     }
   });
+});
+
+app.post("/login", (req, res) => {
+  // Os dados do formulário estão em req.body
+  const { email, senha } = req.body;
+
+  // --- Lógica de Validação e Autenticação (A FAZER) ---
+  console.log(`Tentativa de Login: E-mail: ${email}, Senha: ${senha}`);
+
+  if (email === "teste@uscs.com" && senha === "123") {
+    // SUCESSO DE LOGIN (Apenas um teste SIMULADO)
+    console.log("Login OK!");
+    // Você deve redirecionar para a página principal do sistema aqui
+    res.send(`
+        <script>
+            alert("Login Efetuado com Sucesso! Bem-vindo.");
+            window.location.href = "/"; // Ou para a página principal
+        </script>
+    `);
+  } else {
+    // ERRO DE LOGIN
+    console.log("Login Falhou!");
+    res.status(401).send(`
+        <script>
+            alert("Erro: E-mail ou senha incorretos.");
+            window.location.href = "/login"; // Redireciona de volta para o login
+        </script>
+    `);
+  }
 });
 
 app.listen(PORT, () => {
