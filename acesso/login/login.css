@@ -46,8 +46,14 @@ body {
   border-radius: 40px;
   border: none;
   background-color: #0f131a;
+  color: #ffffff;
   font-size: 1rem;
   text-align: center;
+}
+
+.login-box input:focus {
+  outline: none;
+  border: 1px solid #4de1c3bb;
 }
 
 .btn-acessar {
