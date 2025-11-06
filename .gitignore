@@ -1,0 +1,8 @@
+# Ignora a pasta de dependências do Node
+node_modules/
+
+# Ignora as pastas de dependências dentro do backend
+backend/node_modules/
+
+# Ignora o arquivo de lock de pacotes gerado pelo npm
+package-lock.json
