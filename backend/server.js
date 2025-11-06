@@ -1,91 +1,125 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const path = require("path");
+
+const express = require('express');
+const mysql = require('mysql2/promise');
+const cors = require('cors');
+const bcrypt = require('bcrypt');
+const path = require('path')
+
 const app = express();
+app.use(cors());
+app.use(express.json());
 const PORT = 3000;
 
-const projectRoot = path.join(__dirname, "..");
-
-app.use(express.static(projectRoot));
-app.use("/acesso", express.static(path.join(projectRoot, "acesso")));
-
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// ROTA ADICIONADA: Redireciona a raiz (/) para a rota /login
-app.get("/", (req, res) => {
-  res.redirect("/login");
+const pool = mysql.createPool({
+  host: 'localst',
+  user: 'root',
+  password: 'StockControl',
+  database: 'SC_db',
+  port: 3306
 });
 
-app.get("/recover", (req, res) => {
-  const filePath = path.join(
-    projectRoot,
-    "acesso",
-    "recover-password",
-    "recover-password.html"
-  );
+// tabelas Criadas:
+// ong_user
+ //   ->     id_user INT AUTO_INCREMENT PRIMARY KEY,
+   // ->     nome VARCHAR(100) NOT NULL,
+//    ->     email VARCHAR(100) NOT NULL UNIQUE,
+  //  ->     senha_hash VARCHAR(255) NOT NULL,
+    //->     cnpj VARCHAR(20) NOT NULL,
+//    ->     telefone VARCHAR(20),
+  //  ->     celular VARCHAR(20) NOT NULL,
+    //->     endereco VARCHAR(255),
+//    ->     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
 
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error("Erro ao servir recover-password.html:", err.message);
-      res
-        .status(404)
-        .send("Página de Recuperação não encontrada no caminho esperado.");
+
+//CREATE TABLE items_cadastrados (
+//    id_item INT AUTO_INCREMENT PRIMARY KEY,
+//    id_user INT,
+//     nome_item VARCHAR(100) NOT NULL,
+//     marca_item VARCHAR(100),
+//     modelo_item VARCHAR(100),
+//     descricao VARCHAR(255),
+//     img_file INT,
+//     status_item VARCHAR(100), -- 'Ótimo estado', 'Necessita reparo', etc.
+//     criado_por INT,
+//     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+//     atualizado_em DATETIME,
+
+// CREATE TABLE hist_discart (
+// 	data_discart DATETIME DEFAULT CURRENT_TIMESTAMP,
+// 	nome_item VARCHAR(100) NOT NULL,
+// 	marca_item VARCHAR(100),
+// 	modelo_item VARCHAR(100),
+// 	img_file INT
+// );
+
+app.post('/api/cadastro', async (req, res) =>{
+  const{email, senha, nome, cnpj, endereco, telefone, celular} = req.body;
+  const camposUnicos = {email, nome, cnpj, endereco, telefone, celular};
+  const hash = await bcrypt.hash(senha, 10);
+  
+  //--**Validação de Duplicata**--
+  for(const [campo, valor] of Object.entries(camposUnicos)){
+    const query = `SELECT * FROM ong_user WHERE ${campo} = ? LIMIT 1`;
+    const [rowsDuplicata] = await pool.query(query, [valor]);
+
+    if (rowsDuplicata.length > 0 ){
+      return res.status(400).json({erro: `${campo} já está cadastrado`})
     }
-  });
-});
-
-app.post("/recover-password", (req, res) => {
-  const { email, "confirm-email": confirmEmail } = req.body;
-
-  if (email !== confirmEmail) {
-    console.log("ERRO: Os e-mails não coincidem.");
-    return res.status(400).send(`
-            <script>
-                alert("Erro: Os e-mails digitados não coincidem!");
-                window.location.href = "/recover"; 
-            </script>
-        `);
   }
 
-  console.log(
-    `SUCESSO (SIMULADO): Email de recuperação enviado para ${email}.`
-  );
+  //--**Cadastro no DB**--
+  try{
+    const [result] = await pool.execute(
+      'INSERT INTO ong_user (email, senha_hash, nome, cnpj, endereco, telefone, celular) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [email, hash, nome, cnpj, endereco, telefone, celular]
+    );
 
-  res.send(`
-            <script>
-                alert("Sucesso! Verifique a caixa de entrada do seu e-mail para continuar a recuperação.");
-                window.location.href = "/login";
-            </script>
-        `);
+    res.json({ok: true, id:result.insertId});
+  } catch (err) {
+    console.error("Erro no banco: ", err);
+    res.status(500).json({erro: 'Erro no banco de dados'});
+  }
 });
 
-app.get("/login", (req, res) => {
-  const filePath = path.join(projectRoot, "acesso", "login", "login.html");
 
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.status(404).send("Página de Login não encontrada.");
+//-----------------------------------------------------------
+
+app.post('/api/login', async (request, response) => {
+  const {email, senha} = request.body;
+  try {
+    const [rows] = await pool.query('SELECT * FROM ong_user WHERE email = ?', [email]);
+
+    if (rows.length === 0){
+      return response.status(401).json({mensagem: 'E-mail ou senha incorretos.'});
     }
-  });
-});
 
-app.get("/register", (req, res) => {
-  const filePath = path.join(
-    projectRoot,
-    "acesso",
-    "register",
-    "register.html"
-  );
+    const usuario = rows[0];
 
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.status(404).send("Página de Registro não encontrada.");
+    const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+    if (!senhaValida){
+      return response.status(401).json({mensagem: 'E-mail ou senha incorretos.'});
     }
-  });
-});
 
+    response.status(200).json({
+      success: true, 
+      mensagem: 'Status 200'
+    });
+    
+  } catch(erro){
+    console.error(erro);
+    response.status(500).json({mensagem: 'Erro interno no servidor'});
+  }
+});
+//-----------------------------------------------------------
+
+app.post('/api/passrecover', async(reqRecover, resRecover) =>{
+  const{email} = reqRecover.body;
+  if(!email){
+    return reqRecover.status(400).json({mensagem: "E-mail obrigatório!"});
+  }
+})
+
+//-----------------------------------------------------------
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}/login`);
-  // A mensagem de acesso agora aponta para a raiz, que redireciona para /login
-  console.log(`Acesse o Login (raiz) em: http://localhost:${PORT}/login`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
