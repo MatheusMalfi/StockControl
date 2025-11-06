@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="login.css" />
+  </head>
+
+  <body>
+    <h1 class="logo">StockControl</h1>
+    <h5 class="subtitulo">CONTROLE DE ESTOQUE</h5>
+
+    <div class="login-box">
+      <h3>Login</h3>
+      <form id="login-form" method="POST" action="/login">
+        <input type="email" name="email" placeholder="E-MAIL" required />
+        <input type="password" name="senha" placeholder="SENHA" required />
+        <button type="submit" class="btn-acessar">ACESSAR</button>
+      </form>
+      <a
+        href="../recover-password/recover-password.html"
+        class="recover-password"
+      >
+        ESQUECI MINHA SENHA
+      </a>
+    </div>
+
+    <div class="noRegister-box">
+      <h3>Ainda não é cadastrado?</h3>
+      <a href="../register/register.html" class="btn-click-here">
+        CLIQUE AQUI
+      </a>
+    </div>
+  </body>
+</html>
