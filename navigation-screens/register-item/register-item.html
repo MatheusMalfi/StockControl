@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="/navigation-screens/register-item/register-item.css"
+    />
+
+    <title>StockControl</title>
+  </head>
+  <body>
+    <h1>StockControl</h1>
+    <h2>CONTROLE DE ESTOQUE</h2>
+
+    <main>
+      <div class="card">
+        <h3>Cadastrar Novo Item</h3>
+
+        <form id="formItem">
+          <div class="form-container">
+            <label class="foto">
+              <span id="foto-texto">Adicionar foto</span>
+              <input type="file" accept="image/*" id="fileInput" required />
+              <img id="preview" alt="Pré-visualização" />
+            </label>
+
+            <input
+              type="text"
+              class="input-field"
+              id="produto"
+              placeholder="Produto"
+              required
+            />
+            <input
+              type="text"
+              class="input-field"
+              id="marca"
+              placeholder="Marca do produto"
+              required
+            />
+            <input
+              type="text"
+              class="input-field"
+              id="modelo"
+              placeholder="Modelo do produto"
+              required
+            />
+            <textarea
+              id="descricao"
+              placeholder="Descrição do produto"
+            ></textarea>
+          </div>
+
+          <div class="status">
+            <label>
+              <div class="green-btn">
+                <input type="radio" id="otimo" name="status" value="otimo" />
+                <span class="dot green"></span> Ótimo Estado de Uso
+              </div>
+            </label>
+
+            <label>
+              <div class="yellow-btn">
+                <input
+                  type="radio"
+                  id="reparos"
+                  name="status"
+                  value="reparos"
+                />
+                <span class="dot yellow"></span> Necessita de Reparos
+              </div>
+            </label>
+
+            <label>
+              <div class="red-btn">
+                <input
+                  type="radio"
+                  id="descartar"
+                  name="status"
+                  value="descartar"
+                />
+                <span class="dot red"></span> Necessita ser Descartado
+              </div>
+            </label>
+          </div>
+
+          <div class="btn-click-register">
+            <button type="submit" id="btnRegister" disabled>Cadastrar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- onde aparecem os itens cadastrados -->
+      <div id="registeredItems"></div>
+    </main>
+
+    <script src="register-item.js" defer></script>
+  </body>
+</html>
