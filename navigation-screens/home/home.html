@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Home StockControl</title>
+
+    <link rel="stylesheet" href="/navigation-screens/home/home.css" />
+  </head>
+
+  <body>
+    <header class="header">
+      <h1>StockControl</h1>
+
+      <h2>CONTROLE DE ESTOQUE</h2>
+    </header>
+
+    <div class="sub-menu">
+      <button
+        class="menu-btn"
+        data-tooltip="Cadastrar Item"
+        onclick="window.location.href='/navigation-screens/register-item/register-item.html'"
+      >
+        <img
+          src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/plus.svg"
+          alt="Cadastrar Item"
+        />
+      </button>
+
+      <button
+        class="menu-btn"
+        data-tooltip="Descartar Item"
+        onclick="window.location.href='/navigation-screens/discard-item/discard-item.html'"
+      >
+        <img
+          src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/trash.svg"
+          alt="Descartar Item"
+        />
+      </button>
+    </div>
+
+    <div class="dashboard-container">
+      <div class="dashboard">
+        <!-- <section class="card discard-main">
+          <h2>Descarte de Itens</h2>
+
+          <div class="item-list-container scrollable-content">
+            <div class="discard-highlight item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+
+                <span class="status-tag status-red">Aguardando coleta</span>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_monitor.png"
+                alt="Monitor"
+                class="item-image"
+              />
+              <div class="info">
+                <h3>Monitor</h3>
+                <p>LG - W2353V</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_mouse.png"
+                alt="Mouse"
+                class="item-image"
+              />
+
+              <div class="info">
+                <h3>Mouse</h3>
+                <p>Logitech G PRO</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_teclado.png"
+                alt="Teclado"
+                class="item-image"
+              />
+
+              <div class="info">
+                <h3>Teclado</h3>
+                <p>Razer Blackwidow</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_impressora.png"
+                alt="Impressora"
+                class="item-image"
+              />
+              <div class="info">
+                <h3>Impressora</h3>
+                <p>HP - D110A</p>
+              </div>
+            </div>
+          </div>
+        </section> -->
+
+        <section class="card registered-items">
+          <h2>Itens Cadastrados</h2>
+          <div class="item-list scrollable-content">
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+
+                <span class="status-tag status-red"
+                  >Necessita ser Descartado</span
+                >
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+
+                <span class="status-tag status-green">Ótimo Estado de Uso</span>
+              </div>
+            </div>
+            <div class="item">
+              <img
+                src="url_da_imagem_gabinete.png"
+                alt="Gabinete"
+                class="item-image case-image"
+              />
+
+              <div class="info">
+                <h3>Gabinete</h3>
+
+                <p>COOLER MASTER - GT REDFLAG</p>
+
+                <span class="status-tag status-orange"
+                  >Necessita de Reparos</span
+                >
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+
+                <span class="status-tag status-red"
+                  >Necessita ser Descartado</span
+                >
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+
+                <span class="status-tag status-red"
+                  >Necessita ser Descartado</span
+                >
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+
+                <span class="status-tag status-red"
+                  >Necessita ser Descartado</span
+                >
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+
+                <span class="status-tag status-red"
+                  >Necessita ser Descartado</span
+                >
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+
+                <span class="status-tag status-red"
+                  >Necessita ser Descartado</span
+                >
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card awaiting-collection">
+          <h2>Itens Aguardando a Coleta</h2>
+
+          <div class="awaiting-collection scrollable-content">
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_notebook.png"
+                alt="Notebook"
+                class="item-image notebook-image"
+              />
+
+              <div class="info">
+                <h3>Notebook</h3>
+
+                <p>DELL - G1375</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card discard-history">
+          <h2>Histórico de Descarte</h2>
+
+          <div class="discard-history scrollable-content">
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image-gray"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image-gray"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image-gray"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image-gray"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image-gray"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image-gray"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <img
+                src="url_da_imagem_microondas.png"
+                alt="Microondas"
+                class="item-image microwave-image-gray"
+              />
+
+              <div class="info">
+                <h3>Microondas</h3>
+
+                <p>POLISHOP - MQ4386</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>
