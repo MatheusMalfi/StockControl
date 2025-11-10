@@ -6,6 +6,12 @@ body {
   color: white;
 }
 
+header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
 h1 {
   font-size: 48px;
   text-align: center;
@@ -21,9 +27,67 @@ h2 {
   margin-bottom: 30px;
 }
 
+.sub-menu {
+  position: absolute;
+  top: -60px; /* Ajuste este valor para a distância desejada acima do card */
+  right: 0; /* Alinha o botão ao canto direito do content-wrapper (que é 850px de largura) */
+  z-index: 10; /* Garante que fique acima de outros elementos se houver sobreposição */
+}
+
+.menu-btn {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.menu-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #21262d;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.menu-btn:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(5px);
+}
+
+.menu-btn:hover {
+  background-color: #89ffdb;
+}
+
+.menu-btn img {
+  width: 22px;
+  height: 22px;
+  filter: invert(1);
+}
+
 main {
   width: 750px;
   margin: auto;
+}
+
+.content-wrapper {
+  width: 750px;
+  margin: 0 auto; /* Centraliza o contêiner */
+  position: relative; /* Define como contexto de posicionamento para o sub-menu */
 }
 
 .card {
