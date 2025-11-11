@@ -1,0 +1,307 @@
+/* Estilos Globais e Fundo (mantidos) */
+/* Estilos Globais e Fundo (mantidos) */
+body {
+  background-color: #010817;
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.sub-menu {
+  position: relative;
+  right: 40px;
+  display: flex;
+  gap: 8px;
+}
+
+.menu-btn {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.menu-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #21262d;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.menu-btn:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(5px);
+}
+
+.menu-btn:hover {
+  background-color: #89ffdb;
+}
+
+.menu-btn img {
+  width: 22px;
+  height: 22px;
+  filter: invert(1);
+}
+
+h1 {
+  font-size: 64px;
+  text-align: center;
+  color: white;
+  margin-bottom: 0;
+}
+
+h2 {
+  font-size: 20px;
+  color: #89ffdb;
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 30px;
+}
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+
+  /* Linha 1: 'auto' (Ajusta-se ao Descarte de Itens com vh)
+ Linha 2: '1fr' (Ocupa o espaço vertical RESTANTE) */
+  grid-template-rows: auto 1fr;
+
+  gap: 10px;
+  max-width: 1200px;
+  width: 100%;
+  flex-grow: 1; /* Permite que o dashboard cresça para usar o min-height: 100vh do body */
+}
+
+.sub-menu {
+  justify-content: end;
+  padding-bottom: 10px;
+}
+
+/* Posicionamento dos Cards no Grid Principal */
+
+/* 1. Descarte de Itens (Ocupa as 2 primeiras colunas da Linha 1) */
+.discard-main {
+  grid-column: 1 / 3;
+  grid-row: 1 / 2;
+  height: auto;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.discard-main .discard-highlight.item {
+  padding-bottom: 15px;
+  margin-bottom: 10px;
+}
+
+/* ESTILO DO SCROLL NO CARD DE DESCARTE (Corrigido para preencher) */
+.discard-main .item-list-container {
+  overflow-y: auto;
+  padding-right: 10px;
+  max-height: 300px;
+}
+
+/* 2. Itens Cadastrados (Fica na Coluna 3, Linha 1) 
+  AJUSTADO: Se o card Cadastrados ocupar 2 linhas, os de baixo NUNCA subirão.
+  Por isso, ele deve ocupar APENAS a Linha 1, assim como o card Descarte.
+*/
+.registered-items {
+  grid-column: 1;
+  grid-row: 1 / 3; /* Ocupa as duas linhas. */
+  max-height: 96vh;
+}
+
+.registered-items .scrollable-content {
+  overflow-y: auto;
+  max-height: 680px;
+  padding-right: 10px;
+}
+
+/* 3. Itens Aguardando a Coleta (Fica na Linha 2, Coluna 1) */
+.awaiting-collection {
+  grid-column: 2;
+  /* grid-row: 2 / 3; */
+  max-height: 96vh;
+  overflow: hidden;
+}
+
+.awaiting-collection .scrollable-content {
+  overflow-y: auto;
+  max-height: 680px;
+  padding-right: 10px;
+}
+
+/* 4. Histórico de Descarte (Fica na Linha 2, Coluna 2) */
+.discard-history {
+  grid-column: 3;
+  /* grid-row: 2 / 3; */
+  max-height: 96vh;
+  overflow: hidden;
+}
+
+.discard-history .scrollable-content {
+  overflow-y: auto;
+  max-height: 680px;
+  padding-right: 10px;
+}
+
+/* Card Container (Estilo Comum) */
+.card {
+  background-color: #161b22;
+  border-radius: 25px;
+  padding: 20px;
+  box-shadow: 0 0 0 1px #21262d, 0 4px 12px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.card h2 {
+  /* ... (Estilos h2, discard-highlight e item permanecem os mesmos) ... */
+  font-size: 1.5em;
+  font-weight: 600;
+  color: #ffffff;
+  margin-top: 0;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #21262d;
+  margin-bottom: 15px;
+}
+
+/* Estilo de Destaque */
+.discard-highlight {
+  background-color: #1f2a37;
+  padding: 15px;
+  border-radius: 20px;
+}
+
+/* Estilo dos Itens e Tags (mantidos) */
+.item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #21262d;
+}
+
+.discard-highlight.item {
+  border-bottom: none;
+  padding: 0;
+}
+.item-list .item:last-child,
+.scrollable-content .item:last-child {
+  border-bottom: none;
+}
+
+.info {
+  margin-left: 15px;
+  flex-grow: 1;
+}
+
+.info h3 {
+  margin: 0;
+  font-size: 1em;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.info p {
+  margin: 0;
+  font-size: 0.85em;
+  color: #8b949e;
+}
+
+.item-image {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #2f363d;
+}
+
+.discard-highlight .item-image {
+  width: 80px;
+  height: 80px;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.75em;
+  font-weight: 600;
+  margin-top: 5px;
+}
+.status-tag::before {
+  content: "•";
+  font-size: 1.5em;
+  line-height: 1;
+  margin-right: 3px;
+  transform: translateY(1px);
+}
+.status-green {
+  background-color: rgba(33, 166, 92, 0.2);
+  color: #38c364;
+}
+.status-green::before {
+  color: #38c364;
+}
+.status-red {
+  background-color: rgba(220, 38, 38, 0.2);
+  color: #ff7b72;
+}
+.status-red::before {
+  color: #ff7b72;
+}
+.status-orange {
+  background-color: rgba(253, 186, 116, 0.2);
+  color: #f79009;
+}
+.status-orange::before {
+  color: #f79009;
+}
+
+/* Regra geral de Scroll (mantida, mas redefinida para ser mais clara) */
+.scrollable-content {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding-right: 10px;
+}
+
+/* Customização da Barra de Rolagem (mantida) */
+.scrollable-content::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollable-content::-webkit-scrollbar-thumb {
+  background-color: #373e47;
+  border-radius: 10px;
+}
+.scrollable-content::-webkit-scrollbar-track {
+  background: #161b22;
+}
