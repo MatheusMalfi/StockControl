@@ -18,9 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        msg.style.color = "green";
+        msg.style.color = "lime";
         msg.textContent = "Login bem-sucedido! Redirecionando...";
-        // redireciona pra página principal (ajuste o destino conforme precisar)
         setTimeout(() => (window.location.href = "/home.html"), 1500);
       } else {
         msg.style.color = "red";
