@@ -1,135 +1,74 @@
 body {
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #0a0e1a;
-  color: #ffffff;
+  font-family: "Poppins", sans-serif;
+  background: #f7f9fb;
   display: flex;
-  justify-content: center;
   align-items: center;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.logo {
-  font-size: 3rem;
-  font-weight: bold;
-  color: #ffffff;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
-.subtitulo {
-  color: #5df2d7ad;
-  margin: 0 0 40px 0;
-  text-align: center;
-  letter-spacing: 2px;
-}
-
-.login-box {
-  background-color: #131c25;
-  padding: 30px;
-  border-radius: 20px;
-  text-align: center;
-  width: 100%;
-  max-width: 400px;
-}
-
-.login-box h3 {
-  margin-bottom: 20px;
-  font-size: 1.4rem;
-}
-
-.login-box input {
-  width: 90%;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 40px;
-  border: none;
-  background-color: #0f131a;
-  color: #ffffff;
-  font-size: 1rem;
-  text-align: center;
-}
-
-.login-box input:focus {
-  outline: none;
-  border: 1px solid #4de1c3bb;
-}
-
-.btn-acessar {
-  padding: 12px 30px;
-  border: none;
-  background-color: #4de1c3bb;
-  color: white;
-  border-radius: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 40px;
-  transition: 0.3s;
-}
-
-.btn-acessar:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
-}
-
-.recover-password {
-  text-align: end;
-  display: block;
-  margin-top: 12px;
-  font-size: 0.6rem;
-  color: #5df2d6;
-  text-decoration: none;
-  letter-spacing: 1px;
-}
-
-.recover-password:hover {
-  text-decoration: underline;
+  justify-content: center;
+  height: 100vh;
 }
 
 .container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  text-align: center;
-}
-
-.noRegister-box {
-  background-color: #131c25;
-  padding: 20px;
-  border-radius: 20px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
-  max-width: 420px;
-  margin-top: 20px;
-  border: 2px solid #4de1c350;
 }
 
-.noRegister-box h3 {
-  padding-bottom: 40px;
-  margin: 0 0 10px 0;
-  font-size: 1.2rem;
-  color: #ffffff;
+.login-box {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  width: 320px;
   text-align: center;
 }
 
-.btn-click-here {
-  padding: 10px 20px;
-  background-color: #4de1c3bb;
+.login-box h1 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+input {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background-color: #007bff;
   color: white;
-  font-weight: normal;
+  border: none;
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
   cursor: pointer;
-  border-radius: 40px;
+  font-weight: bold;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.link-cadastro {
+  margin-top: 15px;
+}
+
+.link-cadastro a {
+  color: #007bff;
   text-decoration: none;
 }
-.btn-click-here:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
+
+.link-cadastro a:hover {
+  text-decoration: underline;
 }
 
-/* Imagem de cadastro (lado direito) */
-/* .imagem-cadastro {
-    max-width: 40%; 
-    height: auto;
-    margin-left: 10px;
-} */
+.msg {
+  margin-top: 15px;
+  color: red;
+  font-size: 14px;
+}
