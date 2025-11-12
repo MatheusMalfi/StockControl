@@ -71,35 +71,37 @@
           </div>
 
           <div class="status">
-            <label>
-              <div class="green-btn">
-                <input type="radio" id="otimo" name="status" value="otimo" />
-                <span class="dot green"></span> Ótimo Estado de Uso
-              </div>
+            <label class="green-btn" for="otimo-radio">
+              <input
+                type="radio"
+                id="otimo-radio"
+                name="status"
+                value="otimo"
+                style="display: none"
+              />
+              <span class="dot green"></span> Ótimo Estado de Uso
             </label>
 
-            <label>
-              <div class="yellow-btn">
-                <input
-                  type="radio"
-                  id="reparos"
-                  name="status"
-                  value="reparos"
-                />
-                <span class="dot yellow"></span> Necessita de Reparos
-              </div>
+            <label class="yellow-btn" for="reparos-radio">
+              <input
+                type="radio"
+                id="reparos-radio"
+                name="status"
+                value="reparos"
+                style="display: none"
+              />
+              <span class="dot yellow"></span> Necessita de Reparos
             </label>
 
-            <label>
-              <div class="red-btn">
-                <input
-                  type="radio"
-                  id="descartar"
-                  name="status"
-                  value="descartar"
-                />
-                <span class="dot red"></span> Necessita ser Descartado
-              </div>
+            <label class="red-btn" for="descartar-radio">
+              <input
+                type="radio"
+                id="descartar-radio"
+                name="status"
+                value="descartar"
+                style="display: none"
+              />
+              <span class="dot red"></span> Necessita ser Descartado
             </label>
           </div>
 
