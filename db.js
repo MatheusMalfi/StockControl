@@ -1,7 +1,7 @@
-PORT=3000
-DB_HOST=localhost
-DB_PORT=3000
-DB_USER=root
-DB_PASSWORD=34091088Deus.
-DB_NAME=stockcontrol
-BCRYPT_ROUNDS=10
+PORT = 3000;
+DB_HOST = localhost;
+DB_PORT = 3000;
+DB_USER = root;
+DB_PASSWORD = !StockControl2025;
+DB_NAME = stockcontrol;
+BCRYPT_ROUNDS = 10;
