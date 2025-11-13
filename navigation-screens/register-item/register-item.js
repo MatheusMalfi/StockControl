@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const modeloInput = document.getElementById("modelo");
   const statusInputs = document.querySelectorAll("input[name='status']");
   const btnRegister = document.getElementById("btnRegister");
+  const statusLabels = document.querySelectorAll(
+    ".green-btn, .yellow-btn, .red-btn" // Seleciona todos os labels dos status
+  );
 
   // --- FUNÇÃO DE VALIDAÇÃO ---
   function checkFormValidity() {
@@ -35,6 +38,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Monitora os inputs de texto e status
   form.addEventListener("input", checkFormValidity);
+
+  // 🌟 LÓGICA PARA MANTER O ESTADO ATIVO DO BOTÃO DE STATUS APÓS O CLIQUE 🌟
+  statusInputs.forEach((input) => {
+    // O evento 'change' é acionado quando um radio button é selecionado
+    input.addEventListener("change", () => {
+      // 1. Remove a classe 'active' de TODOS os botões visuais (labels)
+      statusLabels.forEach((label) => label.classList.remove("active"));
+
+      // 2. Encontra o label que corresponde ao input checado (usando o 'for' do label e o 'id' do input)
+      const targetLabel = document.querySelector(`label[for="${input.id}"]`);
+
+      // 3. Adiciona a classe 'active' apenas no botão clicado
+      if (targetLabel) {
+        targetLabel.classList.add("active");
+      }
+
+      checkFormValidity();
+    });
+  });
+  // FIM DA LÓGICA DE ESTADO ATIVO
 
   // Lógica para pré-visualização da foto
   fileInput.addEventListener("change", function () {
@@ -89,13 +112,13 @@ document.addEventListener("DOMContentLoaded", () => {
     item.classList.add("item-card");
 
     item.innerHTML = `
-        <img src="${imagem}" alt="${produto}">
-        <div class="item-info">
-          <h4>${produto}</h4>
-          <p>${marca} - ${modelo}</p>
-          ${statusHtml}
-        </div>
-      `;
+            <img src="${imagem}" alt="${produto}">
+            <div class="item-info">
+              <h4>${produto}</h4>
+              <p>${marca} - ${modelo}</p>
+              ${statusHtml}
+            </div>
+          `;
 
     lista.appendChild(item);
 
@@ -103,6 +126,10 @@ document.addEventListener("DOMContentLoaded", () => {
     form.reset();
     preview.style.display = "none";
     fotoTexto.style.display = "block";
+
+    // NOVO: Remove a classe 'active' de todos os botões visuais ao resetar o formulário
+    statusLabels.forEach((label) => label.classList.remove("active"));
+
     checkFormValidity(); // Desabilita o botão após o reset
   });
 

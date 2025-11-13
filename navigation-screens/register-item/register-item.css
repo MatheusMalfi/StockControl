@@ -156,14 +156,9 @@ textarea {
   margin: 25px 0;
 }
 
-.status label {
-  cursor: pointer;
-}
-
 .status input {
   position: absolute;
   opacity: 0;
-  pointer-events: none;
 }
 
 .status .dot {
@@ -191,7 +186,8 @@ textarea {
   transition: box-shadow 0.2s ease;
 }
 
-.green-btn:hover {
+.green-btn:hover,
+.green-btn.active {
   background-color: #00ff4c;
   color: black;
   box-shadow: 0 0 10px white;
@@ -208,7 +204,8 @@ textarea {
   transition: box-shadow 0.2s ease;
 }
 
-.yellow-btn:hover {
+.yellow-btn:hover,
+.yellow-btn.active {
   background-color: #ffbd00;
   color: black;
   box-shadow: 0 0 10px white;
@@ -225,7 +222,8 @@ textarea {
   transition: box-shadow 0.2s ease;
 }
 
-.red-btn:hover {
+.red-btn:hover,
+.red-btn.active {
   background-color: #ff2d2d;
   color: black;
   box-shadow: 0 0 10px white;
