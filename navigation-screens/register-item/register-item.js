@@ -22,6 +22,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnRegister = document.getElementById("btnRegister");
   const msg = document.getElementById("msg");
   const lista = document.getElementById("registeredItems");
+  const statusLabels = document.querySelectorAll(
+    ".green-btn, .yellow-btn, .red-btn" // Seleciona todos os labels dos status
+  );
 
   // --- FUNÇÃO DE VALIDAÇÃO ---
   function checkFormValidity() {
@@ -40,6 +43,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Monitora inputs
   form.addEventListener("input", checkFormValidity);
+
+  // 🌟 LÓGICA PARA MANTER O ESTADO ATIVO DO BOTÃO DE STATUS APÓS O CLIQUE 🌟
+  statusInputs.forEach((input) => {
+    // O evento 'change' é acionado quando um radio button é selecionado
+    input.addEventListener("change", () => {
+      // 1. Remove a classe 'active' de TODOS os botões visuais (labels)
+      statusLabels.forEach((label) => label.classList.remove("active"));
+
+      // 2. Encontra o label que corresponde ao input checado (usando o 'for' do label e o 'id' do input)
+      const targetLabel = document.querySelector(`label[for="${input.id}"]`);
+
+      // 3. Adiciona a classe 'active' apenas no botão clicado
+      if (targetLabel) {
+        targetLabel.classList.add("active");
+      }
+
+      checkFormValidity();
+    });
+  });
+  // FIM DA LÓGICA DE ESTADO ATIVO
 
   // Lógica para pré-visualização da foto
   fileInput.addEventListener("change", function () {
@@ -120,6 +143,14 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const result = await resp.json().catch(() => ({}));
+    item.innerHTML = `
+            <img src="${imagem}" alt="${produto}">
+            <div class="item-info">
+              <h4>${produto}</h4>
+              <p>${marca} - ${modelo}</p>
+              ${statusHtml}
+            </div>
+          `;
 
       if (resp.ok && result.success) {
         if (msg) {
@@ -173,4 +204,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Garante que o botão começa desabilitado
   checkFormValidity();
-});
+})
