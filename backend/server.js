@@ -34,7 +34,7 @@ app.get('/register', (req, res) => {
 });
 
 // ==================== MYSQL POOL ====================
-
+//
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT || 3000),
