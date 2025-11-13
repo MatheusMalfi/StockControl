@@ -1,30 +1,48 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - StockControl</title>
-  <link rel="stylesheet" href="/acesso/login/login.css" />
-</head>
-<body>
-  <div class="container">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="/acesso/login/login.css" />
+  </head>
+  <body>
+    <h1 class="logo">StockControl</h1>
+    <h5 class="subtitulo">CONTROLE DE ESTOQUE</h5>
     <div class="login-box">
-      <h1>StockControl</h1>
-
+      <h3>Login</h3>
       <form id="login-form" method="POST" action="/api/login">
-        <input type="email" name="email" placeholder="E-MAIL" required autocomplete="username" />
-        <input type="password" name="senha" placeholder="SENHA" required autocomplete="current-password" />
+        <input
+          type="email"
+          name="email"
+          placeholder="E-MAIL"
+          required
+          autocomplete="username"
+        />
+        <input
+          type="password"
+          name="senha"
+          placeholder="SENHA"
+          required
+          autocomplete="current-password"
+        />
         <button type="submit" class="btn-acessar">ACESSAR</button>
-
-        <p class="link-cadastro">
-          Não tem conta? <a href="/acesso/register/register.html">Cadastre-se</a>
-        </p>
       </form>
-
-      <div id="msg" class="msg"></div>
+      <a
+        href="/acesso/recover-password/recover-password.html"
+        class="recover-password"
+      >
+        ESQUECI MINHA SENHA
+      </a>
     </div>
-  </div>
 
-  <script src="/acesso/login/login.js"></script>
-</body>
+    <div class="noRegister-box">
+      <h3>Ainda não é cadastrado?</h3>
+      <a href="/acesso/register/register.html" class="btn-click-here">
+        CLIQUE AQUI
+      </a>
+    </div>
+
+    <script src="/acesso/login/login.js"></script>
+  </body>
 </html>
