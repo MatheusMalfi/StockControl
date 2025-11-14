@@ -18,30 +18,46 @@
     </header>
 
     <div class="sub-menu">
-      <button
-        class="menu-btn"
-        data-tooltip="Cadastrar Item"
-        onclick="window.location.href='/navigation-screens/register-item/register-item.html'"
-      >
-        <img
-          src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/plus.svg"
-          alt="Cadastrar Item"
-        />
-      </button>
-
-      <button
-        class="menu-btn"
-        data-tooltip="Descartar Item"
-        onclick="window.location.href='/navigation-screens/discard-item/discard-item.html'"
-      >
-        <img
-          src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/trash.svg"
-          alt="Descartar Item"
-        />
-      </button>
+    <div class="sub-menu-left">
+        <button
+            class="menu-btn logout-btn"
+            data-tooltip="Sair"
+            onclick="window.location.href='/acesso/login/login.html'"
+        >
+            <img
+                src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/box-arrow-left.svg"
+                alt="Sair"
+            />
+        </button>
     </div>
 
+    <div class="sub-menu-right">
+        <button
+            class="menu-btn"
+            data-tooltip="Cadastrar Item"
+            onclick="window.location.href='/navigation-screens/register-item/register-item.html'"
+        >
+            <img
+                src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/plus.svg"
+                alt="Cadastrar Item"
+            />
+        </button>
+
+        <button
+            class="menu-btn"
+            data-tooltip="Descartar Item"
+            onclick="window.location.href='/navigation-screens/discard-item/discard-item.html'"
+        >
+            <img
+                src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/trash.svg"
+                alt="Descartar Item"
+            />
+        </button>
+    </div>
+</div>
+
     <div class="dashboard-container">
+      
       <div class="dashboard">
         <!-- <section class="card discard-main">
           <h2>Descarte de Itens</h2>
@@ -114,9 +130,9 @@
           </div>
         </section> -->
 
-        <section class="card registered-items">
+        <section class="card registered-items" onclick="activateScroll('registered-items')">
           <h2>Itens Cadastrados</h2>
-          <div class="item-list scrollable-content">
+          <div id="registered-items-content" class="item-list scrollable-content">
             <div class="item">
               <img
                 src=""
@@ -260,10 +276,10 @@
           </div>
         </section>
 
-        <section class="card awaiting-collection">
+       <section class="card awaiting-collection" onclick="activateScroll('awaiting-collection')">
           <h2>Itens Aguardando a Coleta</h2>
 
-          <div class="awaiting-collection scrollable-content">
+          <div id="awaiting-collection-content" class="scrollable-content">
             <div class="item">
               <img
                 src=""
@@ -364,10 +380,10 @@
           </div>
         </section>
 
-        <section class="card discard-history">
+        <section class="card discard-history" onclick="activateScroll('discard-history')">
           <h2>Histórico de Descarte</h2>
 
-          <div class="discard-history scrollable-content">
+         <div id="discard-history-content" class="discard-scroll-content">
             <div class="item">
               <img
                 src=""
