@@ -1,134 +1,111 @@
+/* ====== Register Page (StockControl) ====== */
 :root {
-  --cor-fundo-principal: #0f131a;
-  --cor-caixa-fundo: #1a222b;
-  --cor-destaque: #4de1c3bb;
-  --cor-borda-input: #444444;
+  --bg: #0b1219;
+  --card: #111b27;
+  --accent: #34d399;
+  --text: #e6edf3;
+  --muted: #a0aec0;
+  --error: #e74c3c;
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
 }
 
 body {
-  margin: 0;
-  background-color: var(--cor-fundo-principal);
-  color: #ffffff;
-  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at 30% 20%, #132232, var(--bg));
+  color: var(--text);
   display: flex;
-  justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  width: 100%;
+  max-width: 440px;
   padding: 20px;
 }
 
-.logo {
-  width: 100%;
-  max-width: 450px;
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 32px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.card h1 {
   text-align: center;
+  margin-bottom: 24px;
+  color: var(--accent);
+  letter-spacing: 1px;
 }
 
-.logo h1 {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #ffffff;
-  margin-bottom: 5px;
-}
-
-.subtitulo {
-  color: #b0b0b0;
-  margin: 0 0 30px 0;
-  text-align: center;
-  letter-spacing: 3px;
-  font-size: 0.9em;
-}
-
-.register-box {
-  background-color: var(--cor-caixa-fundo);
-  padding: 30px 40px;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-}
-
-.register-box h2 {
-  font-size: 1.5em;
-  margin-bottom: 25px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.form-register {
+form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
-.form-register input {
-  background-color: var(--cor-fundo-principal);
-  color: #ffffff;
-  border: 1px solid var(--cor-borda-input);
-  padding: 15px 15px;
-  border-radius: 30px;
-  font-size: 0.9em;
+input {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid #1e293b;
+  background: #0f172a;
+  color: var(--text);
+  font-size: 15px;
+  transition: 0.2s border-color, 0.2s background;
+}
+
+input:focus {
+  border-color: var(--accent);
   outline: none;
-  transition: border-color 0.3s;
-  text-transform: uppercase;
-}
-
-.form-register input::placeholder {
-  color: #b0b0b0;
-  opacity: 0.7;
-  font-weight: 400;
-}
-
-.form-register input:focus {
-  border-color: var(--cor-destaque);
-}
-
-.btn-click-register {
-  display: block;
-  width: 100%;
-  max-width: 200px;
-
-  padding: 12px 10px;
-  border: none;
-  cursor: pointer;
-  border-radius: 40px;
-  background-color: #4de1c3bb;
-  color: white;
-  font-weight: 700;
-  text-decoration: none;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
-}
-
-.btn-click-register:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
+  background: #111c2e;
 }
 
 .buttons {
   display: flex;
-  flex-direction: row;
-  gap: 15px;
-  align-items: center;
-  justify-content: center;
-  margin-top: 40px;
+  justify-content: space-between;
+  margin-top: 16px;
 }
 
-.btn-back {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 9px 12px;
-  flex-grow: 1;
-  font-size: 1em;
-  font-weight: 700;
-  text-align: center;
-  border-radius: 40px;
-  transition: all 0.3s ease;
-  margin-top: 1px;
-  background-color: #3c536b23;
-  color: #ffffff;
+.btn-primary,
+.btn-sec {
+  border: none;
   text-decoration: none;
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.25s all ease;
 }
 
-.btn-back:hover {
-  background-color: #3c536b50;
-  color: #5df2d6;
+.btn-primary {
+  background: var(--accent);
+  color: #0b1219;
+}
+
+.btn-primary:hover {
+  background: #2eb57f;
+}
+
+.btn-sec {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid #1e293b;
+}
+
+.btn-sec:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.msg {
+  text-align: center;
+  margin-top: 16px;
+  font-weight: 500;
 }
