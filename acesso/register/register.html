@@ -1,75 +1,55 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cadastro - StockControl</title>
-  <link rel="stylesheet" href="/acesso/register/register.css"/>
-</head>
-<body>
-  <div class="container">
-    <div class="card">
-      <h1>Criar conta</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro StockControl</title>
+    <link rel="stylesheet" href="/acesso/register/register.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>Criar conta</h1>
 
-      <!-- note que NÃO tem action nem method -->
-      <form id="form-cadastro">
-        <input type="email"   name="email_institucional" placeholder="E-MAIL INSTITUCIONAL" required />
-        <input type="email"   name="confirma_email"      placeholder="CONFIRME SEU E-MAIL"  required />
-        <input type="password"name="senha"               placeholder="SENHA"                 required />
-        <input type="password"name="confirma_senha"      placeholder="CONFIRME SUA SENHA"   required />
-        <input type="text"    name="nome_empresa"        placeholder="NOME DA EMPRESA"      required />
-        <input type="text"    name="cnpj"                placeholder="CNPJ" />
-        <input type="text"    name="endereco"            placeholder="ENDEREÇO" />
-        <input type="tel"     name="telefone"            placeholder="TELEFONE" />
-        <input type="tel"     name="celular"             placeholder="CELULAR" />
+        <form id="form-cadastro">
+          <input
+            type="email"
+            name="email_institucional"
+            placeholder="E-MAIL INSTITUCIONAL"
+            required
+          />
+          <input
+            type="email"
+            name="confirma_email"
+            placeholder="CONFIRME SEU E-MAIL"
+            required
+          />
+          <input type="password" name="senha" placeholder="SENHA" required />
+          <input
+            type="password"
+            name="confirma_senha"
+            placeholder="CONFIRME SUA SENHA"
+            required
+          />
+          <input
+            type="text"
+            name="nome_empresa"
+            placeholder="NOME DA EMPRESA"
+            required
+          />
+          <input type="text" name="cnpj" placeholder="CNPJ" />
+          <input type="text" name="endereco" placeholder="ENDEREÇO" />
+          <input type="tel" name="telefone" placeholder="TELEFONE" />
+          <input type="tel" name="celular" placeholder="CELULAR" />
 
-        <div class="buttons">
-          <a class="btn-sec" href="/acesso/login/login.html">Voltar</a>
-          <button class="btn-primary" type="submit">Cadastrar</button>
-        </div>
-      </form>
-
-      <div id="msg" class="msg"></div>
+          <div class="buttons">
+            <a class="btn-back" href="/acesso/login/login.html">Voltar</a>
+            <button class="btn-send" type="submit">Cadastrar</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
 
-  <script>
-    const form = document.getElementById('form-cadastro');
-    const msg  = document.getElementById('msg');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault(); // impede POST no HTML
-
-      msg.style.color = '#333';
-      msg.textContent = 'Enviando...';
-
-      const data = Object.fromEntries(new FormData(form));
-
-      try {
-        const res = await fetch('/api/cadastro', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-
-        const json = await res.json();
-
-        if (res.ok && json.ok) {
-          msg.style.color = 'green';
-          msg.textContent = 'Cadastro realizado! Redirecionando para o login...';
-          setTimeout(() => {
-            window.location.href = '/acesso/login/login.html';
-          }, 1200);
-        } else {
-          msg.style.color = 'red';
-          msg.textContent = json.erro || 'Falha no cadastro.';
-        }
-      } catch (err) {
-        console.error(err);
-        msg.style.color = 'red';
-        msg.textContent = 'Erro ao conectar ao servidor.';
-      }
-    });
-  </script>
-</body>
+    <script src="/acesso/register/register.js"></script>
+  </body>
 </html>
