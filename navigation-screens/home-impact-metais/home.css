@@ -1,15 +1,12 @@
 /* Variáveis de Cores */
 :root {
-  --bg-dark: #1f2228; /* Cor de fundo principal mais escura */
-  --card-bg: #272b31; /* Fundo dos cards da lista de entidades */
-  --aside-bg: #272b31; /* Fundo da seção de histórico */
-  --pdf-item-bg: #32373f; /* Fundo dos itens de PDF */
+  --aside-bg: rgba(78, 151, 130, 0.07);
+  --pdf-item-bg: rgba(137,255,220,0.07); /* Fundo dos itens de PDF */
   --text-primary: #ffffff; /* Texto principal claro */
-  --text-secondary: #b0b0b0; /* Texto secundário (subtítulo) */
-  --count-bg: #d9534f; /* Fundo do contador (vermelho) */
+  --count-bg: #d82721; /* Fundo do contador (vermelho) */
   --pdf-icon-color: #d9534f; /* Cor do ícone PDF */
-  --view-more-color: #5bc0de; /* Cor do "VER MAIS" (azul claro/ciano) */
-  --border-radius-main: 15px;
+  --view-more-color: #89ffdb; /* Cor do "VER MAIS" (azul claro/ciano) */
+  --border-radius-main: 35px;
   --border-radius-card: 10px;
   --border-radius-count: 8px;
 }
@@ -27,7 +24,7 @@ body {
 /* Container Principal */
 .main-container {
   width: 100%;
-  max-width: 1000px; /* Ajuste para largura máxima da tela */
+  max-width: 1400px; /* Ajuste para largura máxima da tela */
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -54,40 +51,43 @@ h2 {
   margin-bottom: 30px;
 }
 
+.sub-menu {
+  position: absolute;
+  top: -60px; /* Ajuste este valor para a distância desejada acima do card */
+  right: 0; /* Alinha o botão ao canto direito do content-wrapper (que é 850px de largura) */
+  z-index: 10; /* Garante que fique acima de outros elementos se houver sobreposição */
+}
+
+
 /* Wrapper do Conteúdo (Lista e Histórico) */
 .content-wrapper {
   display: flex;
   gap: 30px;
   flex-wrap: wrap; /* Para responsividade */
   justify-content: center; /* Centraliza itens em telas menores */
-  background-color: rgba(137, 255, 220, 0.07);
-  border-radius: 20px;
+  background-color: rgba(25, 53, 45, 0.07);
+  border-radius: 30px;
 }
 
-/* Seção da Lista de Entidades 
+/* Seção da Lista de Entidades */
 .entities-list {
   flex: 2;  
   min-width: 380px; 
-  background-color: rgba(
-    137,
-    255,
-    220,
-    0.07
-  );
+  background-color: rgba(137,255,220,0.07);
   border-radius: var(--border-radius-main);
   padding: 20px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}*/
+}
 
 .entity-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #32373f; /* Fundo de cada card de entidade */
+  background-color: rgba(137,255,220,0.07); /* Fundo de cada card de entidade */
   padding: 18px 25px;
   margin-bottom: 20px;
   border-radius: var(--border-radius-card);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
@@ -97,7 +97,8 @@ h2 {
 }
 
 .entity-card:hover {
-  background-color: #3e444f; /* Levemente mais claro no hover */
+  background-color: #c42bc40c;
+  color: #5df2d6;
 }
 
 .entity-info {
@@ -141,6 +142,7 @@ h2 {
 }
 
 .entity-name {
+  color: var(--text-primary);
   font-size: 1.3em;
   font-weight: 600;
 }
@@ -186,7 +188,8 @@ h2 {
 }
 
 .history-item:hover {
-  background-color: #434954; /* Levemente mais claro no hover */
+  background-color: #c42bc40c;
+  color: #5df2d6;
 }
 
 .history-title {
