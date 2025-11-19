@@ -313,7 +313,7 @@ h2 {
   overflow-y: hidden;
   padding-right: 5px;
   /* Garante que o conteúdo não ultrapasse o contêiner */
-  max-height: 280px;
+  max-height: 370px;
 }
 
 .active-scroll {
