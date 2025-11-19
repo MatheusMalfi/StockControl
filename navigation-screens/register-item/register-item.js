@@ -20,11 +20,44 @@ document.addEventListener("DOMContentLoaded", () => {
   const modeloInput = document.getElementById("modelo");
   const statusInputs = document.querySelectorAll("input[name='status']");
   const btnRegister = document.getElementById("btnRegister");
-  const msg = document.getElementById("msg");
+  // const msg = document.getElementById("msg"); // REMOVIDO: vamos usar 'notificationArea'
   const lista = document.getElementById("registeredItems");
   const statusLabels = document.querySelectorAll(
     ".green-btn, .yellow-btn, .red-btn" // Seleciona todos os labels dos status
   );
+
+  // 🔔 SELECIONA O ELEMENTO DE NOTIFICAÇÃO
+  const notificationArea = document.getElementById("notification-area");
+
+  // --- FUNÇÃO PARA EXIBIR NOTIFICAÇÕES (NOVO) ---
+  /**
+   * Exibe uma notificação pop-up.
+   * @param {string} message - A mensagem a ser exibida.
+   * @param {'success'|'error'|'loading'|'critical'} type - O tipo de notificação.
+   * @param {number} duration - Duração em ms antes de fechar (exceto loading).
+   */
+  function showNotification(message, type, duration = 3000) {
+    if (!notificationArea) return;
+
+    // Limpa classes anteriores e define a nova
+    notificationArea.className = "notification";
+    notificationArea.textContent = message;
+    notificationArea.classList.add(`notification-${type}`);
+
+    // Força o re-render (para garantir que a animação show funcione)
+    void notificationArea.offsetWidth;
+
+    // Exibe a notificação
+    notificationArea.classList.add("show");
+
+    // Fecha a notificação após 'duration' (a menos que seja 'loading')
+    if (type !== "loading") {
+      setTimeout(() => {
+        notificationArea.classList.remove("show");
+      }, duration);
+    }
+  }
+  // --- FIM DA FUNÇÃO DE NOTIFICAÇÃO ---
 
   // --- FUNÇÃO DE VALIDAÇÃO ---
   function checkFormValidity() {
@@ -112,7 +145,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const statusSelecionado = document.querySelector(
       "input[name='status']:checked"
-    ).value;
+    )?.value; // Usado optional chaining (?) caso status não esteja checado
+
+    if (!statusSelecionado) {
+      console.error("Status não selecionado.");
+      return;
+    }
 
     const condition_id = mapStatusToConditionId(statusSelecionado);
 
@@ -129,11 +167,8 @@ document.addEventListener("DOMContentLoaded", () => {
       created_by: user.user_id,
     };
 
-    // Limpa mensagem
-    if (msg) {
-      msg.textContent = "";
-      msg.style.color = "#fff";
-    }
+    // 💬 Exibe notificação de Carregamento/Loading (dura até o try/catch terminar)
+    showNotification("Cadastrando item...", "loading", 0);
 
     try {
       const resp = await fetch("/api/items", {
@@ -143,20 +178,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const result = await resp.json().catch(() => ({}));
-    item.innerHTML = `
-            <img src="${imagem}" alt="${produto}">
-            <div class="item-info">
-              <h4>${produto}</h4>
-              <p>${marca} - ${modelo}</p>
-              ${statusHtml}
-            </div>
-          `;
 
       if (resp.ok && result.success) {
-        if (msg) {
-          msg.textContent = "Item cadastrado com sucesso!";
-          msg.style.color = "lime";
-        }
+        // 🟢 SUCESSO
+        showNotification("Item cadastrado com sucesso!", "success");
 
         // Criação do card para mostrar na tela (visual)
         let statusHtml = "";
@@ -172,36 +197,44 @@ document.addEventListener("DOMContentLoaded", () => {
           const item = document.createElement("div");
           item.classList.add("item-card");
           item.innerHTML = `
-            <img src="${imagem}" alt="${produto}">
-            <div class="item-info">
-              <h4>${produto}</h4>
-              <p>${marca} - ${modelo}</p>
-              ${statusHtml}
-            </div>
-          `;
+  <img src="${imagem}" alt="${produto}">
+  <div class="item-info">
+   <h4>${produto}</h4>
+   <p>${marca} - ${modelo}</p>
+   ${statusHtml}
+  </div>
+  `;
           lista.appendChild(item);
         }
 
         // Resetar o formulário
         form.reset();
+        statusLabels.forEach((label) => label.classList.remove("active"));
         preview.style.display = "none";
         fotoTexto.style.display = "block";
         checkFormValidity();
       } else {
-        if (msg) {
-          msg.textContent = result.message || "Erro ao cadastrar item.";
-          msg.style.color = "red";
-        }
+        // 🔴 ERRO NO BACKEND (Ex: 400 Bad Request, falha de validação)
+        showNotification(
+          result.message || "Erro ao cadastrar item. Detalhes: " + resp.status,
+          "error"
+        );
       }
     } catch (error) {
       console.error("Erro na conexão:", error);
-      if (msg) {
-        msg.textContent = "Erro ao conectar ao servidor.";
-        msg.style.color = "red";
-      }
+      // 🛑 ERRO DE CONEXÃO (Ex: Servidor Offline)
+      showNotification(
+        "Erro ao conectar ao servidor. Tente novamente.",
+        "critical"
+      );
+    }
+
+    // Oculta o loading se ainda estiver ativo (geralmente não será necessário, mas garante)
+    if (notificationArea.classList.contains("notification-loading")) {
+      notificationArea.classList.remove("show");
     }
   });
 
   // Garante que o botão começa desabilitado
   checkFormValidity();
-})
+});

@@ -28,7 +28,7 @@ h2 {
 }
 
 .sub-menu {
-  padding-top: 5%;
+  padding-top: 3%;
   position: absolute;
   top: -60px; /* Ajuste este valor para a distância desejada acima do card */
   right: 0; /* Alinha o botão ao canto direito do content-wrapper (que é 850px de largura) */
