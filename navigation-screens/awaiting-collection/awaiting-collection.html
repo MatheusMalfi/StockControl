@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="/navigation-screens/awaiting-collection/awaiting-collection.css"
+    />
+
+    <title>Aguardando Coleta StockControl</title>
+  </head>
+  <body>
+    <header class="header">
+      <h1>
+        <a
+          href="/navigation-screens/home/home.html"
+          target="_blank"
+          style="text-decoration: none; color: inherit"
+          >StockControl</a
+        >
+      </h1>
+      <h2>CONTROLE DE ESTOQUE</h2>
+    </header>
+
+    <div class="content-wrapper">
+      <div class="sub-menu">
+        <button
+          class="menu-btn"
+          data-tooltip="Voltar para Home"
+          onclick="window.location.href='/navigation-screens/home/home.html'"
+        >
+          <img
+            src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/house.svg"
+            alt="Home"
+          />
+        </button>
+      </div>
+    </div>
+
+    <main>
+      <div class="card">
+        <h3>Aguardando Coleta</h3>
+        <p>Selecione o item a ser visualizado.</p>
+
+        <div class="items">
+          <!-- Item de exemplo -->
+          <div class="item">
+            <img src="    " alt="Item 1" />
+            <div class="item-info">
+              <h4>Item 1</h4>
+              <p>DELL - G1375</p>
+              <div class="status">
+                <span class="dot red"></span>
+                Necessita ser Descartado
+              </div>
+            </div>
+          </div>
+
+          <!-- Item de exemplo -->
+          <div class="item">
+            <img src="    " alt="Item 2" />
+            <div class="item-info">
+              <h4>Item 2</h4>
+              <p>POLISHOP - MO4306</p>
+              <div class="status">
+                <span class="dot green"></span>
+                Ótimos Estado de Uso
+              </div>
+            </div>
+          </div>
+
+          <!-- Item de exemplo -->
+          <div class="item">
+            <img src="    " alt="Item 3" />
+            <div class="item-info">
+              <h4>Item 3</h4>
+              <p>COOLER MASTER - GT REDFLAG</p>
+              <div class="status">
+                <span class="dot yellow"></span>
+                Necessita de Reparos
+              </div>
+            </div>
+          </div>
+
+          <!-- Item de exemplo -->
+          <div class="item">
+            <img src="    " alt="Item 4" />
+            <div class="item-info">
+              <h4>Item 4</h4>
+              <p>COOLER MASTER - GT REDFLAG</p>
+              <div class="status">
+                <span class="dot yellow"></span>
+                Necessita de Reparos
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 
+        <div class="buttons">
+          <button type="button" onclick="history.back()">VOLTAR</button>
+        </div> -->
+      </div>
+    </main>
+  </body>
+</html>
