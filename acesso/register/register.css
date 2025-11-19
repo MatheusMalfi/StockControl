@@ -73,6 +73,7 @@ input:focus {
   flex-direction: column;
   gap: 8px; /* Espaço entre os itens */
   margin-bottom: 8px; /* Espaço antes do próximo campo */
+  padding-left: 3px;
 }
 
 .user-type-group .group-title {
