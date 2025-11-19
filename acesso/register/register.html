@@ -42,6 +42,25 @@
           <input type="tel" name="telefone" placeholder="TELEFONE" />
           <input type="tel" name="celular" placeholder="CELULAR" />
 
+          <div class="user-type-group">
+            <p class="group-title">TIPO DE USUÁRIO:</p>
+
+            <label class="radio-label">
+              <input type="radio" name="user_type" value="ong" required />
+              ONG
+            </label>
+
+            <label class="radio-label">
+              <input
+                type="radio"
+                name="user_type"
+                value="impact_metais"
+                required
+              />
+              Impact Metais
+            </label>
+          </div>
+
           <div class="buttons">
             <a class="btn-back" href="/acesso/login/login.html">Voltar</a>
             <button class="btn-send" type="submit">Cadastrar</button>
