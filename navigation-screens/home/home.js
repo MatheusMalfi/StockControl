@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="info">
                     <h3>${h.product_name}</h3>
                     <p>${h.product_brand || ""} - ${h.product_model || ""}</p>
-                    <small>Ação: ${h.action}</small><br>
+                    <small>Ação: ${h.action_label}</small><br>
                     <small>Data: ${new Date(h.created_at).toLocaleString(
                       "pt-BR"
                     )}</small>

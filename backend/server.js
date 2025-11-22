@@ -1,11 +1,11 @@
 // ==================== IMPORTS ====================
-require('dotenv').config();
+require("dotenv").config();
 
-const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const bcrypt = require('bcrypt');           // se der erro no Windows, troque por 'bcryptjs'
-const mysql = require('mysql2/promise');
+const express = require("express");
+const path = require("path");
+const cors = require("cors");
+const bcrypt = require("bcrypt"); // se der erro no Windows, troque por 'bcryptjs'
+const mysql = require("mysql2/promise");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,8 +13,8 @@ const PORT = process.env.PORT || 3000;
 // ==================== STATIC / FRONTEND ====================
 
 // raiz do projeto: .../StockControl (um nível acima do /backend)
-const root = path.join(__dirname, '..');
-console.log('Static root:', root);
+const root = path.join(__dirname, "..");
+console.log("Static root:", root);
 
 app.use(cors());
 app.use(express.json());
@@ -24,35 +24,35 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(root));
 
 // Rota inicial -> abre o login.html
-app.get('/', (req, res) => {
-  res.sendFile(path.join(root, 'acesso', 'login', 'login.html'));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(root, "acesso", "login", "login.html"));
 });
 
 // (Opcional) rota direta pro cadastro
-app.get('/register', (req, res) => {
-  res.sendFile(path.join(root, 'acesso', 'register', 'register.html'));
+app.get("/register", (req, res) => {
+  res.sendFile(path.join(root, "acesso", "register", "register.html"));
 });
 
 // ==================== MYSQL POOL ====================
 //
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || "localhost",
   port: Number(process.env.DB_PORT || 3000),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'stockcontrol',
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "stockcontrol",
   waitForConnections: true,
   connectionLimit: 10,
 });
 
 // ==================== HEALTHCHECK ====================
 
-app.get('/healthz', async (req, res) => {
+app.get("/healthz", async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT 1 AS ok');
+    const [rows] = await pool.query("SELECT 1 AS ok");
     res.json({ ok: true, db: rows[0].ok === 1 });
   } catch (err) {
-    console.error('Erro no /healthz:', err);
+    console.error("Erro no /healthz:", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -67,33 +67,43 @@ app.get('/healthz', async (req, res) => {
 //   nome_empresa, cnpj, endereco, telefone, celular
 // }
 
-app.post('/api/cadastro', async (req, res) => {
+app.post("/api/cadastro", async (req, res) => {
   try {
     const {
-      email_institucional, confirma_email,
-      senha, confirma_senha,
-      nome_empresa, cnpj, endereco, telefone, celular,
+      email_institucional,
+      confirma_email,
+      senha,
+      confirma_senha,
+      nome_empresa,
+      cnpj,
+      endereco,
+      telefone,
+      celular,
     } = req.body;
 
     if (!email_institucional || !senha || !nome_empresa) {
-      return res.status(400).json({ erro: 'Campos obrigatórios ausentes.' });
+      return res.status(400).json({ erro: "Campos obrigatórios ausentes." });
     }
 
     if (email_institucional !== confirma_email) {
-      return res.status(400).json({ erro: 'E-mail e confirmação não conferem.' });
+      return res
+        .status(400)
+        .json({ erro: "E-mail e confirmação não conferem." });
     }
 
     if (senha !== confirma_senha) {
-      return res.status(400).json({ erro: 'Senha e confirmação não conferem.' });
+      return res
+        .status(400)
+        .json({ erro: "Senha e confirmação não conferem." });
     }
 
     // E-mail já usado?
     const [dup] = await pool.query(
-      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      "SELECT id FROM users WHERE email = ? LIMIT 1",
       [email_institucional]
     );
     if (dup.length) {
-      return res.status(400).json({ erro: 'E-mail já cadastrado.' });
+      return res.status(400).json({ erro: "E-mail já cadastrado." });
     }
 
     // Descobrir/ criar organização pelo CNPJ
@@ -101,7 +111,7 @@ app.post('/api/cadastro', async (req, res) => {
 
     if (cnpj) {
       const [org] = await pool.query(
-        'SELECT id FROM organizations WHERE cnpj = ? LIMIT 1',
+        "SELECT id FROM organizations WHERE cnpj = ? LIMIT 1",
         [cnpj]
       );
       if (org.length) {
@@ -141,8 +151,8 @@ app.post('/api/cadastro', async (req, res) => {
       organization_id: organizationId,
     });
   } catch (err) {
-    console.error('Erro no cadastro:', err);
-    res.status(500).json({ erro: 'Erro interno no servidor' });
+    console.error("Erro no cadastro:", err);
+    res.status(500).json({ erro: "Erro interno no servidor" });
   }
 });
 
@@ -151,43 +161,45 @@ app.post('/api/cadastro', async (req, res) => {
 // Espera body:
 // { email, senha }
 
-app.post('/api/login', async (req, res) => {
+app.post("/api/login", async (req, res) => {
   try {
     const { email, senha } = req.body;
 
     if (!email || !senha) {
-      return res.status(400).json({ mensagem: 'E-mail e senha são obrigatórios.' });
+      return res
+        .status(400)
+        .json({ mensagem: "E-mail e senha são obrigatórios." });
     }
 
     const [rows] = await pool.query(
-      'SELECT * FROM users WHERE email = ? LIMIT 1',
+      "SELECT * FROM users WHERE email = ? LIMIT 1",
       [email]
     );
     if (!rows.length) {
-      return res.status(401).json({ mensagem: 'E-mail ou senha incorretos.' });
+      return res.status(401).json({ mensagem: "E-mail ou senha incorretos." });
     }
 
     const user = rows[0];
     const ok = await bcrypt.compare(senha, user.password_hash);
 
     if (!ok) {
-      return res.status(401).json({ mensagem: 'E-mail ou senha incorretos.' });
+      return res.status(401).json({ mensagem: "E-mail ou senha incorretos." });
     }
 
     res.json({
       success: true,
-      mensagem: 'Login OK',
+      mensagem: "Login OK",
       user_id: user.id,
       organization_id: user.organization_id,
     });
   } catch (err) {
-    console.error('Erro no login:', err);
-    res.status(500).json({ mensagem: 'Erro interno no servidor' });
+    console.error("Erro no login:", err);
+    res.status(500).json({ mensagem: "Erro interno no servidor" });
   }
 });
 
 // ========== CRIAR ITEM ==========
-app.post('/api/items', async (req, res) => {
+app.post("/api/items", async (req, res) => {
   try {
     const {
       organization_id,
@@ -202,7 +214,7 @@ app.post('/api/items', async (req, res) => {
       condition_id,
       weight_kg,
       photo_url,
-      created_by
+      created_by,
     } = req.body;
 
     if (!organization_id || !product_name || !condition_id) {
@@ -226,7 +238,7 @@ app.post('/api/items', async (req, res) => {
         condition_id,
         weight_kg || null,
         photo_url || null,
-        created_by || null
+        created_by || null,
       ]
     );
 
@@ -239,7 +251,7 @@ app.post('/api/items', async (req, res) => {
 
 // ========== MARCAR ITEM PARA DESCARTE ==========
 // ========== DESCARTAR ITENS ==========
-app.post('/api/items/discard', async (req, res) => {
+app.post("/api/items/discard", async (req, res) => {
   try {
     const { organization_id, created_by, item_ids, item_id } = req.body;
 
@@ -251,9 +263,7 @@ app.post('/api/items/discard', async (req, res) => {
       idsRaw = [item_id];
     }
 
-    const ids = idsRaw
-      .map((v) => Number(v))
-      .filter((n) => !Number.isNaN(n));
+    const ids = idsRaw.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
 
     if (!organization_id || ids.length === 0) {
       return res.status(400).json({ message: "Campos obrigatórios faltando." });
@@ -264,7 +274,9 @@ app.post('/api/items/discard', async (req, res) => {
       "SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1"
     );
     if (!condRows.length) {
-      return res.status(500).json({ message: 'Condição DESCARTAR não encontrada.' });
+      return res
+        .status(500)
+        .json({ message: "Condição DESCARTAR não encontrada." });
     }
     const newConditionId = condRows[0].id;
 
@@ -287,19 +299,28 @@ app.post('/api/items/discard', async (req, res) => {
         `INSERT INTO disposal_history
          (item_id, organization_id, destination_type, prev_condition_id, new_condition_id, action, quantity, created_by)
          VALUES (?, ?, 'INTERNAL', ?, ?, 'MARKED_FOR_DISPOSAL', 1, ?)`,
-        [id, organization_id, prevConditionId, newConditionId, created_by || null]
+        [
+          id,
+          organization_id,
+          prevConditionId,
+          newConditionId,
+          created_by || null,
+        ]
       );
     }
 
-    res.json({ success: true, message: 'Itens descartados registrados com sucesso.' });
+    res.json({
+      success: true,
+      message: "Itens descartados registrados com sucesso.",
+    });
   } catch (err) {
-    console.error('Erro em /api/items/discard:', err);
-    res.status(500).json({ message: 'Erro ao descartar itens.' });
+    console.error("Erro em /api/items/discard:", err);
+    res.status(500).json({ message: "Erro ao descartar itens." });
   }
 });
 
 // ========== SOLICITAR COLETA P/ IMPACTO METAIS ==========
-app.post('/api/disposal/request', async (req, res) => {
+app.post("/api/disposal/request", async (req, res) => {
   try {
     const { organization_id, created_by, items } = req.body;
 
@@ -313,7 +334,9 @@ app.post('/api/disposal/request', async (req, res) => {
     );
 
     if (!recycler.length) {
-      return res.status(500).json({ message: "Impacto Metais não encontrada." });
+      return res
+        .status(500)
+        .json({ message: "Impacto Metais não encontrada." });
     }
 
     const recycler_id = recycler[0].id;
@@ -346,15 +369,16 @@ app.post('/api/disposal/request', async (req, res) => {
 });
 // ========== HOME DASHBOARD ==========
 // Retorna itens cadastrados, itens para descarte e históricos
-app.get('/api/home', async (req, res) => {
+app.get("/api/home", async (req, res) => {
   try {
     const organization_id = req.query.organization_id;
     if (!organization_id) {
-      return res.status(400).json({ message: 'organization_id faltando.' });
+      return res.status(400).json({ message: "organization_id faltando." });
     }
 
     // --- ITENS CADASTRADOS ---
-    const [itens] = await pool.query(`
+    const [itens] = await pool.query(
+      `
       SELECT 
         i.id,
         i.product_name,
@@ -371,35 +395,46 @@ app.get('/api/home', async (req, res) => {
       JOIN conditions c ON c.id = i.condition_id
       WHERE i.organization_id = ? AND i.is_active = 1
       ORDER BY i.created_at DESC
-    `, [organization_id]);
+    `,
+      [organization_id]
+    );
 
     // --- ITENS PARA COLETA (DESCARTAR) ---
-    const itensDescartar = itens.filter(i => i.condition_code === 'DESCARTAR');
+    const itensDescartar = itens.filter(
+      (i) => i.condition_code === "DESCARTAR"
+    );
 
     // --- HISTÓRICO DE DESCARTE ---
-    const [historico] = await pool.query(`
+    const [historico] = await pool.query(
+      `
       SELECT 
         h.id,
         h.item_id,
         i.product_name,
         i.product_brand,
         i.product_model,
-        h.action,
+        CASE
+   WHEN h.action = 'MARKED_FOR_DISPOSAL' THEN 'Descarte'
+   WHEN h.action = 'REQUESTED_PICKUP' THEN 'Coleta Solicitada'
+   WHEN h.action = 'PICKED_UP' THEN 'Coletado'
+   ELSE REPLACE(h.action, '_', ' ')       
+   END AS action_label,
         h.created_at
       FROM disposal_history h
       JOIN items i ON i.id = h.item_id
       WHERE h.organization_id = ?
       ORDER BY h.created_at DESC
       LIMIT 50
-    `, [organization_id]);
+    `,
+      [organization_id]
+    );
 
     res.json({
       success: true,
       itens,
       itensDescartar,
-      historico
+      historico,
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Erro ao carregar dados da home" });
@@ -407,12 +442,14 @@ app.get('/api/home', async (req, res) => {
 });
 
 // ========== DESCARTAR ITEM (marca como DESCARTAR e registra histórico) ==========
-app.post('/api/items/discard', async (req, res) => {
+app.post("/api/items/discard", async (req, res) => {
   try {
     const { item_id, organization_id, created_by } = req.body;
 
     if (!item_id || !organization_id) {
-      return res.status(400).json({ message: "item_id e organization_id são obrigatórios." });
+      return res
+        .status(400)
+        .json({ message: "item_id e organization_id são obrigatórios." });
     }
 
     // pega condição anterior
@@ -421,7 +458,9 @@ app.post('/api/items/discard', async (req, res) => {
       [item_id, organization_id]
     );
     if (!rows.length) {
-      return res.status(404).json({ message: "Item não encontrado para esta organização." });
+      return res
+        .status(404)
+        .json({ message: "Item não encontrado para esta organização." });
     }
     const prevConditionId = rows[0].condition_id;
 
@@ -430,7 +469,9 @@ app.post('/api/items/discard', async (req, res) => {
       `SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1`
     );
     if (!cond.length) {
-      return res.status(500).json({ message: "Condição DESCARTAR não encontrada na tabela conditions." });
+      return res.status(500).json({
+        message: "Condição DESCARTAR não encontrada na tabela conditions.",
+      });
     }
     const newConditionId = cond[0].id;
 
@@ -448,7 +489,13 @@ app.post('/api/items/discard', async (req, res) => {
          (item_id, organization_id, destination_type, prev_condition_id, new_condition_id, action, quantity, created_by)
        VALUES
          (?,       ?,              'INTERNAL',       ?,                 ?,                'MARKED_FOR_DISPOSAL', 1, ?)`,
-      [item_id, organization_id, prevConditionId, newConditionId, created_by || null]
+      [
+        item_id,
+        organization_id,
+        prevConditionId,
+        newConditionId,
+        created_by || null,
+      ]
     );
 
     res.json({ success: true });
@@ -457,7 +504,6 @@ app.post('/api/items/discard', async (req, res) => {
     res.status(500).json({ message: "Erro ao descartar item." });
   }
 });
-
 
 // ==================== START SERVER ====================
 
