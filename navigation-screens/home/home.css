@@ -161,7 +161,7 @@ h2 {
 .discard-history {
   grid-column: 3 / 4;
   grid-row: 1 / 3;
-  max-height: 100vh; /* Garante que ocupe todo o espaço do grid */
+  max-height: 100%; /* Garante que ocupe todo o espaço do grid */
   overflow: hidden;
 }
 
