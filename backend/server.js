@@ -93,6 +93,7 @@ app.post("/api/cadastro", async (req, res) => {
       endereco,
       telefone,
       celular,
+      org_type,
     } = req.body;
 
     if (!email_institucional || !senha || !nome_empresa) {
@@ -137,9 +138,10 @@ app.post("/api/cadastro", async (req, res) => {
       const [insOrg] = await pool.execute(
         `INSERT INTO organizations
          (org_type, name, cnpj, email, phone, mobile, address_line1)
-         VALUES ('ONG', ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
 
         [
+          org_type || 'ONG',
           nome_empresa,
           cnpj || null,
           email_institucional,
@@ -187,7 +189,14 @@ app.post("/api/login", async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      "SELECT * FROM users WHERE email = ? LIMIT 1",
+      `
+    SELECT 
+      u.*, 
+      o.org_type 
+    FROM users u
+    JOIN organizations o ON o.id = u.organization_id
+    WHERE u.email = ? LIMIT 1
+    `,
       [email]
     );
     if (!rows.length) {
@@ -204,6 +213,7 @@ app.post("/api/login", async (req, res) => {
     res.json({
       success: true,
       mensagem: "Login OK",
+      org_type: user.org_type,
       user_id: user.id,
       organization_id: user.organization_id,
     });

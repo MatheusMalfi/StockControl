@@ -38,28 +38,25 @@ document.addEventListener("DOMContentLoaded", () => {
       const userPayload = {
         email: data.email,
         user_id: result.user_id,
+        org_type: result.org_type,
         organization_id: result.organization_id,
         logged_at: new Date().toISOString(),
       };
       localStorage.setItem("sc_user", JSON.stringify(userPayload));
 
-      // msg.style.color = "limegreen"; // LINHA REMOVIDA/COMENTADA
-      // msg.textContent = "Login bem-sucedido! Redirecionando..."; // LINHA REMOVIDA/COMENTADA
+      // Default: Home ONG
+      let redirectUrl = "/navigation-screens/home/home.html";
 
-      // Você pode adicionar um alerta simples para sucesso (temporário):
-      // alert("Login bem-sucedido! Redirecionando...");
-
-      // redireciona pra home
+      if (result.org_type === "RECYCLER") {
+        // Redireciona para a Home da Impact Metais
+        redirectUrl =
+          "/navigation-screens/impact-metais/home-impact-metais/home.html";
+      }
       setTimeout(() => {
-        window.location.href = "/navigation-screens/home/home.html";
+        window.location.href = redirectUrl;
       }, 1200);
     } catch (error) {
       console.error("Erro no login:", error);
-      // msg.style.color = "red"; // LINHA REMOVIDA/COMENTADA
-      // msg.textContent = "Erro ao conectar ao servidor."; // LINHA REMOVIDA/COMENTADA
-
-      // Ou um alerta para erro de servidor:
-      alert("Erro ao conectar ao servidor.");
     }
   });
 });
