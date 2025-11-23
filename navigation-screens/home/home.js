@@ -31,17 +31,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Seletores ajustados para usar os IDs definidos no HTML para o scroll
   const listaCadastrados = document.getElementById("registered-items-content");
-  const listaAguardando = document.getElementById(
-    "awaiting-collection-content"
-  );
+  const listaAguardando = document.getElementById("awaiting-collection-content");
   const listaHistorico = document.getElementById("discard-history-content");
 
   carregarDashboard();
 
   async function carregarDashboard() {
-    const resp = await fetch(
-      `/api/home?organization_id=${user.organization_id}`
-    );
+    const resp = await fetch(`/api/home?organization_id=${user.organization_id}`);
     const data = await resp.json();
 
     if (!resp.ok || !data.success) {
@@ -63,17 +59,15 @@ document.addEventListener("DOMContentLoaded", () => {
       div.classList.add("item");
 
       div.innerHTML = `
-                <img src="${
-                  item.photo_url || "https://via.placeholder.com/80"
-                }" class="item-image" />
-                <div class="info">
-                    <h3>${item.product_name}</h3>
-                    <p>${item.brand || ""} - ${item.model || ""}</p>
-                    <span class="status-tag ${mapTag(item.condition_code)}">
-                        ${item.condition_label}
-                    </span>
-                </div>
-            `;
+        <img src="${item.photo_url || "https://via.placeholder.com/80"}" class="item-image" />
+        <div class="info">
+          <h3>${item.product_name}</h3>
+          <p>${item.brand || ""} - ${item.model || ""}</p>
+          <span class="status-tag ${mapTag(item.condition_code)}">
+            ${item.condition_label}
+          </span>
+        </div>
+      `;
 
       listaCadastrados.appendChild(div);
     });
@@ -88,14 +82,12 @@ document.addEventListener("DOMContentLoaded", () => {
       div.classList.add("item");
 
       div.innerHTML = `
-                <img src="${
-                  item.photo_url || "https://via.placeholder.com/80"
-                }" class="item-image" />
-                <div class="info">
-                    <h3>${item.product_name}</h3>
-                    <p>${item.brand || ""} - ${item.model || ""}</p>
-                </div>
-            `;
+        <img src="${item.photo_url || "https://via.placeholder.com/80"}" class="item-image" />
+        <div class="info">
+          <h3>${item.product_name}</h3>
+          <p>${item.brand || ""} - ${item.model || ""}</p>
+        </div>
+      `;
       listaAguardando.appendChild(div);
     });
   }
@@ -109,16 +101,14 @@ document.addEventListener("DOMContentLoaded", () => {
       div.classList.add("item");
 
       div.innerHTML = `
-                <img src="https://via.placeholder.com/80/555" class="item-image" />
-                <div class="info">
-                    <h3>${h.product_name}</h3>
-                    <p>${h.product_brand || ""} - ${h.product_model || ""}</p>
-                    <small>Ação: ${h.action_label}</small><br>
-                    <small>Data: ${new Date(h.created_at).toLocaleString(
-                      "pt-BR"
-                    )}</small>
-                </div>
-            `;
+        <img src="https://via.placeholder.com/80/555" class="item-image" />
+        <div class="info">
+          <h3>${h.product_name}</h3>
+          <p>${h.product_brand || ""} - ${h.product_model || ""}</p>
+          <small>Ação: ${h.action_label}</small><br>
+          <small>Data: ${new Date(h.created_at).toLocaleString("pt-BR")}</small>
+        </div>
+      `;
       listaHistorico.appendChild(div);
     });
   }
@@ -129,5 +119,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (cond === "REPARO") return "status-orange";
     if (cond === "DESCARTAR") return "status-red";
     return "";
+  }
+
+  /*  
+  ======================================================
+  🔥 ADICIONAMOS APENAS OS CAMINHOS AQUI EMBAIXO
+  NADA DO CÓDIGO ORIGINAL FOI ALTERADO
+  ======================================================
+  */
+
+  // Botão: Histórico de Coletas
+  const btnHistoricoColetas = document.querySelector(
+    'button[data-tooltip="Histórico de Coletas"]'
+  );
+
+  if (btnHistoricoColetas) {
+    btnHistoricoColetas.addEventListener("click", () => {
+      window.location.href =
+        "/navigation-screens/collection-history/collection-history.html";
+    });
   }
 });

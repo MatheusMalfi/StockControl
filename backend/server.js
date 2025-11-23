@@ -33,6 +33,20 @@ app.get("/register", (req, res) => {
   res.sendFile(path.join(root, "acesso", "register", "register.html"));
 });
 
+// ================================================
+// 🔹 NOVA ROTA DE PÁGINA: HISTÓRICO DE COLETAS
+// ================================================
+app.get("/collection-history", (req, res) => {
+  res.sendFile(
+    path.join(
+      root,
+      "navigation-screens",
+      "collection-history",
+      "collection-history.html"
+    )
+  );
+});
+
 // ==================== MYSQL POOL ====================
 //
 const pool = mysql.createPool({
@@ -124,6 +138,7 @@ app.post("/api/cadastro", async (req, res) => {
         `INSERT INTO organizations
          (org_type, name, cnpj, email, phone, mobile, address_line1)
          VALUES ('ONG', ?, ?, ?, ?, ?, ?)`,
+
         [
           nome_empresa,
           cnpj || null,
@@ -367,6 +382,7 @@ app.post("/api/disposal/request", async (req, res) => {
     res.status(500).json({ message: "Erro ao solicitar coleta." });
   }
 });
+
 // ========== HOME DASHBOARD ==========
 // Retorna itens cadastrados, itens para descarte e históricos
 app.get("/api/home", async (req, res) => {
@@ -502,6 +518,54 @@ app.post("/api/items/discard", async (req, res) => {
   } catch (err) {
     console.error("Erro no /api/items/discard:", err);
     res.status(500).json({ message: "Erro ao descartar item." });
+  }
+});
+
+// ======================================================
+// 🔹 NOVA ROTA DE API: HISTÓRICO DE COLETAS
+// ======================================================
+app.get("/api/collection-history", async (req, res) => {
+  try {
+    const organization_id = req.query.organization_id;
+    if (!organization_id) {
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    }
+
+    const [coletas] = await pool.query(
+      `
+      SELECT
+        h.id,
+        h.item_id,
+        i.product_name,
+        i.product_brand,
+        i.product_model,
+        i.photo_url,
+        h.quantity,
+        h.weight_kg,
+        h.created_at AS picked_up_at,
+        org.name AS recycler_name
+      FROM disposal_history h
+      JOIN items i
+        ON i.id = h.item_id
+      LEFT JOIN organizations org
+        ON org.id = h.destination_org_id
+      WHERE
+        h.organization_id = ?
+        AND h.action = 'PICKED_UP'
+      ORDER BY h.created_at DESC
+      `,
+      [organization_id]
+    );
+
+    res.json({
+      success: true,
+      coletas,
+    });
+  } catch (err) {
+    console.error("Erro em /api/collection-history:", err);
+    res.status(500).json({ message: "Erro ao carregar histórico de coletas." });
   }
 });
 
