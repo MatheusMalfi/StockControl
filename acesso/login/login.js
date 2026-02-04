@@ -1,6 +1,45 @@
+const notify = {
+  _base(message, type) {
+    document
+      .querySelectorAll(".notification-loading")
+      .forEach((n) => n.remove());
+
+    const notification = document.createElement("div");
+    notification.classList.add("notification", `notification-${type}`);
+    notification.innerHTML = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.classList.add("show");
+    }, 10);
+
+    if (type !== "loading") {
+      setTimeout(() => {
+        notification.classList.remove("show");
+        setTimeout(() => {
+          notification.remove();
+        }, 500);
+      }, 3000);
+    }
+  },
+
+  success(message) {
+    this._base(message, "success");
+  },
+  error(message) {
+    this._base(message, "error");
+  },
+  critical(message) {
+    this._base(message, "critical");
+  },
+  loading(message) {
+    this._base(message, "loading");
+  },
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("login-form");
-  // const msg = document.getElementById("msg"); // LINHA REMOVIDA/COMENTADA
 
   if (!form) {
     console.error("Formulário #login-form não encontrado.");
@@ -10,8 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // msg.textContent = "";           // LINHA REMOVIDA/COMENTADA
-    // msg.style.color = "#f97316";    // LINHA REMOVIDA/COMENTADA
+    notify.loading("Autenticando...");
 
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
@@ -25,16 +63,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const result = await response.json().catch(() => ({}));
 
-      if (!response.ok || !result.success) {
-        // msg.style.color = "red";    // LINHA REMOVIDA/COMENTADA
-        // msg.textContent = result.mensagem || "Falha no login."; // LINHA REMOVIDA/COMENTADA
+      // Aguarda para garantir que a notificação seja visível
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        // Você pode adicionar aqui um alerta simples para o erro:
-        alert(result.mensagem || "Falha no login.");
+      document
+        .querySelectorAll(".notification-loading")
+        .forEach((n) => n.remove());
+
+      if (!response.ok || !result.success) {
+        notify.error(result.mensagem || "Falha no login.");
         return;
       }
 
-      // Guarda dados básicos do usuário
       const userPayload = {
         email: data.email,
         user_id: result.user_id,
@@ -44,19 +84,24 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       localStorage.setItem("sc_user", JSON.stringify(userPayload));
 
-      // Default: Home ONG
       let redirectUrl = "/navigation-screens/home/home.html";
 
       if (result.org_type === "RECYCLER") {
-        // Redireciona para a Home da Impact Metais
         redirectUrl =
           "/navigation-screens/impact-metais/home-impact-metais/home.html";
       }
+
       setTimeout(() => {
         window.location.href = redirectUrl;
       }, 1200);
     } catch (error) {
       console.error("Erro no login:", error);
+      // Aguarda para garantir que a notificação seja visível
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      document
+        .querySelectorAll(".notification-loading")
+        .forEach((n) => n.remove());
+      notify.error("Erro ao conectar ao servidor.");
     }
   });
 });

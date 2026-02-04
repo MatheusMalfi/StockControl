@@ -133,3 +133,37 @@ body {
     height: auto;
     margin-left: 10px;
 } */
+
+/* Notificações */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 10px;
+  padding: 10px 20px;
+  border-radius: 16px;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.notification-loading {
+  background-color: #3b82f6;
+}
+
+.notification-error {
+  background-color: #e74c3c;
+}
+
+.notification-critical {
+  background-color: #c0392b;
+}
