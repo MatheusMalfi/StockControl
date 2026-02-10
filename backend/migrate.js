@@ -18,9 +18,10 @@ async function migrate() {
   try {
     const sqlFile = path.join(__dirname, '..', 'Db_MySQL.sql');
     const sql = fs.readFileSync(sqlFile, 'utf8');
+    const normalizedSql = sql.replace(/\bCREATE TABLE\s+/gi, 'CREATE TABLE IF NOT EXISTS ');
     
     console.log('📝 Executando SQL...');
-    await connection.query(sql);
+    await connection.query(normalizedSql);
     
     console.log('✅ Banco de dados criado com sucesso!');
   } catch (error) {
