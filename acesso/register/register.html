@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro StockControl</title>
+    <link rel="stylesheet" href="/acesso/register/register.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>Criar conta</h1>
+
+        <form id="form-cadastro">
+          <input
+            type="email"
+            name="email_institucional"
+            placeholder="E-MAIL INSTITUCIONAL"
+            required
+          />
+          <input
+            type="email"
+            name="confirma_email"
+            placeholder="CONFIRME SEU E-MAIL"
+            required
+          />
+          <input type="password" name="senha" placeholder="SENHA" required />
+          <input
+            type="password"
+            name="confirma_senha"
+            placeholder="CONFIRME SUA SENHA"
+            required
+          />
+          <input
+            type="text"
+            name="nome_empresa"
+            placeholder="NOME DA EMPRESA"
+            required
+          />
+          <input type="text" name="cnpj" placeholder="CNPJ" />
+          <input type="text" name="endereco" placeholder="ENDEREÇO" />
+          <input type="tel" name="telefone" placeholder="TELEFONE" />
+          <input type="tel" name="celular" placeholder="CELULAR" />
+
+          <div class="user-type-group">
+            <p class="group-title">TIPO DE USUÁRIO:</p>
+
+            <label class="radio-label">
+              <input type="radio" name="org_type" value="ONG" required />
+              ONG
+            </label>
+
+            <label class="radio-label">
+              <input
+                type="radio"
+                name="org_type"
+                value="RECYCLER"
+                required
+              />
+              Impact Metais
+            </label>
+          </div>
+
+          <div class="buttons">
+            <a class="btn-back" href="/acesso/login/login.html">Voltar</a>
+            <button class="btn-send" type="submit">Cadastrar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="/acesso/register/register.js"></script>
+  </body>
+</html>

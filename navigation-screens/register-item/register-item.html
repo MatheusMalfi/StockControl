@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="/navigation-screens/register-item/register-item.css"
+    />
+
+    <title>Registrar item StockControl</title>
+  </head>
+  <body>
+    <header class="header">
+      <h1>StockControl</h1>
+      <h2>CONTROLE DE ESTOQUE</h2>
+    </header>
+
+    <div class="content-wrapper">
+      <div class="sub-menu">
+        <button
+          class="menu-btn"
+          data-tooltip="Voltar para Home"
+          onclick="window.location.href='/navigation-screens/home/home.html'"
+        >
+          <img
+            src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/house.svg"
+            alt="Home"
+          />
+        </button>
+      </div>
+    </div>
+
+    <main>
+      <div class="card">
+        <h3>Cadastrar Novo Item</h3>
+
+        <form id="formItem">
+          <div class="form-container">
+            <label class="foto">
+              <span id="foto-texto">Adicionar foto</span>
+              <input type="file" accept="image/*" id="fileInput" required />
+              <img id="preview" alt="Pré-visualização" />
+            </label>
+
+            <input
+              type="text"
+              class="input-field"
+              id="produto"
+              placeholder=" Nome do Produto"
+              required
+            />
+            <input
+              type="text"
+              class="input-field"
+              id="marca"
+              placeholder="Marca do produto"
+              required
+            />
+            <input
+              type="text"
+              class="input-field"
+              id="modelo"
+              placeholder="Modelo do produto"
+              required
+            />
+            <textarea
+              id="descricao"
+              placeholder="Descrição do produto"
+            ></textarea>
+          </div>
+
+          <div class="status">
+            <label class="green-btn" for="otimo-radio">
+              <input
+                type="radio"
+                id="otimo-radio"
+                name="status"
+                value="otimo"
+                style="display: none"
+              />
+              <span class="dot green"></span> Ótimo Estado de Uso
+            </label>
+
+            <label class="yellow-btn" for="reparos-radio">
+              <input
+                type="radio"
+                id="reparos-radio"
+                name="status"
+                value="reparos"
+                style="display: none"
+              />
+              <span class="dot yellow"></span> Necessita de Reparos
+            </label>
+
+            <label class="red-btn" for="descartar-radio">
+              <input
+                type="radio"
+                id="descartar-radio"
+                name="status"
+                value="descartar"
+                style="display: none"
+              />
+              <span class="dot red"></span> Necessita ser Descartado
+            </label>
+          </div>
+
+          <div class="btn-click-register">
+            <button type="submit" id="btnRegister" disabled>Cadastrar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- onde aparecem os itens cadastrados -->
+      <div id="registeredItems"></div>
+    </main>
+
+    <div id="notification-area" class="notification"></div>
+
+    <script src="register-item.js" defer></script>
+  </body>
+</html>
