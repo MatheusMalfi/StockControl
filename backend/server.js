@@ -78,7 +78,8 @@ app.get("/healthz", async (req, res) => {
 // {
 //   email_institucional, confirma_email,
 //   senha, confirma_senha,
-//   nome_empresa, cnpj, endereco, telefone, celular
+//   nome_empresa, cnpj, endereco, telefone, celular,
+//   org_type -> "ONG" ou "RECYCLER"
 // }
 
 app.post("/api/cadastro", async (req, res) => {
@@ -93,6 +94,7 @@ app.post("/api/cadastro", async (req, res) => {
       endereco,
       telefone,
       celular,
+      org_type, // 🔥 vem do formulário (ONG ou RECYCLER)
     } = req.body;
 
     if (!email_institucional || !senha || !nome_empresa) {
@@ -133,13 +135,16 @@ app.post("/api/cadastro", async (req, res) => {
       }
     }
 
+    // 🔥 Normaliza org_type para garantir valor válido no ENUM
+    const orgTypeFinal = org_type === "RECYCLER" ? "RECYCLER" : "ONG";
+
     if (!organizationId) {
       const [insOrg] = await pool.execute(
         `INSERT INTO organizations
          (org_type, name, cnpj, email, phone, mobile, address_line1)
-         VALUES ('ONG', ?, ?, ?, ?, ?, ?)`,
-
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
+          orgTypeFinal, // ONG ou RECYCLER
           nome_empresa,
           cnpj || null,
           email_institucional,
@@ -151,7 +156,7 @@ app.post("/api/cadastro", async (req, res) => {
       organizationId = insOrg.insertId;
     }
 
-    // Cria usuário ADMIN da ONG
+    // Cria usuário ADMIN da organização
     const hash = await bcrypt.hash(senha, 10);
     const [insUser] = await pool.execute(
       `INSERT INTO users
@@ -164,6 +169,7 @@ app.post("/api/cadastro", async (req, res) => {
       ok: true,
       user_id: insUser.insertId,
       organization_id: organizationId,
+      org_type: orgTypeFinal,
     });
   } catch (err) {
     console.error("Erro no cadastro:", err);
@@ -186,10 +192,15 @@ app.post("/api/login", async (req, res) => {
         .json({ mensagem: "E-mail e senha são obrigatórios." });
     }
 
+    // 🔥 Agora buscamos o usuário junto com o tipo da organização
     const [rows] = await pool.query(
-      "SELECT * FROM users WHERE email = ? LIMIT 1",
+      `SELECT u.*, o.org_type
+       FROM users u
+       JOIN organizations o ON o.id = u.organization_id
+       WHERE u.email = ? LIMIT 1`,
       [email]
     );
+
     if (!rows.length) {
       return res.status(401).json({ mensagem: "E-mail ou senha incorretos." });
     }
@@ -201,11 +212,13 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ mensagem: "E-mail ou senha incorretos." });
     }
 
+    // 🔥 Agora retornamos também org_type para o front
     res.json({
       success: true,
       mensagem: "Login OK",
       user_id: user.id,
       organization_id: user.organization_id,
+      org_type: user.org_type, // ONG ou RECYCLER
     });
   } catch (err) {
     console.error("Erro no login:", err);
@@ -430,11 +443,11 @@ app.get("/api/home", async (req, res) => {
         i.product_brand,
         i.product_model,
         CASE
-   WHEN h.action = 'MARKED_FOR_DISPOSAL' THEN 'Descarte'
-   WHEN h.action = 'REQUESTED_PICKUP' THEN 'Coleta Solicitada'
-   WHEN h.action = 'PICKED_UP' THEN 'Coletado'
-   ELSE REPLACE(h.action, '_', ' ')       
-   END AS action_label,
+          WHEN h.action = 'MARKED_FOR_DISPOSAL' THEN 'Descarte'
+          WHEN h.action = 'REQUESTED_PICKUP' THEN 'Coleta Solicitada'
+          WHEN h.action = 'PICKED_UP' THEN 'Coletado'
+          ELSE REPLACE(h.action, '_', ' ')
+        END AS action_label,
         h.created_at
       FROM disposal_history h
       JOIN items i ON i.id = h.item_id

@@ -50,7 +50,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     notify.loading("Processando o seu cadastro. Aguarde um momento...");
 
+    // Garante que um org_type foi selecionado (ONG ou RECYCLER)
+    const selectedOrgType = form.querySelector('input[name="org_type"]:checked');
+    if (!selectedOrgType) {
+      document
+        .querySelectorAll(".notification-loading")
+        .forEach((n) => n.remove());
+
+      notify.error("Selecione o tipo de usuário: ONG ou Impact Metais.");
+      return;
+    }
+
+    // Pega todos os campos do formulário, incluindo org_type
     const data = Object.fromEntries(new FormData(form));
+    // data.org_type será "ONG" ou "RECYCLER"
 
     try {
       const res = await fetch("/api/cadastro", {
