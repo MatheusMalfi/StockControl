@@ -2,7 +2,7 @@
   "name": "stockcontrol",
   "version": "1.0.0",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/migrate.js && node backend/server.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
