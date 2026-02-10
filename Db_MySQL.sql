@@ -12,7 +12,7 @@ CREATE TABLE organizations (
   id              BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   org_type        ENUM('ONG','RECYCLER','OTHER') NOT NULL DEFAULT 'ONG',
   name            VARCHAR(150) NOT NULL,
-  cnpj            VARCHAR(18) UNIQUE,                 -- 00.000.000/0000-00
+  cnpj            VARCHAR(18) UNIQUE,
   email           VARCHAR(150),
   phone           VARCHAR(30),
   mobile          VARCHAR(30),
@@ -26,7 +26,7 @@ CREATE TABLE organizations (
   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 3) Users (auth básico, atrelado à organização/ONG)
+-- 3) Users
 CREATE TABLE users (
   id              BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   organization_id BIGINT UNSIGNED NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE users (
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 4) Tabelas de referência (catálogo)
+-- 4) Tabelas de referência
 CREATE TABLE categories (
   id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   name        VARCHAR(80) NOT NULL UNIQUE
@@ -61,7 +61,7 @@ CREATE TABLE models (
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 5) Condições/Status (verde/amarelo/vermelho)
+-- 5) Condições
 CREATE TABLE conditions (
   id        TINYINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   code      ENUM('OTIMO','REPARO','DESCARTAR') NOT NULL UNIQUE,
@@ -72,19 +72,19 @@ CREATE TABLE conditions (
 -- 6) Itens de estoque
 CREATE TABLE items (
   id               BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  organization_id  BIGINT UNSIGNED NOT NULL,            -- quem é dono (ONG)
+  organization_id  BIGINT UNSIGNED NOT NULL,
   category_id      INT UNSIGNED,
   brand_id         INT UNSIGNED,
   model_id         INT UNSIGNED,
-  product_name     VARCHAR(150) NOT NULL,               -- ex.: Notebook, Gabinete
-  product_brand    VARCHAR(120),                        -- captura rápida redundante
+  product_name     VARCHAR(150) NOT NULL,
+  product_brand    VARCHAR(120),
   product_model    VARCHAR(120),
   serial_number    VARCHAR(120),
   description      TEXT,
-  condition_id     TINYINT UNSIGNED NOT NULL,           -- FK conditions
-  weight_kg        DECIMAL(10,3),                       -- opcional, p/ pedidos
-  photo_url        VARCHAR(500),                        -- URL/armazenamento externo
-  is_active        TINYINT(1) NOT NULL DEFAULT 1,       -- soft delete
+  condition_id     TINYINT UNSIGNED NOT NULL,
+  weight_kg        DECIMAL(10,3),
+  photo_url        VARCHAR(500),
+  is_active        TINYINT(1) NOT NULL DEFAULT 1,
   created_by       BIGINT UNSIGNED,
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -100,19 +100,19 @@ CREATE TABLE items (
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 7) Histórico de descarte (ONG e recicladora)
+-- 7) Histórico de descarte
 CREATE TABLE disposal_history (
   id                 BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   item_id            BIGINT UNSIGNED NOT NULL,
-  organization_id    BIGINT UNSIGNED NOT NULL,       -- ONG que descartou
+  organization_id    BIGINT UNSIGNED NOT NULL,
   destination_type   ENUM('INTERNAL','RECYCLER') NOT NULL,
-  destination_org_id BIGINT UNSIGNED,                -- quando destino = recicladora
+  destination_org_id BIGINT UNSIGNED,
   prev_condition_id  TINYINT UNSIGNED,
   new_condition_id   TINYINT UNSIGNED,
   action             ENUM('MARKED_FOR_DISPOSAL','REQUESTED_PICKUP','PICKED_UP','CANCELLED') NOT NULL,
   quantity           INT UNSIGNED NOT NULL DEFAULT 1,
   weight_kg          DECIMAL(10,3),
-  document_number    VARCHAR(100),                   -- protocolo/romaneio/nota
+  document_number    VARCHAR(100),
   notes              TEXT,
   created_by         BIGINT UNSIGNED,
   created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -128,11 +128,11 @@ CREATE TABLE disposal_history (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- 8) Pedidos para recicladoras (ex.: Impacto Metais)
+-- 8) Pedidos para recicladoras
 CREATE TABLE recycler_orders (
   id                 BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-  organization_id    BIGINT UNSIGNED NOT NULL,     -- ONG que solicita
-  recycler_id        BIGINT UNSIGNED NOT NULL,     -- parceira (Impacto Metais)
+  organization_id    BIGINT UNSIGNED NOT NULL,
+  recycler_id        BIGINT UNSIGNED NOT NULL,
   status             ENUM('DRAFT','REQUESTED','SCHEDULED','PICKED_UP','CANCELLED') NOT NULL DEFAULT 'DRAFT',
   scheduled_at       DATETIME,
   picked_up_at       DATETIME,
@@ -150,8 +150,8 @@ CREATE TABLE recycler_orders (
 CREATE TABLE recycler_order_items (
   id                 BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   recycler_order_id  BIGINT UNSIGNED NOT NULL,
-  item_id            BIGINT UNSIGNED,            -- vincula itens específicos (opcional)
-  category_id        INT UNSIGNED,               -- ou agrupa por categoria (opcional)
+  item_id            BIGINT UNSIGNED,
+  category_id        INT UNSIGNED,
   description        VARCHAR(200),
   quantity           INT UNSIGNED NOT NULL DEFAULT 1,
   weight_kg          DECIMAL(10,3),
@@ -180,11 +180,11 @@ LEFT JOIN brands b   ON b.id = i.brand_id
 LEFT JOIN models m   ON m.id = i.model_id
 JOIN conditions c    ON c.id = i.condition_id;
 
--- 10) Seeds iniciais (condições, categorias e Impacto Metais)
+-- 10) Seeds
 INSERT INTO conditions (code, label_pt, color_hex) VALUES
-  ('OTIMO',     'Ótimo Estado de Uso', '#2ECC71'),
-  ('REPARO',    'Necessita de Reparos', '#F1C40F'),
-  ('DESCARTAR', 'Necessita ser Descartado', '#E74C3C')
+  ('OTIMO','Ótimo Estado de Uso','#2ECC71'),
+  ('REPARO','Necessita de Reparos','#F1C40F'),
+  ('DESCARTAR','Necessita ser Descartado','#E74C3C')
 ON DUPLICATE KEY UPDATE label_pt=VALUES(label_pt), color_hex=VALUES(color_hex);
 
 INSERT INTO categories (name) VALUES
@@ -195,14 +195,33 @@ INSERT INTO categories (name) VALUES
   ('Outros')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
--- Parceira: Impacto Metais (edite os dados reais)
 INSERT INTO organizations (org_type, name, cnpj, email, phone, mobile, address_line1, city, state, postal_code, notes)
 VALUES
-  ('RECYCLER', 'Impacto Metais', '00.000.000/0000-00', 'contato@impactometais.com.br', '(11) 0000-0000', '(11) 90000-0000',
-   'Rua Exemplo, 123', 'São Paulo', 'SP', '00000-000', 'Coletora/parceira para descarte de resíduos eletrônicos')
+  ('RECYCLER','Impacto Metais','00.000.000/0000-00','contato@impactometais.com.br','(11) 0000-0000','(11) 90000-0000',
+   'Rua Exemplo, 123','São Paulo','SP','00000-000','Coletora/parceira para descarte de resíduos eletrônicos')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
--- ONG exemplo para testes (opcional)
 INSERT INTO organizations (org_type, name, cnpj, email)
-VALUES ('ONG','Sua ONG', '11.111.111/0001-11', 'contato@suaong.org')
+VALUES ('ONG','Sua ONG','11.111.111/0001-11','contato@suaong.org')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- 11) NOVA VIEW: Histórico de COLETAS (PICKED_UP)
+CREATE OR REPLACE VIEW v_collection_history AS
+SELECT
+  h.id,
+  h.item_id,
+  h.organization_id,
+  h.destination_org_id,
+  i.product_name,
+  i.product_brand,
+  i.product_model,
+  i.photo_url,
+  h.quantity,
+  h.weight_kg,
+  h.created_at AS picked_up_at,
+  org.name AS recycler_name
+FROM disposal_history h
+JOIN items i ON i.id = h.item_id
+LEFT JOIN organizations org ON org.id = h.destination_org_id
+WHERE h.action = 'PICKED_UP'
+ORDER BY h.created_at DESC;

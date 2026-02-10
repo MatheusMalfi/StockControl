@@ -33,6 +33,20 @@ app.get("/register", (req, res) => {
   res.sendFile(path.join(root, "acesso", "register", "register.html"));
 });
 
+// ================================================
+// 🔹 NOVA ROTA DE PÁGINA: HISTÓRICO DE COLETAS
+// ================================================
+app.get("/collection-history", (req, res) => {
+  res.sendFile(
+    path.join(
+      root,
+      "navigation-screens",
+      "collection-history",
+      "collection-history.html",
+    ),
+  );
+});
+
 // ==================== MYSQL POOL ====================
 //
 const pool = mysql.createPool({
@@ -79,6 +93,7 @@ app.post("/api/cadastro", async (req, res) => {
       endereco,
       telefone,
       celular,
+      org_type,
     } = req.body;
 
     if (!email_institucional || !senha || !nome_empresa) {
@@ -100,7 +115,7 @@ app.post("/api/cadastro", async (req, res) => {
     // E-mail já usado?
     const [dup] = await pool.query(
       "SELECT id FROM users WHERE email = ? LIMIT 1",
-      [email_institucional]
+      [email_institucional],
     );
     if (dup.length) {
       return res.status(400).json({ erro: "E-mail já cadastrado." });
@@ -112,7 +127,7 @@ app.post("/api/cadastro", async (req, res) => {
     if (cnpj) {
       const [org] = await pool.query(
         "SELECT id FROM organizations WHERE cnpj = ? LIMIT 1",
-        [cnpj]
+        [cnpj],
       );
       if (org.length) {
         organizationId = org[0].id;
@@ -123,15 +138,17 @@ app.post("/api/cadastro", async (req, res) => {
       const [insOrg] = await pool.execute(
         `INSERT INTO organizations
          (org_type, name, cnpj, email, phone, mobile, address_line1)
-         VALUES ('ONG', ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+
         [
+          org_type || "ONG",
           nome_empresa,
           cnpj || null,
           email_institucional,
           telefone || null,
           celular || null,
           endereco || null,
-        ]
+        ],
       );
       organizationId = insOrg.insertId;
     }
@@ -142,7 +159,7 @@ app.post("/api/cadastro", async (req, res) => {
       `INSERT INTO users
        (organization_id, email, password_hash, name, role, is_active)
        VALUES (?, ?, ?, ?, 'ADMIN', 1)`,
-      [organizationId, email_institucional, hash, nome_empresa]
+      [organizationId, email_institucional, hash, nome_empresa],
     );
 
     res.status(201).json({
@@ -172,8 +189,15 @@ app.post("/api/login", async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      "SELECT * FROM users WHERE email = ? LIMIT 1",
-      [email]
+      `
+    SELECT 
+      u.*, 
+      o.org_type 
+    FROM users u
+    JOIN organizations o ON o.id = u.organization_id
+    WHERE u.email = ? LIMIT 1
+    `,
+      [email],
     );
     if (!rows.length) {
       return res.status(401).json({ mensagem: "E-mail ou senha incorretos." });
@@ -189,6 +213,7 @@ app.post("/api/login", async (req, res) => {
     res.json({
       success: true,
       mensagem: "Login OK",
+      org_type: user.org_type,
       user_id: user.id,
       organization_id: user.organization_id,
     });
@@ -239,7 +264,7 @@ app.post("/api/items", async (req, res) => {
         weight_kg || null,
         photo_url || null,
         created_by || null,
-      ]
+      ],
     );
 
     res.json({ success: true, item_id: result.insertId });
@@ -271,7 +296,7 @@ app.post("/api/items/discard", async (req, res) => {
 
     // Pega o ID da condição DESCARTAR
     const [condRows] = await pool.query(
-      "SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1"
+      "SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1",
     );
     if (!condRows.length) {
       return res
@@ -284,14 +309,14 @@ app.post("/api/items/discard", async (req, res) => {
       // Descobre condição anterior
       const [prevRows] = await pool.query(
         "SELECT condition_id FROM items WHERE id = ? AND organization_id = ? LIMIT 1",
-        [id, organization_id]
+        [id, organization_id],
       );
       const prevConditionId = prevRows.length ? prevRows[0].condition_id : null;
 
       // Atualiza o item para DESCARTAR
       await pool.execute(
         "UPDATE items SET condition_id = ? WHERE id = ? AND organization_id = ?",
-        [newConditionId, id, organization_id]
+        [newConditionId, id, organization_id],
       );
 
       // Registra no histórico
@@ -305,7 +330,7 @@ app.post("/api/items/discard", async (req, res) => {
           prevConditionId,
           newConditionId,
           created_by || null,
-        ]
+        ],
       );
     }
 
@@ -330,7 +355,7 @@ app.post("/api/disposal/request", async (req, res) => {
 
     // pegar recicladora automaticamente
     const [recycler] = await pool.query(
-      `SELECT id FROM organizations WHERE name LIKE '%Impacto Metais%' LIMIT 1`
+      `SELECT id FROM organizations WHERE name LIKE '%Impacto Metais%' LIMIT 1`,
     );
 
     if (!recycler.length) {
@@ -346,7 +371,7 @@ app.post("/api/disposal/request", async (req, res) => {
       `INSERT INTO recycler_orders 
        (organization_id, recycler_id, status, created_by)
        VALUES (?, ?, 'REQUESTED', ?)`,
-      [organization_id, recycler_id, created_by]
+      [organization_id, recycler_id, created_by],
     );
 
     const order_id = pedido.insertId;
@@ -357,7 +382,7 @@ app.post("/api/disposal/request", async (req, res) => {
         `INSERT INTO recycler_order_items 
          (recycler_order_id, item_id, quantity)
          VALUES (?, ?, 1)`,
-        [order_id, it]
+        [order_id, it],
       );
     }
 
@@ -367,6 +392,7 @@ app.post("/api/disposal/request", async (req, res) => {
     res.status(500).json({ message: "Erro ao solicitar coleta." });
   }
 });
+
 // ========== HOME DASHBOARD ==========
 // Retorna itens cadastrados, itens para descarte e históricos
 app.get("/api/home", async (req, res) => {
@@ -396,12 +422,12 @@ app.get("/api/home", async (req, res) => {
       WHERE i.organization_id = ? AND i.is_active = 1
       ORDER BY i.created_at DESC
     `,
-      [organization_id]
+      [organization_id],
     );
 
     // --- ITENS PARA COLETA (DESCARTAR) ---
     const itensDescartar = itens.filter(
-      (i) => i.condition_code === "DESCARTAR"
+      (i) => i.condition_code === "DESCARTAR",
     );
 
     // --- HISTÓRICO DE DESCARTE ---
@@ -426,7 +452,7 @@ app.get("/api/home", async (req, res) => {
       ORDER BY h.created_at DESC
       LIMIT 50
     `,
-      [organization_id]
+      [organization_id],
     );
 
     res.json({
@@ -455,7 +481,7 @@ app.post("/api/items/discard", async (req, res) => {
     // pega condição anterior
     const [rows] = await pool.query(
       `SELECT condition_id FROM items WHERE id = ? AND organization_id = ? LIMIT 1`,
-      [item_id, organization_id]
+      [item_id, organization_id],
     );
     if (!rows.length) {
       return res
@@ -466,7 +492,7 @@ app.post("/api/items/discard", async (req, res) => {
 
     // pega id da condição DESCARTAR
     const [cond] = await pool.query(
-      `SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1`
+      `SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1`,
     );
     if (!cond.length) {
       return res.status(500).json({
@@ -480,7 +506,7 @@ app.post("/api/items/discard", async (req, res) => {
       `UPDATE items
        SET condition_id = ?, updated_at = NOW()
        WHERE id = ? AND organization_id = ?`,
-      [newConditionId, item_id, organization_id]
+      [newConditionId, item_id, organization_id],
     );
 
     // registra histórico na disposal_history
@@ -495,13 +521,61 @@ app.post("/api/items/discard", async (req, res) => {
         prevConditionId,
         newConditionId,
         created_by || null,
-      ]
+      ],
     );
 
     res.json({ success: true });
   } catch (err) {
     console.error("Erro no /api/items/discard:", err);
     res.status(500).json({ message: "Erro ao descartar item." });
+  }
+});
+
+// ======================================================
+// 🔹 NOVA ROTA DE API: HISTÓRICO DE COLETAS
+// ======================================================
+app.get("/api/collection-history", async (req, res) => {
+  try {
+    const organization_id = req.query.organization_id;
+    if (!organization_id) {
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    }
+
+    const [coletas] = await pool.query(
+      `
+      SELECT
+        h.id,
+        h.item_id,
+        i.product_name,
+        i.product_brand,
+        i.product_model,
+        i.photo_url,
+        h.quantity,
+        h.weight_kg,
+        h.created_at AS picked_up_at,
+        org.name AS recycler_name
+      FROM disposal_history h
+      JOIN items i
+        ON i.id = h.item_id
+      LEFT JOIN organizations org
+        ON org.id = h.destination_org_id
+      WHERE
+        h.organization_id = ?
+        AND h.action = 'PICKED_UP'
+      ORDER BY h.created_at DESC
+      `,
+      [organization_id],
+    );
+
+    res.json({
+      success: true,
+      coletas,
+    });
+  } catch (err) {
+    console.error("Erro em /api/collection-history:", err);
+    res.status(500).json({ message: "Erro ao carregar histórico de coletas." });
   }
 });
 
