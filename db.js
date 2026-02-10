@@ -1,6 +1,6 @@
 PORT = 3000;
 DB_HOST = localhost;
-DB_PORT = 3306;
+DB_PORT = 3300;
 DB_USER = root;
 DB_PASSWORD = !StockControl2025;
 DB_NAME = stockcontrol;

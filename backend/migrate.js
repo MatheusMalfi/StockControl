@@ -1,3 +1,4 @@
+/*
 // Script para importar o banco de dados no Railway
 require("dotenv").config();
 const mysql = require("mysql2/promise");
@@ -38,3 +39,4 @@ migrate().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+*/

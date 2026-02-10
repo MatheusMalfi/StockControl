@@ -1,9 +1,4 @@
 {
-  "name": "stockcontrol",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "node backend/migrate.js && node backend/server.js"
-  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
