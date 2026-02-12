@@ -218,7 +218,8 @@ main {
 }
 
 .btn-action button:hover:not(:disabled) {
-  background-color: #5df2d6;
+  background-color: #5df2eb0c;
+  color: #5df2d6;
 }
 
 .btn-action button:disabled {
@@ -410,14 +411,14 @@ main {
 
 .photo-upload-btn {
   width: 100%;
-  background-color: #89ffdb;
+  background-color: #5df2d6;
   border: none;
   border-radius: 8px;
   padding: 10px;
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  color: #010817;
+  color: white;
   display: none;
   transition: all 0.2s ease;
 }
@@ -499,7 +500,6 @@ main {
   justify-content: flex-end;
   gap: 15px;
   padding: 20px 30px;
-  border-top: 1px solid #2a3441;
 }
 
 .btn-cancel,
@@ -514,12 +514,13 @@ main {
 }
 
 .btn-cancel {
-  background-color: #1e2534;
-  color: #89ffdb;
+  background-color: #4de1c3bb;
+  color: white;
 }
 
 .btn-cancel:hover {
-  background-color: #2a3441;
+  background-color: #5df2eb0c;
+  color: #5df2d6;
 }
 
 .btn-save {
