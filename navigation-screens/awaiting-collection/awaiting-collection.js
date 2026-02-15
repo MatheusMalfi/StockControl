@@ -276,31 +276,61 @@ document.addEventListener("DOMContentLoaded", () => {
   // Salvar alterações
   modalForm.addEventListener("submit", (e) => {
     e.preventDefault();
-
     if (!isEditMode) return;
 
-    // Aqui você pode adicionar a lógica para salvar no backend
+    if (!currentItem) {
+      notify.error("Nenhum item selecionado.");
+      return;
+    }
+
+    const item_id = currentItem.dataset.itemId;
+    const organization_id = user.organization_id;
     const updatedData = {
+      item_id,
+      organization_id,
       produto: document.getElementById("modalProduto").value,
       marca: document.getElementById("modalMarca").value,
       modelo: document.getElementById("modalModelo").value,
       descricao: document.getElementById("modalDescricao").value,
       status: document.querySelector('input[name="modalStatus"]:checked')
         ?.value,
+      // photo_url pode ser enviado se for alterado
     };
 
-    console.log("Dados atualizados:", updatedData);
-
-    // Notificação de sucesso
-    notify.success("Alterações salvas com sucesso!");
-
-    // Atualiza o item na lista (opcional)
-    if (currentItem) {
-      currentItem.querySelector("h4").textContent = updatedData.produto;
-      currentItem.querySelector(".item-info p").textContent =
-        `${updatedData.marca} - ${updatedData.modelo}`;
+    // Se a foto foi alterada, pega a base64
+    const modalPhoto = document.getElementById("modalPhoto");
+    if (
+      modalPhoto &&
+      modalPhoto.src &&
+      !modalPhoto.src.includes("placeholder")
+    ) {
+      updatedData.photo_url = modalPhoto.src;
     }
 
-    closeModal();
+    fetch("/api/items/update", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedData),
+    })
+      .then(async (resp) => {
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+          throw new Error(data.message || "Falha ao atualizar item");
+        }
+        // Atualiza o item na lista (opcional)
+        if (currentItem) {
+          currentItem.querySelector("h4").textContent = updatedData.produto;
+          currentItem.querySelector(".item-info p").textContent =
+            `${updatedData.marca} - ${updatedData.modelo}`;
+          if (updatedData.photo_url) {
+            currentItem.querySelector("img").src = updatedData.photo_url;
+          }
+        }
+        notify.success("Alterações salvas com sucesso!");
+        closeModal();
+      })
+      .catch((err) => {
+        notify.error("Erro ao salvar alterações: " + err.message);
+      });
   });
 });

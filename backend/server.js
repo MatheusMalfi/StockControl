@@ -17,8 +17,8 @@ const root = path.join(__dirname, "..");
 console.log("Static root:", root);
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 // Serve todos os arquivos estáticos da pasta StockControl (HTML, CSS, JS, imagens…)
 app.use(express.static(root));
@@ -78,8 +78,7 @@ app.get("/healthz", async (req, res) => {
 // {
 //   email_institucional, confirma_email,
 //   senha, confirma_senha,
-//   nome_empresa, cnpj, endereco, telefone, celular,
-//   org_type -> "ONG" ou "RECYCLER"
+//   nome_empresa, cnpj, endereco, telefone, celular
 // }
 
 app.post("/api/cadastro", async (req, res) => {
@@ -94,7 +93,7 @@ app.post("/api/cadastro", async (req, res) => {
       endereco,
       telefone,
       celular,
-      org_type, // 🔥 vem do formulário (ONG ou RECYCLER)
+      org_type,
     } = req.body;
 
     if (!email_institucional || !senha || !nome_empresa) {
@@ -135,16 +134,14 @@ app.post("/api/cadastro", async (req, res) => {
       }
     }
 
-    // 🔥 Normaliza org_type para garantir valor válido no ENUM
-    const orgTypeFinal = org_type === "RECYCLER" ? "RECYCLER" : "ONG";
-
     if (!organizationId) {
       const [insOrg] = await pool.execute(
         `INSERT INTO organizations
          (org_type, name, cnpj, email, phone, mobile, address_line1)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+
         [
-          orgTypeFinal, // ONG ou RECYCLER
+          org_type || "ONG",
           nome_empresa,
           cnpj || null,
           email_institucional,
@@ -156,7 +153,7 @@ app.post("/api/cadastro", async (req, res) => {
       organizationId = insOrg.insertId;
     }
 
-    // Cria usuário ADMIN da organização
+    // Cria usuário ADMIN da ONG
     const hash = await bcrypt.hash(senha, 10);
     const [insUser] = await pool.execute(
       `INSERT INTO users
@@ -169,7 +166,6 @@ app.post("/api/cadastro", async (req, res) => {
       ok: true,
       user_id: insUser.insertId,
       organization_id: organizationId,
-      org_type: orgTypeFinal,
     });
   } catch (err) {
     console.error("Erro no cadastro:", err);
@@ -192,15 +188,17 @@ app.post("/api/login", async (req, res) => {
         .json({ mensagem: "E-mail e senha são obrigatórios." });
     }
 
-    // 🔥 Agora buscamos o usuário junto com o tipo da organização
     const [rows] = await pool.query(
-      `SELECT u.*, o.org_type
-       FROM users u
-       JOIN organizations o ON o.id = u.organization_id
-       WHERE u.email = ? LIMIT 1`,
-      [email]
+      `
+    SELECT 
+      u.*, 
+      o.org_type 
+    FROM users u
+    JOIN organizations o ON o.id = u.organization_id
+    WHERE u.email = ? LIMIT 1
+    `,
+      [email],
     );
-
     if (!rows.length) {
       return res.status(401).json({ mensagem: "E-mail ou senha incorretos." });
     }
@@ -212,14 +210,12 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ mensagem: "E-mail ou senha incorretos." });
     }
 
-    // 🔥 Agora retornamos também org_type para o front
     res.json({
       success: true,
       mensagem: "Login OK",
       org_type: user.org_type,
       user_id: user.id,
       organization_id: user.organization_id,
-      org_type: user.org_type, // ONG ou RECYCLER
     });
   } catch (err) {
     console.error("Erro no login:", err);
@@ -444,11 +440,11 @@ app.get("/api/home", async (req, res) => {
         i.product_brand,
         i.product_model,
         CASE
-          WHEN h.action = 'MARKED_FOR_DISPOSAL' THEN 'Descarte'
-          WHEN h.action = 'REQUESTED_PICKUP' THEN 'Coleta Solicitada'
-          WHEN h.action = 'PICKED_UP' THEN 'Coletado'
-          ELSE REPLACE(h.action, '_', ' ')
-        END AS action_label,
+   WHEN h.action = 'MARKED_FOR_DISPOSAL' THEN 'Descarte'
+   WHEN h.action = 'REQUESTED_PICKUP' THEN 'Coleta Solicitada'
+   WHEN h.action = 'PICKED_UP' THEN 'Coletado'
+   ELSE REPLACE(h.action, '_', ' ')       
+   END AS action_label,
         h.created_at
       FROM disposal_history h
       JOIN items i ON i.id = h.item_id
@@ -532,6 +528,72 @@ app.post("/api/items/discard", async (req, res) => {
   } catch (err) {
     console.error("Erro no /api/items/discard:", err);
     res.status(500).json({ message: "Erro ao descartar item." });
+  }
+});
+
+// ========== EDITAR ITEM EM AGUARDANDO COLETA ==========
+app.put("/api/items/update", async (req, res) => {
+  try {
+    const {
+      item_id,
+      organization_id,
+      produto,
+      marca,
+      modelo,
+      descricao,
+      status,
+      photo_url,
+    } = req.body;
+    if (!item_id || !organization_id) {
+      return res
+        .status(400)
+        .json({ message: "item_id e organization_id são obrigatórios." });
+    }
+    // Atualiza os campos permitidos
+    const updates = [];
+    const params = [];
+    if (produto !== undefined) {
+      updates.push("product_name = ?");
+      params.push(produto);
+    }
+    if (marca !== undefined) {
+      updates.push("product_brand = ?");
+      params.push(marca);
+    }
+    if (modelo !== undefined) {
+      updates.push("product_model = ?");
+      params.push(modelo);
+    }
+    if (descricao !== undefined) {
+      updates.push("description = ?");
+      params.push(descricao);
+    }
+    if (status !== undefined) {
+      // Buscar o id da condição pelo code
+      const [cond] = await pool.query(
+        "SELECT id FROM conditions WHERE code = ? LIMIT 1",
+        [status],
+      );
+      if (!cond.length) {
+        return res.status(400).json({ message: "Status inválido." });
+      }
+      updates.push("condition_id = ?");
+      params.push(cond[0].id);
+    }
+    if (photo_url !== undefined) {
+      updates.push("photo_url = ?");
+      params.push(photo_url);
+    }
+    if (!updates.length) {
+      return res.status(400).json({ message: "Nenhum campo para atualizar." });
+    }
+    params.push(item_id, organization_id);
+    const sql = `UPDATE items SET ${updates.join(", ")}, updated_at = NOW() WHERE id = ? AND organization_id = ?`;
+    await pool.execute(sql, params);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erro no /api/items/update:", err);
+    res.status(500).json({ message: "Erro ao atualizar item." });
   }
 });
 
