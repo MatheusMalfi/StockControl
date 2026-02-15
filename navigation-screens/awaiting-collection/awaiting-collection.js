@@ -273,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Salvar alterações
+  // Salvar edições
   modalForm.addEventListener("submit", (e) => {
     e.preventDefault();
     if (!isEditMode) return;
@@ -326,11 +326,11 @@ document.addEventListener("DOMContentLoaded", () => {
             currentItem.querySelector("img").src = updatedData.photo_url;
           }
         }
-        notify.success("Alterações salvas com sucesso!");
+        notify.success("Edições salvas com sucesso!");
         closeModal();
       })
       .catch((err) => {
-        notify.error("Erro ao salvar alterações: " + err.message);
+        notify.error("Erro ao salvar edições: " + err.message);
       });
   });
 });
