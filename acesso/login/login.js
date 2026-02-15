@@ -49,6 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    notify.loading("Autenticando...");
+
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
@@ -60,17 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const result = await response.json().catch(() => ({}));
-
-console.log("LOGIN RESULT:", result);
-alert("org_type: " + result.org_type);
-
-
-      if (!response.ok || !result.success) {
-        alert(result.mensagem || "Falha no login.");
-        return;
-      }
-
-      // 🔥 SALVANDO OS DADOS DO USUÁRIO + ORG_TYPE
 
       // Aguarda para garantir que a notificação seja visível
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -89,30 +80,28 @@ alert("org_type: " + result.org_type);
         user_id: result.user_id,
         org_type: result.org_type,
         organization_id: result.organization_id,
-        org_type: result.org_type, // <-- IMPORTANTE
         logged_at: new Date().toISOString(),
       };
-
       localStorage.setItem("sc_user", JSON.stringify(userPayload));
 
-      // REDIRECIONAMENTO BASEADO NO org_type
-      setTimeout(() => {
-        if (result.org_type === "ONG") {
-          window.location.href = "/navigation-screens/home/home.html";
-        } 
-        else if (result.org_type === "RECYCLER") {
-          window.location.href =
-            "/navigation-screens/impact-metais/home-impact-metais/home.html";
-        } 
-        else {
-          // fallback
-          window.location.href = "/navigation-screens/home/home.html";
-        }
-      }, 800);
+      let redirectUrl = "/navigation-screens/home/home.html";
 
+      if (result.org_type === "RECYCLER") {
+        redirectUrl =
+          "/navigation-screens/impact-metais/home-impact-metais/home.html";
+      }
+
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 1200);
     } catch (error) {
       console.error("Erro no login:", error);
-      alert("Erro ao conectar ao servidor.");
+      // Aguarda para garantir que a notificação seja visível
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      document
+        .querySelectorAll(".notification-loading")
+        .forEach((n) => n.remove());
+      notify.error("Erro ao conectar ao servidor.");
     }
   });
 });
