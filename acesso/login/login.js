@@ -75,6 +75,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      notify.success("Login realizado com sucesso!");
+
       const userPayload = {
         email: data.email,
         user_id: result.user_id,
