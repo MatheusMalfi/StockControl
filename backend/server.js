@@ -94,11 +94,7 @@ app.post("/api/cadastro", async (req, res) => {
       endereco,
       telefone,
       celular,
-<<<<<<< HEAD
       org_type, // 🔥 vem do formulário (ONG ou RECYCLER)
-=======
-      org_type,
->>>>>>> f0f94dbcaa6f075cd799241e243efac845641535
     } = req.body;
 
     if (!email_institucional || !senha || !nome_empresa) {
@@ -147,14 +143,8 @@ app.post("/api/cadastro", async (req, res) => {
         `INSERT INTO organizations
          (org_type, name, cnpj, email, phone, mobile, address_line1)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-<<<<<<< HEAD
         [
           orgTypeFinal, // ONG ou RECYCLER
-=======
-
-        [
-          org_type || "ONG",
->>>>>>> f0f94dbcaa6f075cd799241e243efac845641535
           nome_empresa,
           cnpj || null,
           email_institucional,
@@ -204,23 +194,11 @@ app.post("/api/login", async (req, res) => {
 
     // 🔥 Agora buscamos o usuário junto com o tipo da organização
     const [rows] = await pool.query(
-<<<<<<< HEAD
       `SELECT u.*, o.org_type
        FROM users u
        JOIN organizations o ON o.id = u.organization_id
        WHERE u.email = ? LIMIT 1`,
       [email]
-=======
-      `
-    SELECT 
-      u.*, 
-      o.org_type 
-    FROM users u
-    JOIN organizations o ON o.id = u.organization_id
-    WHERE u.email = ? LIMIT 1
-    `,
-      [email],
->>>>>>> f0f94dbcaa6f075cd799241e243efac845641535
     );
 
     if (!rows.length) {
