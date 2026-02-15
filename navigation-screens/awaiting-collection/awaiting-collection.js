@@ -54,6 +54,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  const rawUser = localStorage.getItem("sc_user");
+  if (!rawUser) {
+    window.location.href = "/acesso/login/login.html";
+    return;
+  }
+
+  const user = JSON.parse(rawUser);
+  const placeholderImage = "https://via.placeholder.com/120x120?text=Item";
+
   // Controla o upload de foto
   photoUploadBtn.addEventListener("click", () => {
     photoInput.click();
@@ -70,8 +79,87 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Adiciona funcionalidade de seleção aos itens existentes
-  inicializarItens();
+  loadItems();
+
+  async function loadItems() {
+    try {
+      container.innerHTML =
+        '<p class="empty-state">Carregando itens aguardando coleta...</p>';
+
+      const resp = await fetch(
+        `/api/home?organization_id=${user.organization_id}`,
+      );
+      const data = await resp.json();
+
+      if (!resp.ok || !data.success) {
+        throw new Error(data.message || "Falha ao carregar itens");
+      }
+
+      renderItems(data.itensDescartar || []);
+    } catch (error) {
+      console.error("Erro ao carregar itens aguardando coleta:", error);
+      container.innerHTML =
+        '<p class="empty-state">Não foi possível carregar os itens agora.</p>';
+      actionButton.disabled = true;
+    }
+  }
+
+  function renderItems(lista) {
+    container.innerHTML = "";
+
+    if (!lista.length) {
+      container.innerHTML =
+        '<p class="empty-state">Nenhum item aguardando coleta.</p>';
+      currentItem = null;
+      updateButtonState();
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    lista.forEach((item) => {
+      const brand = item.brand || "";
+      const model = item.model || "";
+      const brandModel = [brand, model].filter(Boolean).join(" - ");
+
+      const itemDiv = document.createElement("div");
+      itemDiv.classList.add("item");
+      itemDiv.dataset.itemId = item.id || "";
+      itemDiv.dataset.product = item.product_name || "";
+      itemDiv.dataset.brand = brand;
+      itemDiv.dataset.model = model;
+      itemDiv.dataset.description = item.description || "";
+      itemDiv.dataset.photo = item.photo_url || placeholderImage;
+      itemDiv.dataset.statusCode = item.condition_code || "";
+      itemDiv.dataset.statusLabel = item.condition_label || "";
+
+      itemDiv.innerHTML = `
+        <img src="${item.photo_url || placeholderImage}" alt="${
+          item.product_name || "Item"
+        }" />
+        <div class="item-info">
+          <h4>${item.product_name || "Sem nome"}</h4>
+          <p>${brandModel || "Sem marca/modelo"}</p>
+          <div class="status">
+            <span class="dot ${mapStatusColor(item.condition_code)}"></span>
+            ${item.condition_label || ""}
+          </div>
+        </div>
+      `;
+
+      fragment.appendChild(itemDiv);
+    });
+
+    container.appendChild(fragment);
+    inicializarItens();
+  }
+
+  function mapStatusColor(code) {
+    if (code === "OTIMO") return "green";
+    if (code === "REPARO") return "yellow";
+    if (code === "DESCARTAR") return "red";
+    return "";
+  }
 
   function inicializarItens() {
     const items = container.querySelectorAll(".item");
@@ -112,30 +200,24 @@ document.addEventListener("DOMContentLoaded", () => {
   // Função para abrir o modal com os dados do item
   function openModal(item) {
     // Pega os dados do item
-    const itemName = item.querySelector("h4").textContent;
-    const itemDetails = item.querySelector(".item-info p").textContent;
-    const itemStatus = item.querySelector(".status").textContent.trim();
-    const itemImage = item.querySelector("img").src;
-
-    // Separa marca e modelo (formato: "MARCA - MODELO")
-    const [marca, modelo] = itemDetails.split(" - ");
+    const itemName =
+      item.dataset.product || item.querySelector("h4").textContent;
+    const marca = item.dataset.brand || "";
+    const modelo = item.dataset.model || "";
+    const itemImage = item.dataset.photo || item.querySelector("img").src;
+    const itemDescription = item.dataset.description || "";
+    const statusCode = item.dataset.statusCode || "";
 
     // Preenche os campos do modal
     document.getElementById("modalPhoto").src = itemImage;
     document.getElementById("modalProduto").value = itemName;
     document.getElementById("modalMarca").value = marca || "";
     document.getElementById("modalModelo").value = modelo || "";
-    document.getElementById("modalDescricao").value =
-      "Descrição do produto aqui"; // Ajustar conforme API
+    document.getElementById("modalDescricao").value = itemDescription;
 
-    // Define o status correto
-    if (itemStatus.includes("Ótimo")) {
-      document.querySelector('input[value="OTIMO"]').checked = true;
-    } else if (itemStatus.includes("Reparos")) {
-      document.querySelector('input[value="REPARO"]').checked = true;
-    } else if (itemStatus.includes("Descartado")) {
-      document.querySelector('input[value="DESCARTAR"]').checked = true;
-    }
+    document.querySelectorAll('input[name="modalStatus"]').forEach((radio) => {
+      radio.checked = radio.value === statusCode;
+    });
 
     // Reseta o modo de edição
     setEditMode(false);
