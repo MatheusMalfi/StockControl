@@ -11,7 +11,7 @@
 
 * {
   box-sizing: border-box;
-  font-family: "Inter", sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 body {
@@ -57,7 +57,9 @@ input {
   background: #0f172a;
   color: var(--text);
   font-size: 15px;
-  transition: 0.2s border-color, 0.2s background;
+  transition:
+    0.2s border-color,
+    0.2s background;
 }
 
 input:focus {
@@ -122,7 +124,9 @@ input:focus {
   border-color: var(--accent);
   /* Cria o círculo interno preenchido */
   background-color: var(--accent);
-  box-shadow: 0 0 0 3px #0f172a, 0 0 0 4px var(--accent);
+  box-shadow:
+    0 0 0 3px #0f172a,
+    0 0 0 4px var(--accent);
 }
 
 .buttons {
@@ -192,7 +196,9 @@ input:focus {
   z-index: 9999;
   opacity: 0;
   transform: translateY(-100%);
-  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+  transition:
+    opacity 0.4s ease-out,
+    transform 0.4s ease-out;
 }
 
 .notification.show {
