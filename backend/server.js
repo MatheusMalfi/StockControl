@@ -216,6 +216,7 @@ app.post("/api/login", async (req, res) => {
       org_type: user.org_type,
       user_id: user.id,
       organization_id: user.organization_id,
+      role: user.role,
     });
   } catch (err) {
     console.error("Erro no login:", err);

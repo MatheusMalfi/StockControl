@@ -82,13 +82,17 @@ document.addEventListener("DOMContentLoaded", () => {
         user_id: result.user_id,
         org_type: result.org_type,
         organization_id: result.organization_id,
+        role: result.role,
         logged_at: new Date().toISOString(),
       };
       localStorage.setItem("sc_user", JSON.stringify(userPayload));
 
       let redirectUrl = "/navigation-screens/home/home.html";
 
-      if (result.org_type === "RECYCLER") {
+      // ADMIN pode escolher interface, mas por padrão vai para ONG
+      if (result.role === "ADMIN") {
+        redirectUrl = "/dev-dashboard.html";
+      } else if (result.org_type === "RECYCLER") {
         redirectUrl =
           "/navigation-screens/impact-metais/home-impact-metais/home.html";
       }

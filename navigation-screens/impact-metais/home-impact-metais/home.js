@@ -9,10 +9,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const user = JSON.parse(rawUser);
 
-    // Impede que uma ONG acesse a Home da Impact Metais
-    if (user.org_type !== 'RECYCLER') {
-         // Redireciona para a Home da ONG caso a URL seja acessada incorretamente
-         // Você pode alterar isso para uma mensagem de erro se preferir.
+    // ADMIN acessa qualquer interface
+    if (user.org_type !== 'RECYCLER' && user.role !== 'ADMIN') {
+        // Redireciona para a Home da ONG caso a URL seja acessada incorretamente
         return (window.location.href = "/navigation-screens/home/home.html");
     }
 
