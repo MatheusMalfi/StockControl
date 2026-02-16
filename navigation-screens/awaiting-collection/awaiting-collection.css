@@ -558,9 +558,10 @@ main {
 
 .notification-success {
   background-color: #00ff4c;
-  color: #010817;
+  color: white;
 }
 
 .notification-error {
   background-color: #e74c3c;
+  color: white;
 }
