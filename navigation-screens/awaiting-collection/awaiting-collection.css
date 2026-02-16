@@ -557,11 +557,13 @@ main {
 }
 
 .notification-success {
-  background-color: #00ff4c;
+  background-color: #01aa34;
+  font-weight: bold;
   color: white;
 }
 
 .notification-error {
   background-color: #e74c3c;
+  font-weight: bold;
   color: white;
 }
