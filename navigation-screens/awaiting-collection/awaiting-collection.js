@@ -162,25 +162,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function inicializarItens() {
-    const items = container.querySelectorAll(".item");
-
-    items.forEach((item) => {
+    container.querySelectorAll(".item").forEach((item) => {
       item.addEventListener("click", () => {
-        // Remove seleção de todos os outros itens (permite apenas um selecionado)
-        items.forEach((i) => i.classList.remove("selected"));
-
-        // Seleciona o item clicado
+        container
+          .querySelectorAll(".item")
+          .forEach((i) => i.classList.remove("selected"));
         item.classList.add("selected");
-
-        // Armazena o item atual
         currentItem = item;
-
-        // Atualiza o estado do botão
         updateButtonState();
       });
     });
-
-    updateButtonState();
   }
 
   function updateButtonState() {
@@ -274,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Salvar edições
-  modalForm.addEventListener("submit", (e) => {
+  modalForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!isEditMode) return;
 
@@ -285,52 +276,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const item_id = currentItem.dataset.itemId;
     const organization_id = user.organization_id;
-    const updatedData = {
-      item_id,
-      organization_id,
-      produto: document.getElementById("modalProduto").value,
-      marca: document.getElementById("modalMarca").value,
-      modelo: document.getElementById("modalModelo").value,
-      descricao: document.getElementById("modalDescricao").value,
-      status: document.querySelector('input[name="modalStatus"]:checked')
-        ?.value,
-      // photo_url pode ser enviado se for alterado
-    };
+    const produto = document.getElementById("modalProduto").value;
+    const marca = document.getElementById("modalMarca").value;
+    const modelo = document.getElementById("modalModelo").value;
+    const descricao = document.getElementById("modalDescricao").value;
+    const status = document.querySelector(
+      'input[name="modalStatus"]:checked',
+    )?.value;
 
-    // Se a foto foi alterada, pega a base64
-    const modalPhoto = document.getElementById("modalPhoto");
-    if (
-      modalPhoto &&
-      modalPhoto.src &&
-      !modalPhoto.src.includes("placeholder")
-    ) {
-      updatedData.photo_url = modalPhoto.src;
+    // Monta FormData para enviar arquivo e dados
+    const formData = new FormData();
+    formData.append("item_id", item_id);
+    formData.append("organization_id", organization_id);
+    formData.append("produto", produto);
+    formData.append("marca", marca);
+    formData.append("modelo", modelo);
+    formData.append("descricao", descricao);
+    formData.append("status", status);
+
+    // Se uma nova foto foi selecionada, envia o arquivo
+    const file = photoInput.files[0];
+    if (file) {
+      formData.append("photo", file);
     }
 
-    fetch("/api/items/update", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedData),
-    })
-      .then(async (resp) => {
-        const data = await resp.json();
-        if (!resp.ok || !data.success) {
-          throw new Error(data.message || "Falha ao atualizar item");
-        }
-        // Atualiza o item na lista (opcional)
-        if (currentItem) {
-          currentItem.querySelector("h4").textContent = updatedData.produto;
-          currentItem.querySelector(".item-info p").textContent =
-            `${updatedData.marca} - ${updatedData.modelo}`;
-          if (updatedData.photo_url) {
-            currentItem.querySelector("img").src = updatedData.photo_url;
-          }
-        }
-        notify.success("Edições salvas com sucesso!");
-        closeModal();
-      })
-      .catch((err) => {
-        notify.error("Erro ao salvar edições: " + err.message);
+    try {
+      const resp = await fetch("/api/items/update", {
+        method: "PUT",
+        body: formData,
       });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) {
+        throw new Error(data.message || "Falha ao atualizar item");
+      }
+      notify.success("Edições salvas com sucesso!");
+      closeModal();
+      // Atualiza a lista de itens dinamicamente
+      loadItems();
+    } catch (err) {
+      notify.error("Erro ao salvar edições: " + err.message);
+    }
   });
 });
