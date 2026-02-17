@@ -11,23 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configuração do multer para salvar imagens na pasta img-uploads
-const uploadDir = path.join(__dirname, "..", "img-uploads");
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Gera um nome único para o arquivo
-    const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext);
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, base + "-" + unique + ext);
-  },
-});
-const upload = multer({ storage });
-
-// Servir a pasta img-uploads como estática
-app.use("/img-uploads", express.static(uploadDir));
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ==================== STATIC / FRONTEND ====================
 
@@ -82,33 +66,9 @@ const pool = mysql.createPool({
 app.delete("/api/items/:id", async (req, res) => {
   const itemId = req.params.id;
   try {
-    // Busca o caminho da imagem
-    const [rows] = await pool.query(
-      "SELECT photo_url FROM items WHERE id = ? LIMIT 1",
-      [itemId],
-    );
-    if (!rows.length) {
-      return res.status(404).json({ message: "Item não encontrado." });
-    }
-    const photoUrl = rows[0].photo_url;
-
     // Exclui o registro do banco
     await pool.execute("DELETE FROM items WHERE id = ?", [itemId]);
-
-    // Exclui o arquivo da imagem, se existir e for local
-    if (
-      photoUrl &&
-      (photoUrl.startsWith("/img-uploads/"))
-    ) {
-      const filePath = path.join(__dirname, "..", photoUrl.replace(/^\//, ""));
-      fs.unlink(filePath, (err) => {
-        if (err && err.code !== "ENOENT") {
-          console.error("Erro ao deletar imagem:", err);
-        }
-      });
-    }
-
-    res.json({ success: true, message: "Item e imagem excluídos." });
+    res.json({ success: true, message: "Item excluído." });
   } catch (err) {
     console.error("Erro ao excluir item:", err);
     res.status(500).json({ message: "Erro ao excluir item." });
@@ -270,9 +230,11 @@ app.post("/api/login", async (req, res) => {
 // ========== CRIAR ITEM ==========
 app.post("/api/items", upload.single("photo"), async (req, res) => {
   try {
-    let photo_url = null;
+    let photo_blob = null;
     if (req.file) {
-      photo_url = `/img-uploads/${req.file.filename}`;
+      photo_blob = fs.readFileSync(req.file.path);
+      // Remove arquivo temporário
+      fs.unlink(req.file.path, () => {});
     }
 
     const {
@@ -296,8 +258,8 @@ app.post("/api/items", upload.single("photo"), async (req, res) => {
 
     const [result] = await pool.execute(
       `INSERT INTO items 
-      (organization_id, category_id, brand_id, model_id, product_name, product_brand, product_model, serial_number, description, condition_id, weight_kg, photo_url, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (organization_id, category_id, brand_id, model_id, product_name, product_brand, product_model, serial_number, description, condition_id, weight_kg, photo_blob, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         organization_id,
         category_id || null,
@@ -310,12 +272,12 @@ app.post("/api/items", upload.single("photo"), async (req, res) => {
         description || null,
         condition_id,
         weight_kg || null,
-        photo_url,
+        photo_blob,
         created_by || null,
       ],
     );
 
-    res.json({ success: true, item_id: result.insertId, photo_url });
+    res.json({ success: true, item_id: result.insertId });
   } catch (err) {
     console.error("Erro ao criar item:", err);
     res.status(500).json({ message: "Erro ao salvar item." });
@@ -520,29 +482,10 @@ app.put("/api/items/update", upload.single("photo"), async (req, res) => {
         .json({ message: "item_id e organization_id são obrigatórios." });
     }
 
-    let photo_url = undefined;
+    let photo_blob = undefined;
     if (req.file) {
-      const [rows] = await pool.query(
-        "SELECT photo_url FROM items WHERE id = ? AND organization_id = ? LIMIT 1",
-        [item_id, organization_id],
-      );
-      if (
-        rows.length &&
-        rows[0].photo_url &&
-        rows[0].photo_url.startsWith("/img-uploads/")
-      ) {
-        const oldPath = path.join(
-          __dirname,
-          "..",
-          rows[0].photo_url.replace(/^\//, ""),
-        );
-        fs.unlink(oldPath, (err) => {
-          if (err && err.code !== "ENOENT") {
-            console.error("Erro ao deletar imagem antiga:", err);
-          }
-        });
-      }
-      photo_url = `/img-uploads/${req.file.filename}`;
+      photo_blob = fs.readFileSync(req.file.path);
+      fs.unlink(req.file.path, () => {});
     }
 
     const updates = [];
@@ -574,9 +517,9 @@ app.put("/api/items/update", upload.single("photo"), async (req, res) => {
       updates.push("condition_id = ?");
       params.push(cond[0].id);
     }
-    if (photo_url !== undefined) {
-      updates.push("photo_url = ?");
-      params.push(photo_url);
+    if (photo_blob !== undefined) {
+      updates.push("photo_blob = ?");
+      params.push(photo_blob);
     }
     if (!updates.length) {
       return res.status(400).json({ message: "Nenhum campo para atualizar." });
@@ -588,6 +531,24 @@ app.put("/api/items/update", upload.single("photo"), async (req, res) => {
   } catch (err) {
     console.error("Erro no /api/items/update:", err);
     res.status(500).json({ message: "Erro ao atualizar item." });
+  }
+});
+
+// Rota para servir imagem direto do banco
+app.get("/api/items/:id/photo", async (req, res) => {
+  const itemId = req.params.id;
+  try {
+    const [rows] = await pool.query(
+      "SELECT photo_blob FROM items WHERE id = ? LIMIT 1",
+      [itemId],
+    );
+    if (!rows.length || !rows[0].photo_blob) {
+      return res.status(404).send("Imagem não encontrada.");
+    }
+    res.set("Content-Type", "image/jpeg"); // ou "image/png" se for PNG
+    res.send(rows[0].photo_blob);
+  } catch (err) {
+    res.status(500).send("Erro ao buscar imagem.");
   }
 });
 
