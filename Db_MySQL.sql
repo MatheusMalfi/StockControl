@@ -83,11 +83,11 @@ CREATE TABLE items (
   description      TEXT,
   condition_id     TINYINT UNSIGNED NOT NULL,
   weight_kg        DECIMAL(10,3),
-  photo_url        VARCHAR(500),
   is_active        TINYINT(1) NOT NULL DEFAULT 1,
   created_by       BIGINT UNSIGNED,
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  photo_blob       LONGBLOB,
   CONSTRAINT fk_items_org       FOREIGN KEY (organization_id) REFERENCES organizations(id)
     ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT fk_items_category  FOREIGN KEY (category_id)  REFERENCES categories(id)
@@ -172,7 +172,6 @@ SELECT
   COALESCE(i.product_model, m.name) AS model,
   c.label_pt AS condition_label,
   c.code     AS condition_code,
-  i.photo_url,
   i.description,
   i.created_at
 FROM items i
@@ -215,7 +214,6 @@ SELECT
   i.product_name,
   i.product_brand,
   i.product_model,
-  i.photo_url,
   h.quantity,
   h.weight_kg,
   h.created_at AS picked_up_at,
