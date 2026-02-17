@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const label = item.condition_label || "";
       const dotClass = mapConditionToDot(item.condition_code);
-      const foto = item.photo_url || "https://via.placeholder.com/80";
+const foto = item.id ? `/api/items/${item.id}/photo` : "https://via.placeholder.com/80";
 
       card.innerHTML = `
         <img src="${foto}" alt="${item.product_name}" />
