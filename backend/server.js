@@ -1,14 +1,33 @@
-// ==================== IMPORTS ====================
 require("dotenv").config();
-
 const express = require("express");
 const path = require("path");
+const multer = require("multer");
+const fs = require("fs");
 const cors = require("cors");
 const bcrypt = require("bcrypt"); // se der erro no Windows, troque por 'bcryptjs'
 const mysql = require("mysql2/promise");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Configuração do multer para salvar imagens na pasta img-uploads
+const uploadDir = path.join(__dirname, "..", "img-uploads");
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Gera um nome único para o arquivo
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext);
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, base + "-" + unique + ext);
+  },
+});
+const upload = multer({ storage });
+
+// Servir a pasta img-uploads como estática
+app.use("/img-uploads", express.static(uploadDir));
 
 // ==================== STATIC / FRONTEND ====================
 
@@ -59,6 +78,43 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
+// ========== EXCLUIR ITEM E IMAGEM ==========
+app.delete("/api/items/:id", async (req, res) => {
+  const itemId = req.params.id;
+  try {
+    // Busca o caminho da imagem
+    const [rows] = await pool.query(
+      "SELECT photo_url FROM items WHERE id = ? LIMIT 1",
+      [itemId],
+    );
+    if (!rows.length) {
+      return res.status(404).json({ message: "Item não encontrado." });
+    }
+    const photoUrl = rows[0].photo_url;
+
+    // Exclui o registro do banco
+    await pool.execute("DELETE FROM items WHERE id = ?", [itemId]);
+
+    // Exclui o arquivo da imagem, se existir e for local
+    if (
+      photoUrl &&
+      (photoUrl.startsWith("/img-uploads/"))
+    ) {
+      const filePath = path.join(__dirname, "..", photoUrl.replace(/^\//, ""));
+      fs.unlink(filePath, (err) => {
+        if (err && err.code !== "ENOENT") {
+          console.error("Erro ao deletar imagem:", err);
+        }
+      });
+    }
+
+    res.json({ success: true, message: "Item e imagem excluídos." });
+  } catch (err) {
+    console.error("Erro ao excluir item:", err);
+    res.status(500).json({ message: "Erro ao excluir item." });
+  }
+});
+
 // ==================== HEALTHCHECK ====================
 
 app.get("/healthz", async (req, res) => {
@@ -72,15 +128,6 @@ app.get("/healthz", async (req, res) => {
 });
 
 // ==================== CADASTRO ====================
-//
-// Usa as tabelas: organizations, users (do seu script SQL).
-// Espera o body:
-// {
-//   email_institucional, confirma_email,
-//   senha, confirma_senha,
-//   nome_empresa, cnpj, endereco, telefone, celular
-// }
-
 app.post("/api/cadastro", async (req, res) => {
   try {
     const {
@@ -137,8 +184,8 @@ app.post("/api/cadastro", async (req, res) => {
     if (!organizationId) {
       const [insOrg] = await pool.execute(
         `INSERT INTO organizations
-         (org_type, name, cnpj, email, phone, mobile, address_line1)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          (org_type, name, cnpj, email, phone, mobile, address_line1)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
 
         [
           org_type || "ONG",
@@ -157,8 +204,8 @@ app.post("/api/cadastro", async (req, res) => {
     const hash = await bcrypt.hash(senha, 10);
     const [insUser] = await pool.execute(
       `INSERT INTO users
-       (organization_id, email, password_hash, name, role, is_active)
-       VALUES (?, ?, ?, ?, 'ADMIN', 1)`,
+        (organization_id, email, password_hash, name, role, is_active)
+        VALUES (?, ?, ?, ?, 'ADMIN', 1)`,
       [organizationId, email_institucional, hash, nome_empresa],
     );
 
@@ -174,10 +221,6 @@ app.post("/api/cadastro", async (req, res) => {
 });
 
 // ==================== LOGIN ====================
-//
-// Espera body:
-// { email, senha }
-
 app.post("/api/login", async (req, res) => {
   try {
     const { email, senha } = req.body;
@@ -225,8 +268,13 @@ app.post("/api/login", async (req, res) => {
 });
 
 // ========== CRIAR ITEM ==========
-app.post("/api/items", async (req, res) => {
+app.post("/api/items", upload.single("photo"), async (req, res) => {
   try {
+    let photo_url = null;
+    if (req.file) {
+      photo_url = `/img-uploads/${req.file.filename}`;
+    }
+
     const {
       organization_id,
       category_id,
@@ -239,7 +287,6 @@ app.post("/api/items", async (req, res) => {
       description,
       condition_id,
       weight_kg,
-      photo_url,
       created_by,
     } = req.body;
 
@@ -263,25 +310,23 @@ app.post("/api/items", async (req, res) => {
         description || null,
         condition_id,
         weight_kg || null,
-        photo_url || null,
+        photo_url,
         created_by || null,
       ],
     );
 
-    res.json({ success: true, item_id: result.insertId });
+    res.json({ success: true, item_id: result.insertId, photo_url });
   } catch (err) {
     console.error("Erro ao criar item:", err);
     res.status(500).json({ message: "Erro ao salvar item." });
   }
 });
 
-// ========== MARCAR ITEM PARA DESCARTE ==========
 // ========== DESCARTAR ITENS ==========
 app.post("/api/items/discard", async (req, res) => {
   try {
     const { organization_id, created_by, item_ids, item_id } = req.body;
 
-    // Normaliza: aceita item_ids (array) ou item_id (único)
     let idsRaw = [];
     if (Array.isArray(item_ids)) {
       idsRaw = item_ids;
@@ -295,7 +340,6 @@ app.post("/api/items/discard", async (req, res) => {
       return res.status(400).json({ message: "Campos obrigatórios faltando." });
     }
 
-    // Pega o ID da condição DESCARTAR
     const [condRows] = await pool.query(
       "SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1",
     );
@@ -307,24 +351,21 @@ app.post("/api/items/discard", async (req, res) => {
     const newConditionId = condRows[0].id;
 
     for (const id of ids) {
-      // Descobre condição anterior
       const [prevRows] = await pool.query(
         "SELECT condition_id FROM items WHERE id = ? AND organization_id = ? LIMIT 1",
         [id, organization_id],
       );
       const prevConditionId = prevRows.length ? prevRows[0].condition_id : null;
 
-      // Atualiza o item para DESCARTAR
       await pool.execute(
         "UPDATE items SET condition_id = ? WHERE id = ? AND organization_id = ?",
         [newConditionId, id, organization_id],
       );
 
-      // Registra no histórico
       await pool.execute(
         `INSERT INTO disposal_history
-         (item_id, organization_id, destination_type, prev_condition_id, new_condition_id, action, quantity, created_by)
-         VALUES (?, ?, 'INTERNAL', ?, ?, 'MARKED_FOR_DISPOSAL', 1, ?)`,
+          (item_id, organization_id, destination_type, prev_condition_id, new_condition_id, action, quantity, created_by)
+          VALUES (?, ?, 'INTERNAL', ?, ?, 'MARKED_FOR_DISPOSAL', 1, ?)`,
         [
           id,
           organization_id,
@@ -354,7 +395,6 @@ app.post("/api/disposal/request", async (req, res) => {
       return res.status(400).json({ message: "Dados insuficientes." });
     }
 
-    // pegar recicladora automaticamente
     const [recycler] = await pool.query(
       `SELECT id FROM organizations WHERE name LIKE '%Impacto Metais%' LIMIT 1`,
     );
@@ -367,22 +407,20 @@ app.post("/api/disposal/request", async (req, res) => {
 
     const recycler_id = recycler[0].id;
 
-    // cria pedido
     const [pedido] = await pool.execute(
       `INSERT INTO recycler_orders 
-       (organization_id, recycler_id, status, created_by)
-       VALUES (?, ?, 'REQUESTED', ?)`,
+        (organization_id, recycler_id, status, created_by)
+        VALUES (?, ?, 'REQUESTED', ?)`,
       [organization_id, recycler_id, created_by],
     );
 
     const order_id = pedido.insertId;
 
-    // adiciona itens ao pedido
     for (const it of items) {
       await pool.execute(
         `INSERT INTO recycler_order_items 
-         (recycler_order_id, item_id, quantity)
-         VALUES (?, ?, 1)`,
+          (recycler_order_id, item_id, quantity)
+          VALUES (?, ?, 1)`,
         [order_id, it],
       );
     }
@@ -395,7 +433,6 @@ app.post("/api/disposal/request", async (req, res) => {
 });
 
 // ========== HOME DASHBOARD ==========
-// Retorna itens cadastrados, itens para descarte e históricos
 app.get("/api/home", async (req, res) => {
   try {
     const organization_id = req.query.organization_id;
@@ -403,7 +440,6 @@ app.get("/api/home", async (req, res) => {
       return res.status(400).json({ message: "organization_id faltando." });
     }
 
-    // --- ITENS CADASTRADOS ---
     const [itens] = await pool.query(
       `
       SELECT 
@@ -426,12 +462,10 @@ app.get("/api/home", async (req, res) => {
       [organization_id],
     );
 
-    // --- ITENS PARA COLETA (DESCARTAR) ---
     const itensDescartar = itens.filter(
       (i) => i.condition_code === "DESCARTAR",
     );
 
-    // --- HISTÓRICO DE DESCARTE ---
     const [historico] = await pool.query(
       `
       SELECT 
@@ -468,72 +502,8 @@ app.get("/api/home", async (req, res) => {
   }
 });
 
-// ========== DESCARTAR ITEM (marca como DESCARTAR e registra histórico) ==========
-app.post("/api/items/discard", async (req, res) => {
-  try {
-    const { item_id, organization_id, created_by } = req.body;
-
-    if (!item_id || !organization_id) {
-      return res
-        .status(400)
-        .json({ message: "item_id e organization_id são obrigatórios." });
-    }
-
-    // pega condição anterior
-    const [rows] = await pool.query(
-      `SELECT condition_id FROM items WHERE id = ? AND organization_id = ? LIMIT 1`,
-      [item_id, organization_id],
-    );
-    if (!rows.length) {
-      return res
-        .status(404)
-        .json({ message: "Item não encontrado para esta organização." });
-    }
-    const prevConditionId = rows[0].condition_id;
-
-    // pega id da condição DESCARTAR
-    const [cond] = await pool.query(
-      `SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1`,
-    );
-    if (!cond.length) {
-      return res.status(500).json({
-        message: "Condição DESCARTAR não encontrada na tabela conditions.",
-      });
-    }
-    const newConditionId = cond[0].id;
-
-    // atualiza item para condição DESCARTAR
-    await pool.execute(
-      `UPDATE items
-       SET condition_id = ?, updated_at = NOW()
-       WHERE id = ? AND organization_id = ?`,
-      [newConditionId, item_id, organization_id],
-    );
-
-    // registra histórico na disposal_history
-    await pool.execute(
-      `INSERT INTO disposal_history
-         (item_id, organization_id, destination_type, prev_condition_id, new_condition_id, action, quantity, created_by)
-       VALUES
-         (?,       ?,              'INTERNAL',       ?,                 ?,                'MARKED_FOR_DISPOSAL', 1, ?)`,
-      [
-        item_id,
-        organization_id,
-        prevConditionId,
-        newConditionId,
-        created_by || null,
-      ],
-    );
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Erro no /api/items/discard:", err);
-    res.status(500).json({ message: "Erro ao descartar item." });
-  }
-});
-
 // ========== EDITAR ITEM EM AGUARDANDO COLETA ==========
-app.put("/api/items/update", async (req, res) => {
+app.put("/api/items/update", upload.single("photo"), async (req, res) => {
   try {
     const {
       item_id,
@@ -543,14 +513,38 @@ app.put("/api/items/update", async (req, res) => {
       modelo,
       descricao,
       status,
-      photo_url,
     } = req.body;
     if (!item_id || !organization_id) {
       return res
         .status(400)
         .json({ message: "item_id e organization_id são obrigatórios." });
     }
-    // Atualiza os campos permitidos
+
+    let photo_url = undefined;
+    if (req.file) {
+      const [rows] = await pool.query(
+        "SELECT photo_url FROM items WHERE id = ? AND organization_id = ? LIMIT 1",
+        [item_id, organization_id],
+      );
+      if (
+        rows.length &&
+        rows[0].photo_url &&
+        rows[0].photo_url.startsWith("/img-uploads/")
+      ) {
+        const oldPath = path.join(
+          __dirname,
+          "..",
+          rows[0].photo_url.replace(/^\//, ""),
+        );
+        fs.unlink(oldPath, (err) => {
+          if (err && err.code !== "ENOENT") {
+            console.error("Erro ao deletar imagem antiga:", err);
+          }
+        });
+      }
+      photo_url = `/img-uploads/${req.file.filename}`;
+    }
+
     const updates = [];
     const params = [];
     if (produto !== undefined) {
@@ -570,7 +564,6 @@ app.put("/api/items/update", async (req, res) => {
       params.push(descricao);
     }
     if (status !== undefined) {
-      // Buscar o id da condição pelo code
       const [cond] = await pool.query(
         "SELECT id FROM conditions WHERE code = ? LIMIT 1",
         [status],
@@ -598,9 +591,7 @@ app.put("/api/items/update", async (req, res) => {
   }
 });
 
-// ======================================================
-// 🔹 NOVA ROTA DE API: HISTÓRICO DE COLETAS
-// ======================================================
+// ========== HISTÓRICO DE COLETAS ==========
 app.get("/api/collection-history", async (req, res) => {
   try {
     const organization_id = req.query.organization_id;
@@ -647,7 +638,6 @@ app.get("/api/collection-history", async (req, res) => {
 });
 
 // ==================== START SERVER ====================
-
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
