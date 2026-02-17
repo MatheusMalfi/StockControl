@@ -31,13 +31,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Seletores ajustados para usar os IDs definidos no HTML para o scroll
   const listaCadastrados = document.getElementById("registered-items-content");
-  const listaAguardando = document.getElementById("awaiting-collection-content");
+  const listaAguardando = document.getElementById(
+    "awaiting-collection-content",
+  );
   const listaHistorico = document.getElementById("discard-history-content");
 
   carregarDashboard();
 
   async function carregarDashboard() {
-    const resp = await fetch(`/api/home?organization_id=${user.organization_id}`);
+    const resp = await fetch(
+      `/api/home?organization_id=${user.organization_id}`,
+    );
     const data = await resp.json();
 
     if (!resp.ok || !data.success) {
@@ -58,8 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const div = document.createElement("div");
       div.classList.add("item");
 
+      const imgSrc = item.id
+        ? `/api/items/${item.id}/photo`
+        : "https://via.placeholder.com/80";
       div.innerHTML = `
-        <img src="${item.photo_url || "https://via.placeholder.com/80"}" class="item-image" />
+        <img src="${imgSrc}" class="item-image" />
         <div class="info">
           <h3>${item.product_name}</h3>
           <p>${item.brand || ""} - ${item.model || ""}</p>
@@ -81,8 +88,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const div = document.createElement("div");
       div.classList.add("item");
 
+      const imgSrc = item.id
+        ? `/api/items/${item.id}/photo`
+        : "https://via.placeholder.com/80";
       div.innerHTML = `
-        <img src="${item.photo_url || "https://via.placeholder.com/80"}" class="item-image" />
+        <img src="${imgSrc}" class="item-image" />
         <div class="info">
           <h3>${item.product_name}</h3>
           <p>${item.brand || ""} - ${item.model || ""}</p>
@@ -130,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Botão: Histórico de Coletas
   const btnHistoricoColetas = document.querySelector(
-    'button[data-tooltip="Histórico de Coletas"]'
+    'button[data-tooltip="Histórico de Coletas"]',
   );
 
   if (btnHistoricoColetas) {
