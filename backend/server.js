@@ -232,9 +232,7 @@ app.post("/api/items", upload.single("photo"), async (req, res) => {
   try {
     let photo_blob = null;
     if (req.file) {
-      photo_blob = fs.readFileSync(req.file.path);
-      // Remove arquivo temporário
-      fs.unlink(req.file.path, () => {});
+      photo_blob = req.file.buffer;
     }
 
     const {
@@ -258,7 +256,7 @@ app.post("/api/items", upload.single("photo"), async (req, res) => {
 
     const [result] = await pool.execute(
       `INSERT INTO items 
-      (organization_id, category_id, brand_id, model_id, product_name, product_brand, product_model, serial_number, description, condition_id, weight_kg, photo_blob, created_by)
+      (organization_id, category_id, brand_id, model_id, product_name, product_brand, product_model, serial_number, description, condition_id, weight_kg, is_active, photo_blob, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         organization_id,
@@ -272,6 +270,7 @@ app.post("/api/items", upload.single("photo"), async (req, res) => {
         description || null,
         condition_id,
         weight_kg || null,
+        1, // is_active
         photo_blob,
         created_by || null,
       ],
@@ -411,7 +410,6 @@ app.get("/api/home", async (req, res) => {
         COALESCE(i.product_model, m.name) AS model,
         c.label_pt AS condition_label,
         c.code AS condition_code,
-        i.photo_url,
         i.description,
         i.created_at
       FROM items i
@@ -484,8 +482,7 @@ app.put("/api/items/update", upload.single("photo"), async (req, res) => {
 
     let photo_blob = undefined;
     if (req.file) {
-      photo_blob = fs.readFileSync(req.file.path);
-      fs.unlink(req.file.path, () => {});
+      photo_blob = req.file.buffer;
     }
 
     const updates = [];
@@ -570,7 +567,6 @@ app.get("/api/collection-history", async (req, res) => {
         i.product_name,
         i.product_brand,
         i.product_model,
-        i.photo_url,
         h.quantity,
         h.weight_kg,
         h.created_at AS picked_up_at,
