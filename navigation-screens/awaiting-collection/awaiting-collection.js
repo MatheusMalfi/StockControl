@@ -129,14 +129,14 @@ document.addEventListener("DOMContentLoaded", () => {
       itemDiv.dataset.brand = brand;
       itemDiv.dataset.model = model;
       itemDiv.dataset.description = item.description || "";
-      itemDiv.dataset.photo = item.photo_url || placeholderImage;
       itemDiv.dataset.statusCode = item.condition_code || "";
       itemDiv.dataset.statusLabel = item.condition_label || "";
 
+      // Novo src da imagem: /api/items/{id}/photo
+      const imgSrc = item.id ? `/api/items/${item.id}/photo` : placeholderImage;
+
       itemDiv.innerHTML = `
-        <img src="${item.photo_url || placeholderImage}" alt="${
-          item.product_name || "Item"
-        }" />
+        <img src="${imgSrc}" alt="${item.product_name || "Item"}" />
         <div class="item-info">
           <h4>${item.product_name || "Sem nome"}</h4>
           <p>${brandModel || "Sem marca/modelo"}</p>
@@ -195,7 +195,9 @@ document.addEventListener("DOMContentLoaded", () => {
       item.dataset.product || item.querySelector("h4").textContent;
     const marca = item.dataset.brand || "";
     const modelo = item.dataset.model || "";
-    const itemImage = item.dataset.photo || item.querySelector("img").src;
+    const itemImage = item.dataset.itemId
+      ? `/api/items/${item.dataset.itemId}/photo`
+      : placeholderImage;
     const itemDescription = item.dataset.description || "";
     const statusCode = item.dataset.statusCode || "";
 
