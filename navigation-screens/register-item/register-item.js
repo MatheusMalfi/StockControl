@@ -178,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (resp.ok && result.success) {
         showNotification("Item cadastrado com sucesso!", "success");
 
-        // Exibe a imagem cadastrada (usando a URL retornada, se houver)
+        // Exibe a imagem cadastrada usando a nova rota
         let statusHtml = "";
         if (statusSelecionado === "otimo") {
           statusHtml = `<div class="status-text"><span class="dot green"></span> Ótimo Estado de Uso</div>`;
@@ -188,10 +188,10 @@ document.addEventListener("DOMContentLoaded", () => {
           statusHtml = `<div class="status-text"><span class="dot red"></span> Necessita ser Descartado</div>`;
         }
 
-        if (lista) {
+        if (lista && result.item_id) {
           const item = document.createElement("div");
           item.classList.add("item-card");
-          const imgSrc = result.photo_url || preview.src;
+          const imgSrc = `/api/items/${result.item_id}/photo`;
           item.innerHTML = `
   <img src="${imgSrc}" alt="${produto}">
   <div class="item-info">
