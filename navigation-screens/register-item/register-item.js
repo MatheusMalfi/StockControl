@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // const msg = document.getElementById("msg"); // REMOVIDO: vamos usar 'notificationArea'
   const lista = document.getElementById("registeredItems");
   const statusLabels = document.querySelectorAll(
-    ".green-btn, .yellow-btn, .red-btn" // Seleciona todos os labels dos status
+    ".green-btn, .yellow-btn, .red-btn", // Seleciona todos os labels dos status
   );
 
   // 🔔 SELECIONA O ELEMENTO DE NOTIFICAÇÃO
@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fileInput.files.length > 0;
 
     const isStatusChecked = Array.from(statusInputs).some(
-      (input) => input.checked
+      (input) => input.checked,
     );
 
     btnRegister.disabled = !(isTextValid && isStatusChecked);
@@ -141,11 +141,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const marca = marcaInput.value;
     const modelo = modeloInput.value;
     const descricao = document.getElementById("descricao").value;
-    const imagem = preview.src; // data URL (por enquanto, só exibimos na tela)
-
     const statusSelecionado = document.querySelector(
-      "input[name='status']:checked"
-    )?.value; // Usado optional chaining (?) caso status não esteja checado
+      "input[name='status']:checked",
+    )?.value;
 
     if (!statusSelecionado) {
       console.error("Status não selecionado.");
@@ -154,36 +152,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const condition_id = mapStatusToConditionId(statusSelecionado);
 
-    // Monta o payload para o backend
-    const payload = {
-      organization_id: user.organization_id,
-      product_name: produto,
-      product_brand: marca,
-      product_model: modelo,
-      description: descricao,
-      condition_id,
-      // por enquanto não vamos salvar a imagem no banco (photo_url = null)
-      photo_url: null,
-      created_by: user.user_id,
-    };
+    // Monta o FormData para enviar arquivo + dados
+    const formData = new FormData();
+    formData.append("organization_id", user.organization_id);
+    formData.append("product_name", produto);
+    formData.append("product_brand", marca);
+    formData.append("product_model", modelo);
+    formData.append("description", descricao);
+    formData.append("condition_id", condition_id);
+    formData.append("created_by", user.user_id);
+    if (fileInput.files.length > 0) {
+      formData.append("photo", fileInput.files[0]);
+    }
 
-    // 💬 Exibe notificação de Carregamento/Loading (dura até o try/catch terminar)
     showNotification("Cadastrando item...", "loading", 0);
 
     try {
       const resp = await fetch("/api/items", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const result = await resp.json().catch(() => ({}));
 
       if (resp.ok && result.success) {
-        // 🟢 SUCESSO
         showNotification("Item cadastrado com sucesso!", "success");
 
-        // Criação do card para mostrar na tela (visual)
+        // Exibe a imagem cadastrada (usando a URL retornada, se houver)
         let statusHtml = "";
         if (statusSelecionado === "otimo") {
           statusHtml = `<div class="status-text"><span class="dot green"></span> Ótimo Estado de Uso</div>`;
@@ -196,8 +191,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (lista) {
           const item = document.createElement("div");
           item.classList.add("item-card");
+          const imgSrc = result.photo_url || preview.src;
           item.innerHTML = `
-  <img src="${imagem}" alt="${produto}">
+  <img src="${imgSrc}" alt="${produto}">
   <div class="item-info">
    <h4>${produto}</h4>
    <p>${marca} - ${modelo}</p>
@@ -207,29 +203,25 @@ document.addEventListener("DOMContentLoaded", () => {
           lista.appendChild(item);
         }
 
-        // Resetar o formulário
         form.reset();
         statusLabels.forEach((label) => label.classList.remove("active"));
         preview.style.display = "none";
         fotoTexto.style.display = "block";
         checkFormValidity();
       } else {
-        // 🔴 ERRO NO BACKEND (Ex: 400 Bad Request, falha de validação)
         showNotification(
           result.message || "Erro ao cadastrar item. Detalhes: " + resp.status,
-          "error"
+          "error",
         );
       }
     } catch (error) {
       console.error("Erro na conexão:", error);
-      // 🛑 ERRO DE CONEXÃO (Ex: Servidor Offline)
       showNotification(
         "Erro ao conectar ao servidor. Tente novamente.",
-        "critical"
+        "critical",
       );
     }
 
-    // Oculta o loading se ainda estiver ativo (geralmente não será necessário, mas garante)
     if (notificationArea.classList.contains("notification-loading")) {
       notificationArea.classList.remove("show");
     }
