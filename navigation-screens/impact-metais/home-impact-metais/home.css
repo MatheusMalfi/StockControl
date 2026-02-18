@@ -27,7 +27,7 @@ body {
   max-width: 1400px; /* Ajuste para largura máxima da tela */
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 0;
   margin: 0 auto; /* Centraliza horizontalmente */
 }
 
@@ -54,12 +54,10 @@ h2 {
 
 .main-container {
   width: 100%;
-  max-width: 1400px; /* Ok */
+  max-width: 1400px;
   display: flex;
   flex-direction: column;
-  gap: 30px;
-
-  /* ADICIONE ISTO para CENTRALIZAR O CONTAINER INTEIRO */
+  gap: 0px;
   margin: 0 auto;
 }
 
@@ -103,7 +101,9 @@ h2 {
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 .menu-btn:hover::after {
@@ -123,7 +123,8 @@ h2 {
 
 /* Wrapper do Conteúdo (Lista e Histórico) */
 .content-wrapper {
-  padding: 18px;
+  padding: 10px 18px 18px 18px;
+  margin-top: 0;
   display: flex;
   gap: 30px;
   flex-wrap: wrap; /* Para responsividade */
