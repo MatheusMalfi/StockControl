@@ -59,9 +59,8 @@ h4 {
   margin: auto;
 } */
 
-/* ================= JEDA ================= */
-
-.jeda-container {
+/* ================= ONG ================= */
+.ong-container {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,7 +68,7 @@ h4 {
   margin-bottom: 35px;
 }
 
-.logo-jeda {
+.logo-ong {
   width: 85px;
 }
 
