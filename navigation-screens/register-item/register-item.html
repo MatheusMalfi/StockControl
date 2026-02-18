@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
@@ -21,7 +21,7 @@
         <button
           class="menu-btn"
           data-tooltip="Voltar para Home"
-          onclick="window.location.href='/navigation-screens/home/home.html'"
+          onclick="window.location.href = '/navigation-screens/home/home.html'"
         >
           <img
             src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/house.svg"
@@ -42,28 +42,37 @@
               <input type="file" accept="image/*" id="fileInput" required />
               <img id="preview" alt="Pré-visualização" />
             </label>
-
-            <input
-              type="text"
-              class="input-field"
-              id="produto"
-              placeholder=" Nome do Produto"
-              required
-            />
-            <input
-              type="text"
-              class="input-field"
-              id="marca"
-              placeholder="Marca do produto"
-              required
-            />
-            <input
-              type="text"
-              class="input-field"
-              id="modelo"
-              placeholder="Modelo do produto"
-              required
-            />
+            <div class="fields-right">
+              <input
+                type="text"
+                class="input-field"
+                id="produto"
+                placeholder="Nome do Produto"
+                required
+              />
+              <input
+                type="text"
+                class="input-field"
+                id="marca"
+                placeholder="Marca do produto"
+                required
+              />
+              <input
+                type="text"
+                class="input-field"
+                id="modelo"
+                placeholder="Modelo do produto"
+                required
+              />
+              <input
+                type="number"
+                class="input-field"
+                id="quantidade"
+                placeholder="Quantidade"
+                min="1"
+                required
+              />
+            </div>
             <textarea
               id="descricao"
               placeholder="Descrição do produto"

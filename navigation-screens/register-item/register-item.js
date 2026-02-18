@@ -19,8 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const marcaInput = document.getElementById("marca");
   const modeloInput = document.getElementById("modelo");
   const statusInputs = document.querySelectorAll("input[name='status']");
+  const quantidadeInput = document.getElementById("quantidade");
   const btnRegister = document.getElementById("btnRegister");
-  // const msg = document.getElementById("msg"); // REMOVIDO: vamos usar 'notificationArea'
   const lista = document.getElementById("registeredItems");
   const statusLabels = document.querySelectorAll(
     ".green-btn, .yellow-btn, .red-btn", // Seleciona todos os labels dos status
@@ -65,6 +65,8 @@ document.addEventListener("DOMContentLoaded", () => {
       produtoInput.value.trim() !== "" &&
       marcaInput.value.trim() !== "" &&
       modeloInput.value.trim() !== "" &&
+      quantidadeInput.value.trim() !== "" &&
+      Number(quantidadeInput.value) > 0 &&
       fileInput.files.length > 0;
 
     const isStatusChecked = Array.from(statusInputs).some(
@@ -141,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const marca = marcaInput.value;
     const modelo = modeloInput.value;
     const descricao = document.getElementById("descricao").value;
+    const quantidade = quantidadeInput.value;
     const statusSelecionado = document.querySelector(
       "input[name='status']:checked",
     )?.value;
@@ -160,6 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("product_model", modelo);
     formData.append("description", descricao);
     formData.append("condition_id", condition_id);
+    formData.append("quantidade", quantidade);
     formData.append("created_by", user.user_id);
     if (fileInput.files.length > 0) {
       formData.append("photo", fileInput.files[0]);
@@ -208,6 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
         preview.style.display = "none";
         fotoTexto.style.display = "block";
         checkFormValidity();
+        if (quantidadeInput) quantidadeInput.value = "";
       } else {
         showNotification(
           result.message || "Erro ao cadastrar item. Detalhes: " + resp.status,
