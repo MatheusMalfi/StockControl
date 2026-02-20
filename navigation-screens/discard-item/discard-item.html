@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="/navigation-screens/discard-item/discard-item.css"
+    />
+
+    <title>Descartar item StockControl</title>
+  </head>
+  <body>
+    <header class="header">
+      <h1>StockControl</h1>
+      <h2>CONTROLE DE ESTOQUE</h2>
+    </header>
+
+    <div class="content-wrapper">
+      <div class="sub-menu">
+        <button
+          class="menu-btn"
+          data-tooltip="Voltar para Home"
+          onclick="window.location.href='/navigation-screens/home/home.html'"
+        >
+          <img
+            src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/house.svg"
+            alt="Home"
+          />
+        </button>
+      </div>
+    </div>
+
+    <main>
+      <div class="card">
+        <h3>Descartar Item</h3>
+        <p>Selecione o item a ser descartado.</p>
+
+        <!-- AGORA a lista é um container vazio, que o JS preenche com itens reais -->
+        <div class="items" id="itemsContainer"></div>
+
+        <div class="btn-discard">
+          <button disabled>DESCARTAR</button>
+        </div>
+      </div>
+    </main>
+
+    <script src="/navigation-screens/discard-item/discard-item.js" defer></script>
+  </body>
+</html>
