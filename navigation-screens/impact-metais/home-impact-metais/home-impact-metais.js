@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     card.addEventListener("click", () => {
       const entityName = card.querySelector(".entity-name").textContent.trim();
       // Redireciona para a tela de detalhes, passando a ONG na query string
+
+      // Redireciona para a tela de detalhes, passando a ONG na query string
       window.location.href = `/navigation-screens/impact-metais/details-request-impact-metais/details-request.html?ong=${encodeURIComponent(entityName)}`;
     });
   });
