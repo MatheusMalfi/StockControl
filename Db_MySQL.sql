@@ -41,6 +41,23 @@ CREATE TABLE users (
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+-- Usuários DEVs
+INSERT INTO users (
+  organization_id,
+  email,
+  password_hash,
+  name,
+  role,
+  is_active
+) VALUES
+  (16, 'MatheusStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Matheus Malfi', 'ADMIN', 1),
+  (16, 'OtavioStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Otavio piccoli', 'ADMIN', 1),
+  (16, 'GabrielStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Gabriel Barion', 'ADMIN', 1),
+  (16, 'MikyStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Miky David', 'ADMIN', 1),
+  (16, 'YuriStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Yuri Bonfim', 'ADMIN', 1),
+  (16, 'LucasStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Lucas Bulgarelli', 'ADMIN', 1)
+ON DUPLICATE KEY UPDATE name=VALUES(name), role=VALUES(role), is_active=VALUES(is_active);
+
 -- 4) Tabelas de referência
 CREATE TABLE categories (
   id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
