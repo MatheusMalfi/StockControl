@@ -1,10 +1,8 @@
 -- StockControl (E-waste inventory & disposal) - MySQL 8.x
 -- Safe to run in MySQL Workbench. Ajuste engine/charset se precisar.
+-- Usa o banco já existente (igual a DB_NAME no backend/.env). Não cria database.
 
--- 1) Create database
-CREATE DATABASE IF NOT EXISTS stockcontrol
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
+-- 1) Banco de dados existente
 USE stockcontrol;
 
 -- 2) Organizations (ONGs, recicladoras, etc.)
@@ -40,23 +38,6 @@ CREATE TABLE users (
   CONSTRAINT fk_users_org FOREIGN KEY (organization_id) REFERENCES organizations(id)
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
-
--- Usuários DEVs
-INSERT INTO users (
-  organization_id,
-  email,
-  password_hash,
-  name,
-  role,
-  is_active
-) VALUES
-  (16, 'MatheusStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Matheus Malfi', 'ADMIN', 1),
-  (16, 'OtavioStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Otavio piccoli', 'ADMIN', 1),
-  (16, 'GabrielStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Gabriel Barion', 'ADMIN', 1),
-  (16, 'MikyStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Miky David', 'ADMIN', 1),
-  (16, 'YuriStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Yuri Bonfim', 'ADMIN', 1),
-  (16, 'LucasStockControlDev@gmail.com', '$2a$12$wt79m0EPd7r/NYp3RTk8luO9FTqlax1UN1tOONNuY4CfIPV8Y7JPO', 'Lucas Bulgarelli', 'ADMIN', 1)
-ON DUPLICATE KEY UPDATE name=VALUES(name), role=VALUES(role), is_active=VALUES(is_active);
 
 -- 4) Tabelas de referência
 CREATE TABLE categories (
@@ -100,11 +81,11 @@ CREATE TABLE items (
   description      TEXT,
   condition_id     TINYINT UNSIGNED NOT NULL,
   weight_kg        DECIMAL(10,3),
+  photo_url        VARCHAR(500),
   is_active        TINYINT(1) NOT NULL DEFAULT 1,
   created_by       BIGINT UNSIGNED,
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  photo_blob       LONGBLOB,
   CONSTRAINT fk_items_org       FOREIGN KEY (organization_id) REFERENCES organizations(id)
     ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT fk_items_category  FOREIGN KEY (category_id)  REFERENCES categories(id)
@@ -189,6 +170,7 @@ SELECT
   COALESCE(i.product_model, m.name) AS model,
   c.label_pt AS condition_label,
   c.code     AS condition_code,
+  i.photo_url,
   i.description,
   i.created_at
 FROM items i
@@ -211,11 +193,12 @@ INSERT INTO categories (name) VALUES
   ('Outros')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
+-- Impacto Metais: empresa parceira que compra itens de descarte eletrônico retirados da ONG
 INSERT INTO organizations (org_type, name, cnpj, email, phone, mobile, address_line1, city, state, postal_code, notes)
 VALUES
   ('RECYCLER','Impacto Metais','00.000.000/0000-00','contato@impactometais.com.br','(11) 0000-0000','(11) 90000-0000',
-   'Rua Exemplo, 123','São Paulo','SP','00000-000','Coletora/parceira para descarte de resíduos eletrônicos')
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+   'Rua Exemplo, 123','São Paulo','SP','00000-000','Empresa parceira - compra de itens de descarte eletrônico da ONG')
+ON DUPLICATE KEY UPDATE name = VALUES(name), notes = VALUES(notes);
 
 INSERT INTO organizations (org_type, name, cnpj, email)
 VALUES ('ONG','Sua ONG','11.111.111/0001-11','contato@suaong.org')
@@ -231,6 +214,7 @@ SELECT
   i.product_name,
   i.product_brand,
   i.product_model,
+  i.photo_url,
   h.quantity,
   h.weight_kg,
   h.created_at AS picked_up_at,
@@ -240,3 +224,92 @@ JOIN items i ON i.id = h.item_id
 LEFT JOIN organizations org ON org.id = h.destination_org_id
 WHERE h.action = 'PICKED_UP'
 ORDER BY h.created_at DESC;
+
+-- ========== TELA EMPRESA PARCEIRA (Impacto Metais) ==========
+-- 12) Confirmação de recebimento pela parceira (documento, peso recebido, etc.)
+CREATE TABLE partner_receipts (
+  id                    BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  recycler_org_id       BIGINT UNSIGNED NOT NULL COMMENT 'ID da organização parceira (ex: Impacto Metais)',
+  recycler_order_id     BIGINT UNSIGNED,
+  disposal_history_id   BIGINT UNSIGNED,
+  received_at           DATETIME NOT NULL,
+  document_number       VARCHAR(100) COMMENT 'Nº documento de entrada na parceira',
+  total_weight_kg       DECIMAL(12,3),
+  notes                 TEXT,
+  created_by            BIGINT UNSIGNED,
+  created_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pr_recycler   FOREIGN KEY (recycler_org_id) REFERENCES organizations(id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_pr_order      FOREIGN KEY (recycler_order_id) REFERENCES recycler_orders(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_pr_disposal   FOREIGN KEY (disposal_history_id) REFERENCES disposal_history(id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_pr_created_by FOREIGN KEY (created_by) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 13) VIEW: Pedidos recebidos pela parceira (para recycler_id = Impact Metais)
+CREATE OR REPLACE VIEW v_partner_incoming_orders AS
+SELECT
+  ro.id AS order_id,
+  ro.organization_id AS origin_org_id,
+  o_origin.name AS origin_org_name,
+  ro.recycler_id AS partner_org_id,
+  ro.status,
+  ro.scheduled_at,
+  ro.picked_up_at,
+  ro.total_weight_kg,
+  ro.notes AS order_notes,
+  ro.created_at AS order_created_at,
+  (SELECT COUNT(*) FROM recycler_order_items roi WHERE roi.recycler_order_id = ro.id) AS items_count
+FROM recycler_orders ro
+JOIN organizations o_origin ON o_origin.id = ro.organization_id
+WHERE ro.recycler_id IN (SELECT id FROM organizations WHERE org_type = 'RECYCLER')
+ORDER BY ro.created_at DESC;
+
+-- 14) VIEW: Itens recebidos pela parceira (coletas PICKED_UP com destino na recicladora)
+CREATE OR REPLACE VIEW v_partner_received_items AS
+SELECT
+  h.id AS disposal_history_id,
+  h.item_id,
+  h.organization_id AS origin_org_id,
+  o_origin.name AS origin_org_name,
+  h.destination_org_id AS partner_org_id,
+  i.product_name,
+  i.product_brand,
+  i.product_model,
+  cat.name AS category_name,
+  h.quantity,
+  h.weight_kg,
+  h.document_number,
+  h.notes,
+  h.created_at AS picked_up_at
+FROM disposal_history h
+JOIN items i ON i.id = h.item_id
+JOIN organizations o_origin ON o_origin.id = h.organization_id
+LEFT JOIN categories cat ON cat.id = i.category_id
+WHERE h.action = 'PICKED_UP'
+  AND h.destination_org_id IS NOT NULL
+ORDER BY h.created_at DESC;
+
+-- 15) VIEW: Resumo para dashboard da parceira (totais por origem e período)
+CREATE OR REPLACE VIEW v_partner_dashboard AS
+SELECT
+  h.destination_org_id AS partner_org_id,
+  o_origin.id AS origin_org_id,
+  o_origin.name AS origin_org_name,
+  COUNT(DISTINCT h.id) AS collections_count,
+  COALESCE(SUM(h.quantity), 0) AS total_items,
+  COALESCE(SUM(h.weight_kg), 0) AS total_weight_kg,
+  MAX(h.created_at) AS last_pickup_at
+FROM disposal_history h
+JOIN organizations o_origin ON o_origin.id = h.organization_id
+WHERE h.action = 'PICKED_UP' AND h.destination_org_id IS NOT NULL
+GROUP BY h.destination_org_id, o_origin.id, o_origin.name;
+
+-- 16) Usuário de exemplo para Impact Metais (senha: alterar no primeiro acesso)
+-- Senha placeholder: 'ImpactMetais2025!' - substituir por hash bcrypt real após primeiro login
+INSERT INTO users (organization_id, email, password_hash, name, role)
+SELECT o.id, 'admin@impactometais.com.br', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin Impacto Metais', 'ADMIN'
+FROM organizations o WHERE o.org_type = 'RECYCLER' AND o.name = 'Impacto Metais' LIMIT 1
+ON DUPLICATE KEY UPDATE name = VALUES(name);
