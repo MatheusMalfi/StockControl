@@ -503,7 +503,7 @@ main {
 }
 
 .btn-cancel,
-.btn-save {
+.btn-confirmation {
   padding: 12px 30px;
   border: none;
   border-radius: 8px;
@@ -511,25 +511,6 @@ main {
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.btn-cancel {
-  background-color: #4de1c3bb;
-  color: white;
-}
-
-.btn-cancel:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
-}
-
-.btn-save {
-  background-color: #89ffdb;
-  color: #010817;
-}
-
-.btn-save:hover {
-  background-color: #5df2d6;
 }
 
 /* Notificações */

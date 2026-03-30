@@ -256,27 +256,21 @@ textarea {
   background-color: #ff2d2d;
 }
 
-.btn-click-register button {
+.btn-confirmation {
   width: 100%;
   max-width: 200px;
   padding: 12px 10px;
   border: none;
   cursor: pointer;
   border-radius: 40px;
-  background-color: #4de1c3bb;
-  color: white;
   font-weight: 700;
   text-decoration: none;
   text-transform: uppercase;
   transition: all 0.2s ease;
 }
 
-.btn-click-register button:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
-}
-
-.btn-click-register button:disabled {
+.btn-confirmation:disabled,
+.btn-confirmation[disabled]:hover {
   background-color: #4de1c355;
   cursor: not-allowed;
   color: #ffffff99;
