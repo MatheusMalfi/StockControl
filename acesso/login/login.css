@@ -108,16 +108,10 @@ body {
 
 .btn-click-here {
   padding: 10px 20px;
-  background-color: #4de1c3bb;
-  color: white;
   font-weight: normal;
   cursor: pointer;
   border-radius: 40px;
   text-decoration: none;
-}
-.btn-click-here:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
 }
 
 /* Imagem de cadastro (lado direito) */

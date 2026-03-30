@@ -411,21 +411,14 @@ main {
 
 .photo-upload-btn {
   width: 100%;
-  background-color: #5df2d6;
   border: none;
   border-radius: 8px;
   padding: 10px;
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  color: white;
   display: none;
   transition: all 0.2s ease;
-}
-
-.photo-upload-btn:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
 }
 
 .photo-upload-btn.show {
