@@ -1,12 +1,16 @@
 .btn-confirmation,
-.dev-btn {
+.dev-btn,
+.btn-click-here,
+.photo-upload-btn {
   background-color: #4de1c3bb;
   color: white;
 }
 
 .btn-confirmation:hover,
 .dev-btn:hover,
-.dev-btn:focus {
+.dev-btn:focus,
+.btn-click-here:hover,
+.photo-upload-btn:hover {
   background-color: #5df2eb0c;
   color: #5df2d6;
 }
