@@ -152,7 +152,7 @@ h2 {
     255,
     220,
     0.07
-  ); /* Fundo de cada card de entidade */
+  ); /* Fundo de cada card de entidade. */
   padding: 18px 25px;
   margin-bottom: 20px;
   border-radius: var(--border-radius-card);

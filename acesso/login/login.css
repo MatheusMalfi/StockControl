@@ -56,21 +56,14 @@ body {
   border: 1px solid #4de1c3bb;
 }
 
-.btn-acessar {
+.btn-confirmation {
   padding: 12px 30px;
   border: none;
-  background-color: #4de1c3bb;
-  color: white;
   border-radius: 20px;
   font-weight: bold;
   cursor: pointer;
   margin-top: 40px;
   transition: 0.3s;
-}
-
-.btn-acessar:hover {
-  background-color: #5df2eb0c;
-  color: #5df2d6;
 }
 
 .recover-password {
