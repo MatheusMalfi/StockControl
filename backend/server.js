@@ -162,12 +162,19 @@ app.post("/api/cadastro", async (req, res) => {
 
     // Cria usuário ADMIN da ONG
     const hash = await bcrypt.hash(senha, 10);
-    const [insUser] = await pool.execute(
-      `INSERT INTO users
-        (organization_id, email, password_hash, name, role, is_active)
-        VALUES (?, ?, ?, ?, 'ADMIN', 1)`,
-      [organizationId, email_institucional, hash, nome_empresa],
-    );
+    let userRole = "ONG";
+if (org_type === "RECYCLER") {
+  userRole = "RECYCLER";
+} else if (org_type === "ADMIN") {
+  userRole = "ADMIN";
+}
+
+const [insUser] = await pool.execute(
+  `INSERT INTO users
+    (organization_id, email, password_hash, name, role, is_active)
+    VALUES (?, ?, ?, ?, ?, 1)`,
+  [organizationId, email_institucional, hash, nome_empresa, userRole],
+);
 
     res.status(201).json({
       ok: true,
