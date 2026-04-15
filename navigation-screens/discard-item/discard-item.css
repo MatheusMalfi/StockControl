@@ -45,7 +45,6 @@
   border-radius: 20px;
   font-weight: bold;
   cursor: pointer;
-  margin-top: 0;
   transition: 0.3s;
 }
 .modal-confirm-actions .btn-cancel {
