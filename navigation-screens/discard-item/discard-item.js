@@ -1,7 +1,44 @@
-// navigation-screens/discard-item/discard-item.js
-
 document.addEventListener("DOMContentLoaded", () => {
-  // --- Verifica se o usuário está logado ---
+  // Notificações customizadas (padrão do sistema)
+  const notify = {
+    _base(message, type) {
+      document
+        .querySelectorAll(".notification-loading")
+        .forEach((n) => n.remove());
+
+      const notification = document.createElement("div");
+      notification.classList.add("notification", `notification-${type}`);
+      notification.innerHTML = message;
+
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.classList.add("show");
+      }, 10);
+
+      if (type !== "loading") {
+        setTimeout(() => {
+          notification.classList.remove("show");
+          setTimeout(() => {
+            notification.remove();
+          }, 500);
+        }, 3000);
+      }
+    },
+    success(message) {
+      this._base(message, "success");
+    },
+    error(message) {
+      this._base(message, "error");
+    },
+    critical(message) {
+      this._base(message, "critical");
+    },
+    loading(message) {
+      this._base(message, "loading");
+    },
+  };
+  // Verifica se o usuário está logado
   const rawUser = localStorage.getItem("sc_user");
   if (!rawUser) {
     window.location.href = "/acesso/login/login.html";
@@ -17,14 +54,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // Carrega itens do backend assim que a página abre
   carregarItens();
 
   async function carregarItens() {
     container.innerHTML = `<p style="color:#89ffdb;">Carregando itens...</p>`;
 
     try {
-      const resp = await fetch(`/api/home?organization_id=${user.organization_id}`);
+      const resp = await fetch(
+        `/api/home?organization_id=${user.organization_id}`,
+      );
       const data = await resp.json();
 
       if (!resp.ok || !data.success) {
@@ -35,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Pega itens da ONG que ainda NÃO estão com condição DESCARTAR
       const itens = (data.itens || []).filter(
-        (i) => i.condition_code !== "DESCARTAR"
+        (i) => i.condition_code !== "DESCARTAR",
       );
 
       renderizarCards(itens);
@@ -61,7 +99,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const label = item.condition_label || "";
       const dotClass = mapConditionToDot(item.condition_code);
-const foto = item.id ? `/api/items/${item.id}/photo` : "https://via.placeholder.com/80";
+      const foto = item.id
+        ? `/api/items/${item.id}/photo`
+        : "https://via.placeholder.com/80";
 
       card.innerHTML = `
         <img src="${foto}" alt="${item.product_name}" />
@@ -106,31 +146,51 @@ const foto = item.id ? `/api/items/${item.id}/photo` : "https://via.placeholder.
   }
 
   // --- Clique no botão DESCARTAR ---
-  discardButton.addEventListener("click", async () => {
+  let pendingItemIds = [];
+  const modal = document.getElementById("modal-confirm-discard");
+  const btnConfirm = document.getElementById("btn-confirm-discard");
+  const btnCancel = document.getElementById("btn-cancel-discard");
+
+  discardButton.addEventListener("click", () => {
     const selecionados = Array.from(
-      container.querySelectorAll(".item.selected")
+      container.querySelectorAll(".item.selected"),
     );
-
     if (!selecionados.length) return;
-
     const itemIds = selecionados
       .map((el) => el.dataset.id)
       .filter((id) => id !== undefined && id !== null && id !== "")
       .map((id) => Number(id))
       .filter((n) => !Number.isNaN(n));
-
     if (!itemIds.length) {
-      alert("Nenhum item selecionado com ID válido.");
+      notify.error("Nenhum item selecionado com ID válido.");
       return;
     }
+    pendingItemIds = itemIds;
 
-    if (!confirm("Confirmar descarte dos itens selecionados?")) {
+    const msg = document.getElementById("modal-confirm-msg");
+    if (msg) {
+      msg.textContent =
+        itemIds.length === 1
+          ? "Tem certeza que deseja descartar o item selecionado?"
+          : "Tem certeza que deseja descartar os itens selecionados?";
+    }
+    modal.style.display = "flex";
+  });
+
+  btnCancel.addEventListener("click", () => {
+    modal.style.display = "none";
+    pendingItemIds = [];
+  });
+
+  btnConfirm.addEventListener("click", async () => {
+    if (!pendingItemIds.length) {
+      modal.style.display = "none";
       return;
     }
-
     discardButton.disabled = true;
     discardButton.textContent = "Descartando...";
-
+    notify.loading("Descartando itens...");
+    modal.style.display = "none";
     try {
       const resp = await fetch("/api/items/discard", {
         method: "POST",
@@ -138,26 +198,26 @@ const foto = item.id ? `/api/items/${item.id}/photo` : "https://via.placeholder.
         body: JSON.stringify({
           organization_id: user.organization_id,
           created_by: user.user_id,
-          item_ids: itemIds,
+          item_ids: pendingItemIds,
         }),
       });
-
       const result = await resp.json().catch(() => ({}));
-
       if (resp.ok && result.success) {
-        alert("Itens descartados e registrados no histórico com sucesso!");
-        // Recarrega a lista já sem os descartados
+        notify.success(
+          "Itens descartados e registrados no histórico com sucesso!",
+        );
         await carregarItens();
       } else {
         console.error(result);
-        alert(result.message || "Erro ao descartar itens.");
+        notify.error(result.message || "Erro ao descartar itens.");
       }
     } catch (err) {
       console.error("Erro ao descartar itens:", err);
-      alert("Erro ao conectar ao servidor.");
+      notify.critical("Erro ao conectar ao servidor.");
     } finally {
       discardButton.textContent = "DESCARTAR";
       updateDiscardButtonState();
+      pendingItemIds = [];
     }
   });
 });

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
@@ -7,6 +7,7 @@
       rel="stylesheet"
       href="/navigation-screens/discard-item/discard-item.css"
     />
+    <link rel="stylesheet" href="/styles.css" />
 
     <title>Descartar item StockControl</title>
   </head>
@@ -21,7 +22,7 @@
         <button
           class="menu-btn"
           data-tooltip="Voltar para Home"
-          onclick="window.location.href='/navigation-screens/home/home.html'"
+          onclick="window.location.href = '/navigation-screens/home/home.html'"
         >
           <img
             src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/house.svg"
@@ -45,6 +46,27 @@
       </div>
     </main>
 
-    <script src="/navigation-screens/discard-item/discard-item.js" defer></script>
+    <!-- Modal de confirmação customizado -->
+    <div
+      id="modal-confirm-discard"
+      class="modal-confirm-bg"
+      style="display: none"
+    >
+      <div class="modal-confirm-box">
+        <h4>Confirmar Descarte</h4>
+        <p id="modal-confirm-msg">Tem certeza que deseja descartar os itens selecionados?</p>
+        <div class="modal-confirm-actions">
+          <button id="btn-cancel-discard" class="btn-cancel">Cancelar</button>
+          <button id="btn-confirm-discard" class="btn-confirmation">
+            Descartar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="/navigation-screens/discard-item/discard-item.js"
+      defer
+    ></script>
   </body>
 </html>
