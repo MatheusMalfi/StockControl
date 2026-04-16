@@ -71,11 +71,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Pega itens da ONG que ainda NÃO estão com condição DESCARTAR
-      const itens = (data.itens || []).filter(
-        (i) => i.condition_code !== "DESCARTAR",
-      );
-
+      // Usa apenas os itens realmente disponíveis para descarte
+      const itens = data.itensDisponiveisParaDescarte || [];
       renderizarCards(itens);
     } catch (err) {
       console.error("Erro ao buscar itens:", err);
