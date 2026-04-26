@@ -163,18 +163,18 @@ app.post("/api/cadastro", async (req, res) => {
     // Cria usuário ADMIN da ONG
     const hash = await bcrypt.hash(senha, 10);
     let userRole = "ONG";
-if (org_type === "RECYCLER") {
-  userRole = "RECYCLER";
-} else if (org_type === "ADMIN") {
-  userRole = "ADMIN";
-}
+    if (org_type === "RECYCLER") {
+      userRole = "RECYCLER";
+    } else if (org_type === "ADMIN") {
+      userRole = "ADMIN";
+    }
 
-const [insUser] = await pool.execute(
-  `INSERT INTO users
+    const [insUser] = await pool.execute(
+      `INSERT INTO users
     (organization_id, email, password_hash, name, role, is_active)
     VALUES (?, ?, ?, ?, ?, 1)`,
-  [organizationId, email_institucional, hash, nome_empresa, userRole],
-);
+      [organizationId, email_institucional, hash, nome_empresa, userRole],
+    );
 
     res.status(201).json({
       ok: true,
@@ -308,27 +308,12 @@ app.post("/api/items/discard", async (req, res) => {
       return res.status(400).json({ message: "Campos obrigatórios faltando." });
     }
 
-    const [condRows] = await pool.query(
-      "SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1",
-    );
-    if (!condRows.length) {
-      return res
-        .status(500)
-        .json({ message: "Condição DESCARTAR não encontrada." });
-    }
-    const newConditionId = condRows[0].id;
-
     for (const id of ids) {
       const [prevRows] = await pool.query(
         "SELECT condition_id FROM items WHERE id = ? AND organization_id = ? LIMIT 1",
         [id, organization_id],
       );
       const prevConditionId = prevRows.length ? prevRows[0].condition_id : null;
-
-      await pool.execute(
-        "UPDATE items SET condition_id = ? WHERE id = ? AND organization_id = ?",
-        [newConditionId, id, organization_id],
-      );
 
       await pool.execute(
         `INSERT INTO disposal_history
@@ -338,7 +323,7 @@ app.post("/api/items/discard", async (req, res) => {
           id,
           organization_id,
           prevConditionId,
-          newConditionId,
+          prevConditionId, // Mantém o estado original
           created_by || null,
         ],
       );
@@ -346,7 +331,7 @@ app.post("/api/items/discard", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Itens descartados registrados com sucesso.",
+      message: "Itens descartados e registrados com sucesso.",
     });
   } catch (err) {
     console.error("Erro em /api/items/discard:", err);
@@ -408,6 +393,7 @@ app.get("/api/home", async (req, res) => {
       return res.status(400).json({ message: "organization_id faltando." });
     }
 
+    // Todos os itens ativos da organização
     const [itens] = await pool.query(
       `
       SELECT 
@@ -429,8 +415,61 @@ app.get("/api/home", async (req, res) => {
       [organization_id],
     );
 
-    const itensDescartar = itens.filter(
-      (i) => i.condition_code === "DESCARTAR",
+    // Itens aguardando coleta: marcados para descarte e não coletados ainda
+    const [aguardandoColeta] = await pool.query(
+      `
+      SELECT 
+        i.id
+      FROM items i
+      JOIN disposal_history dh ON dh.item_id = i.id AND dh.organization_id = i.organization_id AND dh.action = 'MARKED_FOR_DISPOSAL'
+      WHERE i.organization_id = ?
+        AND i.is_active = 1
+        AND NOT EXISTS (
+          SELECT 1 FROM disposal_history dh2
+          WHERE dh2.item_id = i.id AND dh2.organization_id = i.organization_id AND dh2.action = 'PICKED_UP'
+        )
+      GROUP BY i.id
+      `,
+      [organization_id],
+    );
+
+    // IDs dos itens aguardando coleta
+    const idsAguardando = new Set(aguardandoColeta.map((i) => i.id));
+
+    // Itens disponíveis para descarte: não estão aguardando coleta nem já coletados
+    const itensDisponiveisParaDescarte = itens.filter(
+      (i) => !idsAguardando.has(i.id),
+    );
+
+    // Itens aguardando coleta: marcados para descarte e não coletados ainda
+
+    // Itens aguardando coleta detalhados
+    const [itensAguardandoColeta] = await pool.query(
+      `
+      SELECT 
+        i.id,
+        i.product_name,
+        COALESCE(i.product_brand, b.name) AS brand,
+        COALESCE(i.product_model, m.name) AS model,
+        c.label_pt AS condition_label,
+        c.code AS condition_code,
+        i.description,
+        i.created_at
+      FROM items i
+      LEFT JOIN brands b ON b.id = i.brand_id
+      LEFT JOIN models m ON m.id = i.model_id
+      JOIN conditions c ON c.id = i.condition_id
+      JOIN disposal_history dh ON dh.item_id = i.id AND dh.organization_id = i.organization_id AND dh.action = 'MARKED_FOR_DISPOSAL'
+      WHERE i.organization_id = ?
+        AND i.is_active = 1
+        AND NOT EXISTS (
+          SELECT 1 FROM disposal_history dh2
+          WHERE dh2.item_id = i.id AND dh2.organization_id = i.organization_id AND dh2.action = 'PICKED_UP'
+        )
+      GROUP BY i.id
+      ORDER BY i.created_at DESC
+      `,
+      [organization_id],
     );
 
     const [historico] = await pool.query(
@@ -460,7 +499,8 @@ app.get("/api/home", async (req, res) => {
     res.json({
       success: true,
       itens,
-      itensDescartar,
+      itensDisponiveisParaDescarte,
+      itensDescartar: itensAguardandoColeta,
       historico,
     });
   } catch (err) {
