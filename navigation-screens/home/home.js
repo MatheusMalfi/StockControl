@@ -96,6 +96,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="info">
           <h3>${item.product_name}</h3>
           <p>${item.brand || ""} - ${item.model || ""}</p>
+          <span class="status-tag ${mapTag(item.condition_code)}">
+            ${item.condition_label}
+          </span>
         </div>
       `;
       listaAguardando.appendChild(div);
