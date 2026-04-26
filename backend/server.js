@@ -331,7 +331,7 @@ app.post("/api/items/discard", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Itens descartados registrados com sucesso.",
+      message: "Itens descartados e registrados com sucesso.",
     });
   } catch (err) {
     console.error("Erro em /api/items/discard:", err);
