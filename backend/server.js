@@ -54,7 +54,7 @@ app.get("/collection-history", (req, res) => {
 //
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
-  port: Number(process.env.DB_PORT || 3000),
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "stockcontrol",
@@ -162,10 +162,8 @@ app.post("/api/cadastro", async (req, res) => {
 
     // Cria usuário ADMIN da ONG
     const hash = await bcrypt.hash(senha, 10);
-    let userRole = "ONG";
-    if (org_type === "RECYCLER") {
-      userRole = "RECYCLER";
-    } else if (org_type === "ADMIN") {
+    let userRole = "OPERATOR";
+    if (org_type === "ADMIN") {
       userRole = "ADMIN";
     }
 

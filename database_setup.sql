@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS items (
   estimated_value     DECIMAL(12,2)    DEFAULT NULL,
   currency            CHAR(3)          NOT NULL DEFAULT 'BRL',
   photo_url           VARCHAR(500)     DEFAULT NULL,
+  photo_blob          LONGBLOB         DEFAULT NULL,
   qr_code_token       CHAR(36)         UNIQUE,
   is_active           TINYINT       NOT NULL DEFAULT 1,
   deactivated_at      DATETIME         DEFAULT NULL,
