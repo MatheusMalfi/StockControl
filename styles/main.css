@@ -41,7 +41,15 @@
 
   /* Bordas */
   --color-border:        #E2E8F0;
+  --color-border-light:  #F1F5F9;
   --color-border-focus:  #2563EB;
+
+  /* Aliases para components.css */
+  --color-text-primary:  #1E293B;
+  --color-surface-alt:   #F1F5F9;
+  --font-sans:           'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --space-1-5:           6px;
+  --space-2-5:           10px;
 
   /* Sidebar */
   --sidebar-width:       260px;
@@ -310,7 +318,8 @@ table {
   overflow-x: hidden;
 }
 
-.sidebar-section-label {
+.sidebar-section-label,
+.nav-section-label {
   font-size: var(--font-size-xs);
   font-weight: 600;
   color: rgba(148,163,184,0.6);
@@ -322,11 +331,13 @@ table {
   opacity: 0;
 }
 
-.sidebar.collapsed .sidebar-section-label {
+.sidebar.collapsed .sidebar-section-label,
+.sidebar.collapsed .nav-section-label {
   opacity: 0;
 }
 
-.sidebar:hover .sidebar-section-label {
+.sidebar:hover .sidebar-section-label,
+.sidebar:hover .nav-section-label {
   opacity: 1;
 }
 
@@ -477,14 +488,16 @@ table {
   flex-shrink: 0;
 }
 
-.user-info {
+.user-info,
+.sidebar-user-info {
   overflow: hidden;
   transition: opacity var(--transition-base);
   opacity: 0;
   width: 0;
 }
 
-.user-name {
+.user-name,
+.sidebar-user-name {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: white;
@@ -493,17 +506,20 @@ table {
   text-overflow: ellipsis;
 }
 
-.user-role {
+.user-role,
+.sidebar-user-role {
   font-size: var(--font-size-xs);
   color: var(--sidebar-text);
 }
 
-.sidebar.collapsed .user-info {
+.sidebar.collapsed .user-info,
+.sidebar.collapsed .sidebar-user-info {
   opacity: 0;
   width: 0;
 }
 
-.sidebar:hover .user-info {
+.sidebar:hover .user-info,
+.sidebar:hover .sidebar-user-info {
   opacity: 1;
   width: auto;
 }
@@ -624,7 +640,9 @@ table {
   gap: var(--space-2);
 }
 
-.header-btn {
+.header-btn,
+.header-menu-btn,
+.header-notif-btn {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
@@ -635,16 +653,40 @@ table {
   transition: all var(--transition-fast);
   position: relative;
   cursor: pointer;
+  background: transparent;
+  border: none;
 }
 
-.header-btn:hover {
+.header-btn:hover,
+.header-menu-btn:hover,
+.header-notif-btn:hover {
   background: var(--color-bg-secondary);
   color: var(--color-text);
 }
 
-.header-btn svg {
+.header-btn svg,
+.header-menu-btn svg,
+.header-notif-btn svg {
   width: 18px;
   height: 18px;
+}
+
+/* Botão de usuário no header */
+.header-user-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+}
+
+.header-user-btn:hover {
+  background: var(--color-bg-secondary);
 }
 
 .notif-badge {
