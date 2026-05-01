@@ -1,417 +1,731 @@
 "use strict";
 
 document.addEventListener("sc:ready", function () {
-  // ── State ────────────────────────────────────────────────────────────────
+  // ── Constants ─────────────────────────────────────────────────────────────
+  const KEYS = { ITEMS: "sc_items", MOVEMENTS: "sc_movements", REQUESTS: "sc_requests" };
+
+  // ── State ─────────────────────────────────────────────────────────────────
   const state = {
-    reportType: null,
+    reportType: "estoque",
     page: 1,
-    perPage: 20,
-    total: 0,
-    dateFrom: "",
-    dateTo: "",
-    condition: "",
-    category: "",
-    movType: "",
-    rows: [],
-    kpis: {},
-    chart: [],
-    conditionDist: [],
-    generating: false,
+    perPage: 25,
+    filtered: [],
   };
 
-  // ── DOM refs ─────────────────────────────────────────────────────────────
-  const reportCards    = document.querySelectorAll(".report-type-card");
-  const builderPanel   = document.getElementById("report-builder");
-  const builderTitle   = document.getElementById("builder-title");
-  const btnGenerate    = document.getElementById("btn-generate");
-  const btnExportCsv   = document.getElementById("btn-export-csv");
-  const btnExportPdf   = document.getElementById("btn-export-pdf");
-  const btnPrint       = document.getElementById("btn-print");
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const cards        = document.querySelectorAll(".report-card[data-report]");
+  const builderTitle = document.getElementById("builderTitle");
+  const generateBtn  = document.getElementById("generateBtn");
+  const exportCsvBtn = document.getElementById("exportCsv");
+  const exportPdfBtn = document.getElementById("exportPdf");
+  const printBtn     = document.getElementById("printBtn");
 
-  const filterDateFrom  = document.getElementById("filter-date-from");
-  const filterDateTo    = document.getElementById("filter-date-to");
-  const filterCondition = document.getElementById("filter-condition");
-  const filterCategory  = document.getElementById("filter-category");
-  const filterMovType   = document.getElementById("filter-mov-type");
+  const rptFrom    = document.getElementById("rptFrom");
+  const rptTo      = document.getElementById("rptTo");
+  const rptCond    = document.getElementById("rptCondition");
+  const rptCat     = document.getElementById("rptCategory");
+  const rptMovType = document.getElementById("rptMovType");
 
-  const filterRowDate    = document.getElementById("filter-row-date");
-  const filterRowCond    = document.getElementById("filter-row-cond");
-  const filterRowCat     = document.getElementById("filter-row-cat");
-  const filterRowMovType = document.getElementById("filter-row-mov-type");
+  const condGroup = document.getElementById("rptCondGroup");
+  const catGroup  = document.getElementById("rptCatGroup");
+  const typeGroup = document.getElementById("rptTypeGroup");
 
-  const kpiTotal    = document.getElementById("kpi-total");
-  const kpiGood     = document.getElementById("kpi-good");
-  const kpiRepair   = document.getElementById("kpi-repair");
-  const kpiDiscard  = document.getElementById("kpi-discard");
+  const mainChart   = document.getElementById("mainChart");
+  const chartTitle  = document.getElementById("chartTitle");
+  const chartLegend = document.getElementById("chartLegend");
 
-  const chartContainer = document.getElementById("bar-chart");
-  const chartLegend    = document.getElementById("chart-legend");
-  const condBar        = document.getElementById("condition-bar");
-  const condLabels     = document.getElementById("condition-labels");
+  const condBarSec      = document.getElementById("condBarSection");
+  const condBarOtimo    = document.getElementById("condBarOtimo");
+  const condBarReparo   = document.getElementById("condBarReparo");
+  const condBarDescartar = document.getElementById("condBarDescartar");
+  const condPctOtimo    = document.getElementById("condPctOtimo");
+  const condPctReparo   = document.getElementById("condPctReparo");
+  const condPctDescartar = document.getElementById("condPctDescartar");
 
-  const tableBody      = document.getElementById("report-tbody");
-  const tableHead      = document.getElementById("report-thead");
-  const paginationEl   = document.getElementById("pagination");
-  const emptyState     = document.getElementById("empty-state");
-  const loadingState   = document.getElementById("loading-state");
+  const tHead       = document.getElementById("reportThead");
+  const tBody       = document.getElementById("reportBody");
+  const pagSection  = document.getElementById("reportPagination");
+  const perPageSel  = document.getElementById("rptPerPage");
 
-  // ── Report definitions ────────────────────────────────────────────────────
-  const REPORTS = {
-    inventory: {
-      label: "Inventário Geral",
-      filters: ["date", "condition", "category"],
-      columns: [
-        { key: "name",       label: "Item" },
-        { key: "assetTag",   label: "Patrimônio" },
-        { key: "category",   label: "Categoria" },
-        { key: "condition",  label: "Condição" },
-        { key: "quantity",   label: "Qtd", align: "right" },
-        { key: "location",   label: "Localização" },
-        { key: "updatedAt",  label: "Atualizado" },
-      ],
-      endpoint: "/reports/inventory",
-    },
-    movements: {
-      label: "Movimentações",
-      filters: ["date", "movType"],
-      columns: [
-        { key: "date",       label: "Data/Hora" },
-        { key: "item",       label: "Item" },
-        { key: "type",       label: "Tipo" },
-        { key: "quantity",   label: "Qtd", align: "right" },
-        { key: "destination",label: "Destino" },
-        { key: "user",       label: "Usuário" },
-      ],
-      endpoint: "/reports/movements",
-    },
-    conditions: {
-      label: "Estado dos Itens",
-      filters: ["category"],
-      columns: [
-        { key: "name",      label: "Item" },
-        { key: "category",  label: "Categoria" },
-        { key: "condition", label: "Condição" },
-        { key: "quantity",  label: "Qtd", align: "right" },
-        { key: "location",  label: "Localização" },
-      ],
-      endpoint: "/reports/conditions",
-    },
-    donations: {
-      label: "Doações e Impacto",
-      filters: ["date"],
-      columns: [
-        { key: "date",       label: "Data" },
-        { key: "item",       label: "Item" },
-        { key: "quantity",   label: "Qtd", align: "right" },
-        { key: "destination",label: "Donatário" },
-        { key: "user",       label: "Registrado por" },
-      ],
-      endpoint: "/reports/donations",
-    },
-    discards: {
-      label: "Descartes e Reciclagem",
-      filters: ["date"],
-      columns: [
-        { key: "date",   label: "Data" },
-        { key: "item",   label: "Item" },
-        { key: "reason", label: "Motivo" },
-        { key: "qty",    label: "Qtd", align: "right" },
-        { key: "user",   label: "Registrado por" },
-      ],
-      endpoint: "/reports/discards",
-    },
-    audit: {
-      label: "Log de Auditoria",
-      filters: ["date"],
-      columns: [
-        { key: "date",   label: "Data/Hora" },
-        { key: "user",   label: "Usuário" },
-        { key: "action", label: "Ação" },
-        { key: "target", label: "Objeto" },
-        { key: "ip",     label: "IP" },
-      ],
-      endpoint: "/reports/audit",
-    },
-  };
-
-  // ── Init ─────────────────────────────────────────────────────────────────
-  function init() {
-    wireCards();
-    wireFilters();
-    wireExports();
-    loadCategories();
+  // ── Data helpers ──────────────────────────────────────────────────────────
+  function dbGet(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
+  }
+  function dbSet(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
   }
 
-  async function loadCategories() {
-    try {
-      const data = await SC.api("/categories");
-      const cats = data.items || data || [];
-      if (filterCategory) {
-        filterCategory.innerHTML = '<option value="">Todas as categorias</option>' +
-          cats.map(c => `<option value="${c.id}">${SC.escHtml(c.name)}</option>`).join("");
+  // ── Seed data if missing ──────────────────────────────────────────────────
+  function seedIfNeeded() {
+    const existing = dbGet(KEYS.ITEMS);
+    if (existing.length && existing[0].nome) return;
+
+    const categories = ["Informática", "Mobiliário", "Audiovisual", "Esportivo", "Saúde"];
+    const conditions = ["otimo", "otimo", "bom", "bom", "reparo", "ruim", "inativo"];
+    const locations  = ["Sala A01", "Sala B12", "Almoxarifado", "Lab TI", "Ginásio", "Enfermaria"];
+    const responsaveis = ["João Silva", "Maria Santos", "Pedro Oliveira", "Ana Costa", "Carlos Lima"];
+    const itemNames = {
+      "Informática": ["Notebook Dell", "Monitor 24\"", "Teclado USB", "Mouse Óptico", "Impressora HP", "Projetor HDMI"],
+      "Mobiliário":  ["Mesa Reunião", "Cadeira Escritório", "Armário Aço", "Estante Madeira", "Quadro Branco"],
+      "Audiovisual": ["Câmera Sony", "Tripé Profissional", "Microfone s/Fio", "Caixa de Som JBL", "Mixer Digital"],
+      "Esportivo":   ["Bola Futebol", "Rede Tênis", "Colchonete Yoga", "Bicicleta Ergométrica", "Kit Halteres"],
+      "Saúde":       ["Cadeira de Rodas", "Maca Hospitalar", "Oxímetro", "Termômetro Digital", "Kit Primeiros Socorros"],
+    };
+
+    const now = new Date();
+    const items = [];
+    let idx = 1;
+
+    categories.forEach(cat => {
+      itemNames[cat].forEach((nome, i) => {
+        const cond     = conditions[(idx + i) % conditions.length];
+        const total    = Math.floor(Math.random() * 10) + 1;
+        const daysAgo  = Math.floor(Math.random() * 730) + 30;
+        const acq      = new Date(now); acq.setDate(acq.getDate() - daysAgo);
+        const created  = new Date(now); created.setDate(created.getDate() - Math.floor(daysAgo * 0.8));
+        items.push({
+          id: `item_${String(idx).padStart(3, "0")}`,
+          nome,
+          patrimonio: `PAT-${String(2000 + idx).padStart(5, "0")}`,
+          condicao: cond,
+          categoria: cat,
+          total,
+          disponivel: cond === "inativo" ? 0 : Math.max(0, Math.floor(total * 0.7)),
+          localizacao: locations[idx % locations.length],
+          responsavel: responsaveis[idx % responsaveis.length],
+          valor: (Math.random() * 4900 + 100).toFixed(2),
+          dataAquisicao: acq.toISOString().slice(0, 10),
+          created_at: created.toISOString(),
+        });
+        idx++;
+      });
+    });
+    dbSet(KEYS.ITEMS, items);
+
+    const movExisting = dbGet(KEYS.MOVEMENTS);
+    if (movExisting.length) return;
+
+    const tipos    = ["ENTRADA", "ENTRADA", "SAIDA", "SAIDA", "DOACAO", "DESCARTE", "TRANSFERENCIA"];
+    const destinos = ["ONG Esperança", "Parceiro ABC", "Reciclagem Local", "Setor TI", "Sala A01"];
+    const usuarios = ["admin", "joao.silva", "maria.santos", "pedro.oliveira"];
+    const movs = [];
+
+    items.forEach((item, i) => {
+      const count = Math.floor(Math.random() * 3) + 1;
+      for (let m = 0; m < count; m++) {
+        const tipo    = tipos[(i + m) % tipos.length];
+        const daysAgo = Math.floor(Math.random() * 180);
+        const created = new Date(now); created.setDate(created.getDate() - daysAgo);
+        movs.push({
+          id: `mov_${String(movs.length + 1).padStart(3, "0")}`,
+          item_id: item.id,
+          nome_item: item.nome,
+          patrimonio: item.patrimonio,
+          tipo,
+          quantidade: Math.floor(Math.random() * 3) + 1,
+          destino: tipo !== "ENTRADA" ? destinos[m % destinos.length] : "",
+          observacao: "",
+          created_at: created.toISOString(),
+          usuario: usuarios[(i + m) % usuarios.length],
+        });
       }
-    } catch (_) {}
+    });
+    dbSet(KEYS.MOVEMENTS, movs);
   }
 
-  // ── Report cards ──────────────────────────────────────────────────────────
+  // ── Report config ──────────────────────────────────────────────────────────
+  const REPORT_CFG = {
+    estoque:       { label: "Inventário Geral",        showCond: true,  showCat: true,  showType: false, showCondBar: true,  chartTitle: "Itens por Categoria" },
+    movimentacoes: { label: "Movimentações",           showCond: false, showCat: false, showType: true,  showCondBar: false, chartTitle: "Movimentações por Tipo" },
+    condicao:      { label: "Estado dos Itens",        showCond: false, showCat: true,  showType: false, showCondBar: true,  chartTitle: "Distribuição por Condição" },
+    doacoes:       { label: "Doações e Impacto",       showCond: false, showCat: false, showType: false, showCondBar: false, chartTitle: "Doações por Destinatário" },
+    descarte:      { label: "Descartes e Reciclagem",  showCond: false, showCat: false, showType: false, showCondBar: false, chartTitle: "Descartes por Mês" },
+    auditoria:     { label: "Log de Auditoria",        showCond: false, showCat: false, showType: false, showCondBar: false, chartTitle: "Eventos por Tipo" },
+  };
+
+  const TITLE_ICONS = {
+    estoque:       '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+    movimentacoes: '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+    condicao:      '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+    doacoes:       '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+    descarte:      '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+    auditoria:     '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  };
+
+  // ── Condition helpers ─────────────────────────────────────────────────────
+  const COND_LABEL = { otimo: "Ótimo", bom: "Bom", reparo: "Reparo", ruim: "Ruim", inativo: "Inativo" };
+  const COND_COLOR = { otimo: "var(--color-success)", bom: "#16a34a", reparo: "var(--color-warning)", ruim: "#ca8a04", inativo: "var(--color-danger)" };
+
+  function isGood(c)    { return c === "otimo" || c === "bom"; }
+  function isRepair(c)  { return c === "reparo" || c === "ruim"; }
+  function isDiscard(c) { return c === "inativo"; }
+
+  function matchCondFilter(cond, f) {
+    if (!f) return true;
+    if (f === "OTIMO")     return isGood(cond);
+    if (f === "REPARO")    return isRepair(cond);
+    if (f === "DESCARTAR") return isDiscard(cond);
+    return true;
+  }
+
+  function dateInRange(iso, from, to) {
+    if (!from && !to) return true;
+    const d = iso ? iso.slice(0, 10) : "";
+    if (!d) return true;
+    if (from && d < from) return false;
+    if (to   && d > to)   return false;
+    return true;
+  }
+
+  function condBadge(cond) {
+    const label = COND_LABEL[cond] || cond;
+    const color = COND_COLOR[cond] || "var(--color-text-muted)";
+    return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:0.8125rem;font-weight:500;color:${color};">
+      <span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+      ${SC.escHtml(label)}
+    </span>`;
+  }
+
+  function movTypeBadge(tipo) {
+    const labels = { ENTRADA: "Entrada", SAIDA: "Saída", DOACAO: "Doação", DESCARTE: "Descarte", TRANSFERENCIA: "Transf." };
+    const colors = { ENTRADA: "#16a34a", SAIDA: "#dc2626", DOACAO: "#7c3aed", DESCARTE: "#ea580c", TRANSFERENCIA: "#0284c7" };
+    const label  = labels[tipo] || tipo;
+    const color  = colors[tipo] || "var(--color-text-muted)";
+    return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:0.8125rem;font-weight:500;color:${color};">
+      <span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+      ${SC.escHtml(label)}
+    </span>`;
+  }
+
+  // ── KPI animation ─────────────────────────────────────────────────────────
+  function animCount(el, target, duration) {
+    if (!el) return;
+    const start = performance.now();
+    (function tick(now) {
+      const p      = Math.min((now - start) / duration, 1);
+      const eased  = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased);
+      if (p < 1) requestAnimationFrame(tick);
+    })(start);
+  }
+
+  function animCurrency(el, target, duration) {
+    if (!el) return;
+    const start = performance.now();
+    (function tick(now) {
+      const p      = Math.min((now - start) / duration, 1);
+      const eased  = 1 - Math.pow(1 - p, 3);
+      const val    = target * eased;
+      el.textContent = "R$ " + Math.round(val).toLocaleString("pt-BR");
+      if (p < 1) requestAnimationFrame(tick);
+    })(start);
+  }
+
+  // ── Populate category dropdown ────────────────────────────────────────────
+  function populateCategories() {
+    if (!rptCat) return;
+    const items = dbGet(KEYS.ITEMS);
+    const cats  = [...new Set(items.map(it => it.categoria).filter(Boolean))].sort();
+    rptCat.innerHTML = '<option value="">Todas</option>' +
+      cats.map(c => `<option value="${SC.escHtml(c)}">${SC.escHtml(c)}</option>`).join("");
+  }
+
+  // ── Card wiring ───────────────────────────────────────────────────────────
   function wireCards() {
-    reportCards.forEach(card => {
+    cards.forEach(card => {
       card.addEventListener("click", () => {
-        reportCards.forEach(c => c.classList.remove("active"));
+        cards.forEach(c => c.classList.remove("active"));
         card.classList.add("active");
-        const type = card.dataset.report;
-        selectReport(type);
+        selectReport(card.dataset.report);
+      });
+      card.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); card.click(); }
       });
     });
   }
 
   function selectReport(type) {
-    const def = REPORTS[type];
-    if (!def) return;
+    const cfg = REPORT_CFG[type];
+    if (!cfg) return;
     state.reportType = type;
     state.page = 1;
-    state.rows = [];
+    state.filtered = [];
 
-    if (builderPanel) builderPanel.style.display = "block";
-    if (builderTitle) builderTitle.textContent = def.label;
+    if (builderTitle) {
+      builderTitle.innerHTML =
+        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;color:var(--color-primary);">${TITLE_ICONS[type] || ""}</svg>
+        ${SC.escHtml(cfg.label)}`;
+    }
 
-    // Show/hide filters
-    const has = (f) => def.filters.includes(f);
-    if (filterRowDate)    filterRowDate.style.display    = has("date") ? "flex" : "none";
-    if (filterRowCond)    filterRowCond.style.display    = has("condition") ? "flex" : "none";
-    if (filterRowCat)     filterRowCat.style.display     = has("category") ? "flex" : "none";
-    if (filterRowMovType) filterRowMovType.style.display = has("movType") ? "flex" : "none";
+    if (condGroup)  condGroup.style.display  = cfg.showCond ? "" : "none";
+    if (catGroup)   catGroup.style.display   = cfg.showCat  ? "" : "none";
+    if (typeGroup)  typeGroup.style.display  = cfg.showType ? "" : "none";
+    if (condBarSec) condBarSec.style.display = cfg.showCondBar ? "" : "none";
+    if (chartTitle) chartTitle.textContent   = cfg.chartTitle;
 
-    clearResults();
-    buildTableHead(def.columns);
+    resetTable();
+    generateReport();
   }
 
-  function buildTableHead(columns) {
-    if (!tableHead) return;
-    tableHead.innerHTML = `<tr>${columns.map(c =>
-      `<th ${c.align ? `style="text-align:${c.align}"` : ""}>${SC.escHtml(c.label)}</th>`
-    ).join("")}</tr>`;
-  }
+  // ── Generate dispatcher ───────────────────────────────────────────────────
+  function generateReport() {
+    const from    = rptFrom?.value    || "";
+    const to      = rptTo?.value      || "";
+    const cond    = rptCond?.value    || "";
+    const cat     = rptCat?.value     || "";
+    const movType = rptMovType?.value || "";
 
-  // ── Generate ──────────────────────────────────────────────────────────────
-  function wireFilters() {
-    btnGenerate?.addEventListener("click", () => {
-      state.page = 1;
-      generateReport();
-    });
-
-    [filterDateFrom, filterDateTo, filterCondition, filterCategory, filterMovType].forEach(el => {
-      el?.addEventListener("change", () => {
-        if (state.reportType) {
-          state.dateFrom   = filterDateFrom?.value   || "";
-          state.dateTo     = filterDateTo?.value     || "";
-          state.condition  = filterCondition?.value  || "";
-          state.category   = filterCategory?.value   || "";
-          state.movType    = filterMovType?.value    || "";
-        }
-      });
-    });
-  }
-
-  async function generateReport() {
-    if (!state.reportType || state.generating) return;
-    const def = REPORTS[state.reportType];
-    if (!def) return;
-
-    state.generating = true;
-    state.dateFrom  = filterDateFrom?.value  || "";
-    state.dateTo    = filterDateTo?.value    || "";
-    state.condition = filterCondition?.value || "";
-    state.category  = filterCategory?.value  || "";
-    state.movType   = filterMovType?.value   || "";
-
-    showLoading();
-
-    const qp = new URLSearchParams({ page: state.page, limit: state.perPage });
-    if (state.dateFrom)  qp.set("dateFrom",  state.dateFrom);
-    if (state.dateTo)    qp.set("dateTo",    state.dateTo);
-    if (state.condition) qp.set("condition", state.condition);
-    if (state.category)  qp.set("category",  state.category);
-    if (state.movType)   qp.set("type",      state.movType);
-
-    try {
-      const data = await SC.api(`${def.endpoint}?${qp}`);
-      state.rows  = data.items || data.data || [];
-      state.total = data.total ?? state.rows.length;
-      state.kpis  = data.kpis || {};
-      state.chart = data.chart || [];
-      state.conditionDist = data.conditionDist || [];
-
-      renderKPIs();
-      renderChart();
-      renderConditionBar();
-      renderTableBody(def.columns);
-      renderPagination();
-    } catch (err) {
-      SC.toastError("Erro ao gerar relatório: " + (err.message || ""));
-      clearResults();
-    } finally {
-      state.generating = false;
-      hideLoading();
+    switch (state.reportType) {
+      case "estoque":       genEstoque(from, to, cond, cat); break;
+      case "movimentacoes": genMovimentacoes(from, to, movType); break;
+      case "condicao":      genCondicao(cat); break;
+      case "doacoes":       genDoacoes(from, to); break;
+      case "descarte":      genDescarte(from, to); break;
+      case "auditoria":     genAuditoria(from, to); break;
     }
   }
 
-  // ── KPIs ──────────────────────────────────────────────────────────────────
-  function renderKPIs() {
-    if (kpiTotal)   kpiTotal.textContent   = state.kpis.total   ?? state.total ?? "—";
-    if (kpiGood)    kpiGood.textContent    = state.kpis.good    ?? state.kpis.otimo   ?? "—";
-    if (kpiRepair)  kpiRepair.textContent  = state.kpis.repair  ?? state.kpis.reparo  ?? "—";
-    if (kpiDiscard) kpiDiscard.textContent = state.kpis.discard ?? state.kpis.descartar ?? "—";
+  // ── Report: Inventário Geral ──────────────────────────────────────────────
+  function genEstoque(from, to, condFilter, catFilter) {
+    const items = dbGet(KEYS.ITEMS).filter(it =>
+      dateInRange(it.dataAquisicao, from, to) &&
+      matchCondFilter(it.condicao, condFilter) &&
+      (!catFilter || it.categoria === catFilter)
+    );
+
+    const good    = items.filter(it => isGood(it.condicao)).length;
+    const repair  = items.filter(it => isRepair(it.condicao)).length;
+    const discard = items.filter(it => isDiscard(it.condicao)).length;
+
+    setKpi(1, items.length, "Total de Itens",   "itens cadastrados");
+    setKpi(2, good,         "Em bom estado",    "condição ótima/boa",   "var(--color-success-dark)");
+    setKpi(3, repair,       "Para reparo",      "precisam de atenção",  "var(--color-warning-dark)");
+    setKpi(4, discard,      "Para descarte",    "aguardando descarte",  "var(--color-danger-dark)");
+
+    const catCounts = {};
+    items.forEach(it => { const k = it.categoria || "Sem categoria"; catCounts[k] = (catCounts[k] || 0) + 1; });
+    renderBarChart(
+      Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value })),
+      "var(--color-primary)"
+    );
+    renderCondBar(good, repair, discard);
+
+    const cols = [
+      { key: "nome",          label: "Item" },
+      { key: "patrimonio",    label: "Patrimônio" },
+      { key: "categoria",     label: "Categoria" },
+      { key: "condicao",      label: "Condição",   badge: "cond" },
+      { key: "total",         label: "Total",      align: "right" },
+      { key: "disponivel",    label: "Disponível", align: "right" },
+      { key: "localizacao",   label: "Localização" },
+      { key: "dataAquisicao", label: "Aquisição" },
+    ];
+    setTableHead(cols);
+    state.filtered = items;
+    renderTablePage(cols, (row, col) => {
+      if (col.badge === "cond")          return condBadge(row.condicao);
+      if (col.key === "dataAquisicao")   return SC.escHtml(SC.fmtDate(row.dataAquisicao));
+      return SC.escHtml(String(row[col.key] ?? "—"));
+    });
   }
 
-  // ── Bar chart ─────────────────────────────────────────────────────────────
-  function renderChart() {
-    if (!chartContainer || !state.chart.length) return;
-    const max = Math.max(...state.chart.map(c => c.value || 0), 1);
-    chartContainer.innerHTML = state.chart.map(item => {
-      const pct = Math.round(((item.value || 0) / max) * 100);
-      return `
-        <div class="bar-item" title="${SC.escHtml(item.label)}: ${item.value}">
-          <div class="bar-track">
-            <div class="bar-fill" style="width:${pct}%" data-value="${item.value}">
-              <span class="bar-tooltip">${item.value}</span>
-            </div>
-          </div>
-          <span class="bar-label">${SC.escHtml(item.label)}</span>
-        </div>`;
+  // ── Report: Movimentações ─────────────────────────────────────────────────
+  function genMovimentacoes(from, to, typeFilter) {
+    const movs = dbGet(KEYS.MOVEMENTS).filter(m =>
+      dateInRange(m.created_at, from, to) &&
+      (!typeFilter || m.tipo === typeFilter)
+    ).sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+    const entradas = movs.filter(m => m.tipo === "ENTRADA").length;
+    const saidas   = movs.filter(m => m.tipo === "SAIDA").length;
+    const outros   = movs.filter(m => ["DOACAO", "DESCARTE", "TRANSFERENCIA"].includes(m.tipo)).length;
+
+    setKpi(1, movs.length, "Total",     "movimentações no período");
+    setKpi(2, entradas,    "Entradas",  "itens recebidos",           "var(--color-success-dark)");
+    setKpi(3, saidas,      "Saídas",    "itens retirados",            "var(--color-danger-dark)");
+    setKpi(4, outros,      "Outros",    "doações/descartes/transf.", "var(--color-warning-dark)");
+
+    const typeColors  = { ENTRADA: "var(--color-success)", SAIDA: "var(--color-danger)", DOACAO: "#7c3aed", DESCARTE: "var(--color-warning)", TRANSFERENCIA: "var(--color-primary)" };
+    const typeLabels2 = { ENTRADA: "Entrada", SAIDA: "Saída", DOACAO: "Doação", DESCARTE: "Descarte", TRANSFERENCIA: "Transf." };
+    const typeCounts  = {};
+    movs.forEach(m => { typeCounts[m.tipo] = (typeCounts[m.tipo] || 0) + 1; });
+    renderBarChart(
+      Object.entries(typeCounts).map(([tipo, value]) => ({ label: typeLabels2[tipo] || tipo, value, color: typeColors[tipo] }))
+    );
+
+    const cols = [
+      { key: "created_at", label: "Data/Hora" },
+      { key: "nome_item",  label: "Item" },
+      { key: "patrimonio", label: "Patrimônio" },
+      { key: "tipo",       label: "Tipo",      badge: "movType" },
+      { key: "quantidade", label: "Qtd",        align: "right" },
+      { key: "destino",    label: "Destino" },
+      { key: "usuario",    label: "Usuário" },
+    ];
+    setTableHead(cols);
+    state.filtered = movs;
+    renderTablePage(cols, (row, col) => {
+      if (col.badge === "movType")   return movTypeBadge(row.tipo);
+      if (col.key === "created_at")  return SC.escHtml(SC.fmtDateTime(row.created_at));
+      return SC.escHtml(String(row[col.key] ?? "—"));
+    });
+  }
+
+  // ── Report: Estado dos Itens ──────────────────────────────────────────────
+  function genCondicao(catFilter) {
+    const items = dbGet(KEYS.ITEMS).filter(it =>
+      (!catFilter || it.categoria === catFilter)
+    );
+
+    const good    = items.filter(it => isGood(it.condicao)).length;
+    const repair  = items.filter(it => isRepair(it.condicao)).length;
+    const discard = items.filter(it => isDiscard(it.condicao)).length;
+
+    setKpi(1, items.length, "Total de Itens",  "itens catalogados");
+    setKpi(2, good,         "Bom estado",       "em bom funcionamento",  "var(--color-success-dark)");
+    setKpi(3, repair,       "Para reparo",      "requerem manutenção",   "var(--color-warning-dark)");
+    setKpi(4, discard,      "Para descarte",    "devem ser descartados", "var(--color-danger-dark)");
+
+    const condColors2 = { otimo: "var(--color-success)", bom: "#4ade80", reparo: "var(--color-warning)", ruim: "#fbbf24", inativo: "var(--color-danger)" };
+    const condCounts  = {};
+    items.forEach(it => { const k = it.condicao || "desconhecido"; condCounts[k] = (condCounts[k] || 0) + 1; });
+    const ORDER = ["otimo", "bom", "reparo", "ruim", "inativo"];
+    renderBarChart(
+      ORDER.filter(k => condCounts[k]).map(k => ({ label: COND_LABEL[k] || k, value: condCounts[k], color: condColors2[k] }))
+    );
+    renderCondBar(good, repair, discard);
+
+    const cols = [
+      { key: "nome",        label: "Item" },
+      { key: "patrimonio",  label: "Patrimônio" },
+      { key: "categoria",   label: "Categoria" },
+      { key: "condicao",    label: "Condição",   badge: "cond" },
+      { key: "localizacao", label: "Localização" },
+      { key: "responsavel", label: "Responsável" },
+    ];
+    setTableHead(cols);
+    const condOrder = { inativo: 0, ruim: 1, reparo: 2, bom: 3, otimo: 4 };
+    state.filtered = [...items].sort((a, b) => (condOrder[a.condicao] ?? 5) - (condOrder[b.condicao] ?? 5));
+    renderTablePage(cols, (row, col) => {
+      if (col.badge === "cond") return condBadge(row.condicao);
+      return SC.escHtml(String(row[col.key] ?? "—"));
+    });
+  }
+
+  // ── Report: Doações e Impacto ─────────────────────────────────────────────
+  function genDoacoes(from, to) {
+    const movs = dbGet(KEYS.MOVEMENTS).filter(m =>
+      m.tipo === "DOACAO" && dateInRange(m.created_at, from, to)
+    ).sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+    const qtdTotal = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
+    const itemMap  = {};
+    dbGet(KEYS.ITEMS).forEach(it => { itemMap[it.id] = it; });
+    const valorEst = movs.reduce((s, m) => {
+      const it = itemMap[m.item_id];
+      return s + (it ? parseFloat(it.valor || 0) * (m.quantidade || 1) : 0);
+    }, 0);
+
+    setKpi(1, movs.length, "Total de Doações",  "doações realizadas");
+    setKpi(2, new Set(movs.map(m => m.item_id)).size, "Itens Únicos", "tipos diferentes", "var(--color-primary)");
+    setKpi(3, qtdTotal, "Qtd Total", "unidades doadas", "var(--color-warning-dark)");
+
+    const kpi4El = document.getElementById("rptKpi4");
+    const kpi4LabelEl = document.getElementById("rptKpi4Label");
+    const kpi4SubEl   = document.getElementById("rptKpi4Sub");
+    if (kpi4LabelEl) kpi4LabelEl.textContent = "Valor Estimado";
+    if (kpi4SubEl)   kpi4SubEl.textContent   = "valor dos itens doados";
+    if (kpi4El) { animCurrency(kpi4El, valorEst, 800); kpi4El.style.color = "var(--color-success-dark)"; }
+
+    const destCounts = {};
+    movs.forEach(m => { const d = m.destino || "Não informado"; destCounts[d] = (destCounts[d] || 0) + m.quantidade; });
+    renderBarChart(
+      Object.entries(destCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([label, value]) => ({ label, value, color: "#7c3aed" }))
+    );
+
+    const cols = [
+      { key: "created_at", label: "Data" },
+      { key: "nome_item",  label: "Item" },
+      { key: "patrimonio", label: "Patrimônio" },
+      { key: "quantidade", label: "Qtd",         align: "right" },
+      { key: "destino",    label: "Destinatário" },
+      { key: "usuario",    label: "Registrado por" },
+    ];
+    setTableHead(cols);
+    state.filtered = movs;
+    renderTablePage(cols, (row, col) => {
+      if (col.key === "created_at") return SC.escHtml(SC.fmtDate(row.created_at));
+      return SC.escHtml(String(row[col.key] ?? "—"));
+    });
+  }
+
+  // ── Report: Descartes e Reciclagem ────────────────────────────────────────
+  function genDescarte(from, to) {
+    const movs = dbGet(KEYS.MOVEMENTS).filter(m =>
+      m.tipo === "DESCARTE" && dateInRange(m.created_at, from, to)
+    ).sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+    const qtdTotal     = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
+    const itemsDiscard = dbGet(KEYS.ITEMS).filter(it => isDiscard(it.condicao)).length;
+
+    setKpi(1, movs.length, "Total de Descartes", "descartes realizados");
+    setKpi(2, new Set(movs.map(m => m.item_id)).size, "Itens Únicos", "tipos descartados", "var(--color-warning-dark)");
+    setKpi(3, qtdTotal, "Qtd Total", "unidades descartadas");
+    setKpi(4, itemsDiscard, "Pendentes", "aguardando descarte", "var(--color-danger-dark)");
+
+    const monthCounts = {};
+    movs.forEach(m => {
+      const mo = m.created_at ? m.created_at.slice(0, 7) : "?";
+      monthCounts[mo] = (monthCounts[mo] || 0) + 1;
+    });
+    renderBarChart(
+      Object.entries(monthCounts).sort().slice(-8).map(([label, value]) => ({ label, value, color: "var(--color-danger)" }))
+    );
+
+    const cols = [
+      { key: "created_at", label: "Data" },
+      { key: "nome_item",  label: "Item" },
+      { key: "patrimonio", label: "Patrimônio" },
+      { key: "quantidade", label: "Qtd",           align: "right" },
+      { key: "destino",    label: "Destino/Motivo" },
+      { key: "usuario",    label: "Registrado por" },
+    ];
+    setTableHead(cols);
+    state.filtered = movs;
+    renderTablePage(cols, (row, col) => {
+      if (col.key === "created_at") return SC.escHtml(SC.fmtDate(row.created_at));
+      return SC.escHtml(String(row[col.key] ?? "—"));
+    });
+  }
+
+  // ── Report: Log de Auditoria ──────────────────────────────────────────────
+  function genAuditoria(from, to) {
+    const movs = dbGet(KEYS.MOVEMENTS).filter(m => dateInRange(m.created_at, from, to));
+    const reqs = dbGet(KEYS.REQUESTS).filter(r => dateInRange(r.created_at, from, to));
+
+    const movLabels = { ENTRADA: "Entrada de estoque", SAIDA: "Saída de estoque", DOACAO: "Doação registrada", DESCARTE: "Descarte registrado", TRANSFERENCIA: "Transferência" };
+    const reqLabels = { pendente: "Solicitação criada", aprovada: "Solicitação aprovada", recusada: "Solicitação recusada", concluida: "Solicitação concluída", cancelada: "Solicitação cancelada" };
+
+    const rows = [];
+    movs.forEach(m => rows.push({
+      created_at: m.created_at,
+      usuario:    m.usuario || "sistema",
+      acao:       movLabels[m.tipo] || m.tipo,
+      objeto:     `${m.nome_item || "Item"} (${m.patrimonio || m.item_id})`,
+      tipo:       "MOVIMENTACAO",
+      detalhes:   `Qtd: ${m.quantidade}${m.destino ? " → " + m.destino : ""}`,
+    }));
+    reqs.forEach(r => rows.push({
+      created_at: r.created_at,
+      usuario:    r.solicitante || "usuario",
+      acao:       reqLabels[r.status] || "Solicitação",
+      objeto:     `${r.nome_item || "Item"} (${r.patrimonio || r.item_id})`,
+      tipo:       "SOLICITACAO",
+      detalhes:   [r.setor, r.urgencia].filter(Boolean).join(" — "),
+    }));
+    rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+    const movCount   = rows.filter(r => r.tipo === "MOVIMENTACAO").length;
+    const reqCount   = rows.filter(r => r.tipo === "SOLICITACAO").length;
+    const uniqueUsers = new Set(rows.map(r => r.usuario)).size;
+
+    setKpi(1, rows.length, "Total de Eventos", "eventos registrados");
+    setKpi(2, movCount,    "Movimentações",    "registros de estoque",  "var(--color-primary)");
+    setKpi(3, reqCount,    "Solicitações",     "pedidos processados",   "var(--color-warning-dark)");
+    setKpi(4, uniqueUsers, "Usuários",         "usuários ativos",       "var(--color-success-dark)");
+
+    renderBarChart([
+      { label: "Movimentações", value: movCount, color: "var(--color-primary)" },
+      { label: "Solicitações",  value: reqCount, color: "var(--color-warning)" },
+    ]);
+
+    const cols = [
+      { key: "created_at", label: "Data/Hora" },
+      { key: "usuario",    label: "Usuário" },
+      { key: "acao",       label: "Ação" },
+      { key: "objeto",     label: "Objeto" },
+      { key: "detalhes",   label: "Detalhes" },
+    ];
+    setTableHead(cols);
+    state.filtered = rows;
+    renderTablePage(cols, (row, col) => {
+      if (col.key === "created_at") return SC.escHtml(SC.fmtDateTime(row.created_at));
+      return SC.escHtml(String(row[col.key] ?? "—"));
+    });
+  }
+
+  // ── Render helpers ────────────────────────────────────────────────────────
+  function setKpi(n, value, labelText, subText, color) {
+    const elVal   = document.getElementById(`rptKpi${n}`);
+    const elLabel = document.getElementById(`rptKpi${n}Label`);
+    const elSub   = document.getElementById(`rptKpi${n}Sub`);
+    if (elLabel)    elLabel.textContent = labelText;
+    if (elSub)      elSub.textContent   = subText;
+    if (elVal) {
+      animCount(elVal, value, 600);
+      elVal.style.color = color || "var(--color-text-primary)";
+    }
+  }
+
+  function renderBarChart(data, defaultColor) {
+    if (!mainChart) return;
+    if (!data.length) {
+      mainChart.innerHTML = `<div style="text-align:center;padding:var(--space-4);color:var(--color-text-muted);font-size:0.875rem;width:100%;">Sem dados para exibir.</div>`;
+      if (chartLegend) chartLegend.innerHTML = "";
+      return;
+    }
+    const max = Math.max(...data.map(d => d.value), 1);
+    mainChart.innerHTML = data.map(d => {
+      const pct   = Math.max(Math.round((d.value / max) * 100), 2);
+      const color = d.color || defaultColor || "var(--color-primary)";
+      return `<div class="css-bar-item">
+        <div class="css-bar-fill" style="height:${pct}%;background:${color};">
+          <span class="bar-tooltip">${SC.escHtml(d.label)}: ${d.value}</span>
+        </div>
+        <span class="css-bar-label">${SC.escHtml(d.label)}</span>
+      </div>`;
     }).join("");
 
     if (chartLegend) {
-      chartLegend.innerHTML = state.chart.slice(0, 5).map((item, i) =>
-        `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-muted)">
-          <span style="width:10px;height:10px;border-radius:50%;background:var(--color-primary);opacity:${1 - i * 0.15}"></span>
-          ${SC.escHtml(item.label)}
-        </span>`
-      ).join("");
+      chartLegend.innerHTML = data.map(d => `
+        <div class="chart-legend-item">
+          <div class="chart-legend-dot" style="background:${d.color || defaultColor || "var(--color-primary)"};"></div>
+          ${SC.escHtml(d.label)} (${d.value})
+        </div>`).join("");
     }
   }
 
-  // ── Condition distribution bar ────────────────────────────────────────────
-  function renderConditionBar() {
-    if (!condBar || !state.conditionDist.length) return;
-    const total = state.conditionDist.reduce((s, d) => s + (d.count || 0), 0) || 1;
-    const colors = { OTIMO: "var(--color-success)", REPARO: "var(--color-warning)", DESCARTAR: "var(--color-danger)" };
-
-    condBar.innerHTML = state.conditionDist.map(d => {
-      const pct = Math.round((d.count / total) * 100);
-      const color = colors[d.condition] || "var(--color-primary)";
-      return `<div style="flex:${pct};background:${color};height:100%;min-width:${pct > 0 ? 4 : 0}px" title="${d.label || d.condition}: ${d.count} (${pct}%)"></div>`;
-    }).join("");
-
-    if (condLabels) {
-      condLabels.innerHTML = state.conditionDist.map(d => {
-        const pct = Math.round((d.count / total) * 100);
-        const color = colors[d.condition] || "var(--color-primary)";
-        return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-muted)">
-          <span style="width:10px;height:10px;border-radius:2px;background:${color}"></span>
-          ${SC.escHtml(d.label || d.condition)} (${pct}%)
-        </span>`;
-      }).join("");
-    }
+  function renderCondBar(good, repair, discard) {
+    const total    = good + repair + discard || 1;
+    const pGood    = (good    / total * 100).toFixed(1);
+    const pRepair  = (repair  / total * 100).toFixed(1);
+    const pDiscard = (discard / total * 100).toFixed(1);
+    if (condBarOtimo)     condBarOtimo.style.width     = pGood    + "%";
+    if (condBarReparo)    condBarReparo.style.width    = pRepair  + "%";
+    if (condBarDescartar) condBarDescartar.style.width = pDiscard + "%";
+    if (condPctOtimo)     condPctOtimo.textContent     = pGood    + "%";
+    if (condPctReparo)    condPctReparo.textContent    = pRepair  + "%";
+    if (condPctDescartar) condPctDescartar.textContent = pDiscard + "%";
   }
 
-  // ── Table body ────────────────────────────────────────────────────────────
-  function renderTableBody(columns) {
-    if (!tableBody) return;
+  function setTableHead(cols) {
+    if (!tHead) return;
+    tHead.innerHTML = `<tr>${cols.map(c =>
+      `<th${c.align ? ` style="text-align:${c.align}"` : ""}>${SC.escHtml(c.label)}</th>`
+    ).join("")}</tr>`;
+  }
 
-    if (!state.rows.length) {
-      tableBody.innerHTML = "";
-      emptyState && (emptyState.style.display = "flex");
+  function renderTablePage(cols, cellFn) {
+    if (!tBody) return;
+    const total  = state.filtered.length;
+    const start  = (state.page - 1) * state.perPage;
+    const pageRows = state.filtered.slice(start, start + state.perPage);
+
+    if (!total) {
+      tBody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:var(--space-8);">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);color:var(--color-text-muted);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="empty-state-title">Nenhum registro encontrado</span>
+          <span class="empty-state-text">Ajuste os filtros ou selecione outro período.</span>
+        </div>
+      </td></tr>`;
+      if (pagSection) pagSection.style.display = "none";
       return;
     }
-    emptyState && (emptyState.style.display = "none");
 
-    tableBody.innerHTML = state.rows.map(row => `
-      <tr>${columns.map(col => {
-        let val = row[col.key] ?? "—";
-        if (col.key === "condition") val = SC.conditionBadge(val);
-        else if (col.key === "type") val = SC.movTypeBadge(val);
-        else if (col.key === "date" || col.key === "updatedAt") val = SC.fmtDateTime(val);
-        else val = SC.escHtml(String(val));
-        const align = col.align ? `style="text-align:${col.align}"` : "";
-        return `<td ${align}>${val}</td>`;
-      }).join("")}</tr>`).join("");
-  }
+    tBody.innerHTML = pageRows.map(row =>
+      `<tr>${cols.map(col => {
+        const val = cellFn(row, col);
+        return `<td${col.align ? ` style="text-align:${col.align}"` : ""}>${val}</td>`;
+      }).join("")}</tr>`
+    ).join("");
 
-  function renderPagination() {
-    if (!paginationEl) return;
-    paginationEl.innerHTML = SC.renderPagination({
-      page: state.page,
-      perPage: state.perPage,
-      total: state.total,
-      onPage: (p) => { state.page = p; generateReport(); },
+    if (pagSection) pagSection.style.display = total > state.perPage ? "" : "none";
+    SC.renderPagination({
+      containerId: "rptPagControls",
+      infoId:      "rptPagInfo",
+      page:        state.page,
+      perPage:     state.perPage,
+      total,
+      onPageChange: p => { state.page = p; generateReport(); },
     });
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function showLoading() {
-    if (loadingState) loadingState.style.display = "flex";
-    if (tableBody)    tableBody.innerHTML = "";
-    emptyState && (emptyState.style.display = "none");
-    if (btnGenerate) { btnGenerate.disabled = true; btnGenerate.classList.add("loading"); }
+  function resetTable() {
+    if (tHead) tHead.innerHTML = "";
+    if (tBody) tBody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:var(--space-8);color:var(--color-text-muted);">
+      Clique em <strong>Gerar</strong> para carregar o relatório.
+    </td></tr>`;
+    if (pagSection)  pagSection.style.display  = "none";
+    if (mainChart)   mainChart.innerHTML        = "";
+    if (chartLegend) chartLegend.innerHTML      = "";
   }
 
-  function hideLoading() {
-    if (loadingState) loadingState.style.display = "none";
-    if (btnGenerate) { btnGenerate.disabled = false; btnGenerate.classList.remove("loading"); }
-  }
-
-  function clearResults() {
-    if (tableBody)    tableBody.innerHTML = "";
-    if (chartContainer) chartContainer.innerHTML = "";
-    if (condBar)      condBar.innerHTML   = "";
-    if (condLabels)   condLabels.innerHTML = "";
-    if (chartLegend)  chartLegend.innerHTML = "";
-    if (kpiTotal)     kpiTotal.textContent   = "—";
-    if (kpiGood)      kpiGood.textContent    = "—";
-    if (kpiRepair)    kpiRepair.textContent  = "—";
-    if (kpiDiscard)   kpiDiscard.textContent = "—";
-    emptyState && (emptyState.style.display = "none");
-    if (paginationEl) paginationEl.innerHTML = "";
-  }
-
-  // ── Exports ───────────────────────────────────────────────────────────────
-  function wireExports() {
-    btnExportCsv?.addEventListener("click", () => {
-      if (!state.rows.length) { SC.toastWarning("Gere o relatório primeiro."); return; }
-      exportCsv();
-    });
-
-    btnExportPdf?.addEventListener("click", () => {
-      if (!state.rows.length) { SC.toastWarning("Gere o relatório primeiro."); return; }
-      SC.toastInfo("Exportação PDF disponível em breve.");
-    });
-
-    btnPrint?.addEventListener("click", () => {
-      if (!state.rows.length) { SC.toastWarning("Gere o relatório primeiro."); return; }
-      window.print();
-    });
-  }
-
+  // ── Export CSV ────────────────────────────────────────────────────────────
   function exportCsv() {
-    const def = REPORTS[state.reportType];
-    if (!def) return;
-    const headers = def.columns.map(c => c.label).join(",");
-    const csvRows = state.rows.map(row =>
-      def.columns.map(c => {
-        const val = row[c.key] ?? "";
-        const str = String(val).replace(/"/g, '""');
-        return `"${str}"`;
+    if (!state.filtered.length) { SC.toastWarning("Gere o relatório antes de exportar."); return; }
+
+    const colMaps = {
+      estoque:       ["nome","patrimonio","categoria","condicao","total","disponivel","localizacao","dataAquisicao"],
+      movimentacoes: ["created_at","nome_item","patrimonio","tipo","quantidade","destino","usuario"],
+      condicao:      ["nome","patrimonio","categoria","condicao","localizacao","responsavel"],
+      doacoes:       ["created_at","nome_item","patrimonio","quantidade","destino","usuario"],
+      descarte:      ["created_at","nome_item","patrimonio","quantidade","destino","usuario"],
+      auditoria:     ["created_at","usuario","acao","objeto","detalhes"],
+    };
+    const headerMaps = {
+      estoque:       ["Item","Patrimônio","Categoria","Condição","Total","Disponível","Localização","Aquisição"],
+      movimentacoes: ["Data/Hora","Item","Patrimônio","Tipo","Qtd","Destino","Usuário"],
+      condicao:      ["Item","Patrimônio","Categoria","Condição","Localização","Responsável"],
+      doacoes:       ["Data","Item","Patrimônio","Qtd","Destinatário","Registrado por"],
+      descarte:      ["Data","Item","Patrimônio","Qtd","Destino/Motivo","Registrado por"],
+      auditoria:     ["Data/Hora","Usuário","Ação","Objeto","Detalhes"],
+    };
+
+    const type    = state.reportType;
+    const keys    = colMaps[type]    || [];
+    const headers = headerMaps[type] || keys;
+
+    const rows = state.filtered.map(row =>
+      keys.map(k => {
+        let v = row[k] ?? "";
+        if (k === "created_at" && v) v = v.slice(0, 19).replace("T", " ");
+        if (k === "dataAquisicao" && v) v = v.slice(0, 10);
+        return `"${String(v).replace(/"/g, '""')}"`;
       }).join(",")
     );
-    const csv = [headers, ...csvRows].join("\n");
+
+    const csv  = [headers.map(h => `"${h}"`).join(","), ...rows].join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${state.reportType}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `relatorio-${type}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    SC.toastSuccess("CSV exportado com sucesso.");
+  }
+
+  // ── Wire buttons ──────────────────────────────────────────────────────────
+  function wireButtons() {
+    generateBtn?.addEventListener("click", () => { state.page = 1; generateReport(); });
+    exportCsvBtn?.addEventListener("click", exportCsv);
+    exportPdfBtn?.addEventListener("click", () => SC.toastInfo("Exportação PDF em breve."));
+    printBtn?.addEventListener("click", () => window.print());
+    perPageSel?.addEventListener("change", () => {
+      state.perPage = parseInt(perPageSel.value, 10) || 25;
+      state.page    = 1;
+      generateReport();
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  function init() {
+    seedIfNeeded();
+    populateCategories();
+    wireCards();
+    wireButtons();
+    selectReport("estoque");
   }
 
   init();
