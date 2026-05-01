@@ -693,18 +693,22 @@ INSERT INTO conditions (code, label_pt, color_hex) VALUES
   ('OTIMO',     'Ótimo Estado de Uso',        '#2ECC71'),
   ('REPARO',    'Necessita de Reparos',        '#F1C40F'),
   ('DESCARTAR', 'Necessita ser Descartado',    '#E74C3C')
-ON DUPLICATE KEY UPDATE label_pt = VALUES(label_pt), color_hex = VALUES(color_hex);
+AS new_row
+ON DUPLICATE KEY UPDATE label_pt = new_row.label_pt, color_hex = new_row.color_hex;
 
 INSERT INTO categories (name) VALUES
   ('Notebook'), ('Gabinete'), ('Monitor'), ('Periféricos'), ('Outros')
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+AS new_row
+ON DUPLICATE KEY UPDATE name = new_row.name;
 
 INSERT INTO organizations (org_type, name, cnpj, email, phone, mobile, address_line1, city, state, postal_code, notes)
 VALUES ('RECYCLER', 'Impacto Metais', '00.000.000/0000-00', 'contato@impactometais.com.br',
         '(11) 0000-0000', '(11) 90000-0000', 'Rua Exemplo, 123', 'São Paulo', 'SP', '00000-000',
         'Coletora/parceira para descarte de resíduos eletrônicos')
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+AS new_row
+ON DUPLICATE KEY UPDATE name = new_row.name;
 
 INSERT INTO organizations (org_type, name, cnpj, email)
 VALUES ('ONG', 'Sua ONG', '11.111.111/0001-11', 'contato@suaong.org')
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+AS new_row
+ON DUPLICATE KEY UPDATE name = new_row.name;
