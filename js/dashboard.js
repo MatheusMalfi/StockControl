@@ -1,7 +1,7 @@
 /**
  * dashboard.js — StockControl
- * Data layer: localStorage (sem dependência de backend para dados do dashboard).
- * Semeia dados mock realistas na primeira execução.
+ * Fonte de dados: localStorage (sem dependência de backend).
+ * Schema v2: campos em português (nome, patrimonio, condicao, total, disponivel…)
  */
 
 (() => {
@@ -24,80 +24,284 @@
     GOAL     : "sc_goal",
   };
 
-  function dbGet(key)       { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
-  function dbSet(key, val)  { localStorage.setItem(key, JSON.stringify(val)); }
+  function dbGet(key)      { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
+  function dbSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
   /* ================================================================
-     DADOS MOCK — semeados na primeira execução
+     DADOS MOCK
+     Schema: { id, nome, patrimonio, categoria, condicao, total,
+               disponivel, localizacao, responsavel, valor,
+               dataAquisicao, numeroSerie?, descricao? }
+     Condições: "otimo" | "bom" | "reparo" | "ruim" | "inativo"
+     ================================================================ */
+  const MOCK_ITEMS = [
+    {
+      id: "item_001",
+      nome: "Notebook Dell Inspiron",
+      patrimonio: "PAT-2024-001",
+      categoria: "Informática",
+      condicao: "otimo",
+      total: 10,
+      disponivel: 7,
+      localizacao: "TI - Sala 201",
+      responsavel: "Carlos",
+      valor: 3500.00,
+      dataAquisicao: "2024-01-15",
+      numeroSerie: "DLL-INS-001",
+      descricao: "Notebook para uso administrativo",
+    },
+    {
+      id: "item_002",
+      nome: "Cadeira Ergonômica",
+      patrimonio: "PAT-2024-002",
+      categoria: "Mobiliário",
+      condicao: "bom",
+      total: 25,
+      disponivel: 20,
+      localizacao: "Almoxarifado",
+      responsavel: "Carlos",
+      valor: 890.00,
+      dataAquisicao: "2024-02-10",
+      descricao: "Cadeira para escritório com apoio lombar",
+    },
+    {
+      id: "item_003",
+      nome: "Impressora HP LaserJet",
+      patrimonio: "PAT-2024-003",
+      categoria: "Informática",
+      condicao: "reparo",
+      total: 3,
+      disponivel: 1,
+      localizacao: "Manutenção",
+      responsavel: "Carlos",
+      valor: 1200.00,
+      dataAquisicao: "2023-08-20",
+      numeroSerie: "HP-LJ-003",
+      descricao: "2 unidades aguardando peças",
+    },
+    {
+      id: "item_004",
+      nome: "Projetor Epson EB-X41",
+      patrimonio: "PAT-2024-004",
+      categoria: "Audiovisual",
+      condicao: "otimo",
+      total: 5,
+      disponivel: 4,
+      localizacao: "Sala 201",
+      responsavel: "Ana Pereira",
+      valor: 2400.00,
+      dataAquisicao: "2024-01-20",
+      numeroSerie: "EPS-EB-004",
+      descricao: "Projetor para apresentações em sala de aula",
+    },
+    {
+      id: "item_005",
+      nome: "Servidor Dell PowerEdge",
+      patrimonio: "PAT-2024-005",
+      categoria: "Informática",
+      condicao: "otimo",
+      total: 2,
+      disponivel: 2,
+      localizacao: "Datacenter",
+      responsavel: "Carlos",
+      valor: 12000.00,
+      dataAquisicao: "2024-03-01",
+      numeroSerie: "DLL-PE-005",
+      descricao: "Servidor principal de dados e aplicações",
+    },
+    {
+      id: "item_006",
+      nome: "Monitor Samsung 27\"",
+      patrimonio: "PAT-2024-006",
+      categoria: "Informática",
+      condicao: "bom",
+      total: 15,
+      disponivel: 12,
+      localizacao: "Lab. Informática",
+      responsavel: "Carlos",
+      valor: 1200.00,
+      dataAquisicao: "2024-02-05",
+      descricao: "Monitor Full HD para laboratório",
+    },
+    {
+      id: "item_007",
+      nome: "Mesa de Reunião 10 lugares",
+      patrimonio: "PAT-2024-007",
+      categoria: "Mobiliário",
+      condicao: "otimo",
+      total: 4,
+      disponivel: 4,
+      localizacao: "Sala Diretoria",
+      responsavel: "Fernanda Lima",
+      valor: 1800.00,
+      dataAquisicao: "2024-01-10",
+      descricao: "Mesa modular para sala de reuniões",
+    },
+    {
+      id: "item_008",
+      nome: "Microscópio Óptico Binocular",
+      patrimonio: "PAT-2024-008",
+      categoria: "Laboratório",
+      condicao: "otimo",
+      total: 8,
+      disponivel: 6,
+      localizacao: "Lab. Biologia",
+      responsavel: "Prof. Maria",
+      valor: 5200.00,
+      dataAquisicao: "2024-01-05",
+      numeroSerie: "MIC-OPT-008",
+      descricao: "Microscópio para aulas práticas de biologia",
+    },
+    {
+      id: "item_009",
+      nome: "Câmera IP Intelbras VIP",
+      patrimonio: "PAT-2023-009",
+      categoria: "Segurança",
+      condicao: "ruim",
+      total: 12,
+      disponivel: 8,
+      localizacao: "Almoxarifado",
+      responsavel: "Carlos",
+      valor: 480.00,
+      dataAquisicao: "2023-06-15",
+      descricao: "4 unidades com defeito aguardando manutenção",
+    },
+    {
+      id: "item_010",
+      nome: "Aspirador Industrial 30L",
+      patrimonio: "PAT-2024-010",
+      categoria: "Limpeza",
+      condicao: "bom",
+      total: 3,
+      disponivel: 3,
+      localizacao: "Almoxarifado",
+      responsavel: "João Santos",
+      valor: 750.00,
+      dataAquisicao: "2024-01-25",
+      descricao: "Aspirador para limpeza pesada",
+    },
+    {
+      id: "item_011",
+      nome: "Controle de Acesso HID",
+      patrimonio: "PAT-2022-011",
+      categoria: "Segurança",
+      condicao: "inativo",
+      total: 5,
+      disponivel: 0,
+      localizacao: "Almoxarifado",
+      responsavel: "Carlos",
+      valor: 890.00,
+      dataAquisicao: "2022-03-10",
+      descricao: "Equipamentos obsoletos — aguardando descarte formal",
+    },
+    {
+      id: "item_012",
+      nome: "Estufa Bacteriológica",
+      patrimonio: "PAT-2024-012",
+      categoria: "Laboratório",
+      condicao: "reparo",
+      total: 2,
+      disponivel: 0,
+      localizacao: "Manutenção",
+      responsavel: "Prof. Roberto",
+      valor: 4100.00,
+      dataAquisicao: "2024-02-20",
+      numeroSerie: "EST-BAC-012",
+      descricao: "Em manutenção na assistência técnica",
+    },
+    {
+      id: "item_013",
+      nome: "Switch Cisco Catalyst 2960",
+      patrimonio: "PAT-2024-013",
+      categoria: "Informática",
+      condicao: "otimo",
+      total: 4,
+      disponivel: 4,
+      localizacao: "Datacenter",
+      responsavel: "Carlos",
+      valor: 3200.00,
+      dataAquisicao: "2024-03-05",
+      numeroSerie: "CSC-CAT-013",
+      descricao: "Switch de rede para infraestrutura",
+    },
+    {
+      id: "item_014",
+      nome: "Balança Analítica 0,1 mg",
+      patrimonio: "PAT-2024-014",
+      categoria: "Laboratório",
+      condicao: "bom",
+      total: 3,
+      disponivel: 2,
+      localizacao: "Lab. Química",
+      responsavel: "Prof. Maria",
+      valor: 2900.00,
+      dataAquisicao: "2024-03-10",
+      numeroSerie: "BAL-ANA-014",
+      descricao: "Balança de precisão para análises químicas",
+    },
+    {
+      id: "item_015",
+      nome: "Sistema de Som JBL",
+      patrimonio: "PAT-2023-015",
+      categoria: "Audiovisual",
+      condicao: "ruim",
+      total: 1,
+      disponivel: 0,
+      localizacao: "Manutenção",
+      responsavel: "Ana Pereira",
+      valor: 3800.00,
+      dataAquisicao: "2023-05-12",
+      descricao: "Amplificador com defeito no canal direito",
+    },
+  ];
+
+  /* ================================================================
+     MOVIMENTAÇÕES MOCK
+     Schema: { id, item_id, nome, patrimonio, tipo, quantidade,
+               responsavel, created_at, observacao? }
+     Tipos: ENTRADA | SAIDA | TRANSFERENCIA | DESCARTE | DOACAO
      ================================================================ */
   function ago(days) {
     return new Date(Date.now() - days * 86_400_000).toISOString();
   }
 
-  const MOCK_ITEMS = [
-    /* Informática */
-    { id:  1, name: "Notebook Dell Inspiron 15",  asset_tag: "USCS-001", category: "Informática",  condition: "OTIMO",    location: "Lab. Informática 1", value:  3500, created_at: ago(120) },
-    { id:  2, name: "Notebook Lenovo ThinkPad",   asset_tag: "USCS-002", category: "Informática",  condition: "OTIMO",    location: "Lab. Informática 1", value:  4200, created_at: ago(115) },
-    { id:  3, name: "Desktop HP ProDesk",         asset_tag: "USCS-003", category: "Informática",  condition: "REPARO",   location: "TI",                 value:  2800, created_at: ago(110) },
-    { id:  4, name: "Monitor Samsung 27\"",       asset_tag: "USCS-004", category: "Informática",  condition: "OTIMO",    location: "Lab. Informática 2", value:  1200, created_at: ago(108) },
-    { id:  5, name: "Impressora HP LaserJet",     asset_tag: "USCS-005", category: "Informática",  condition: "REPARO",   location: "Secretaria",         value:   850, created_at: ago(100) },
-    { id:  6, name: "Servidor Dell PowerEdge",    asset_tag: "USCS-006", category: "Informática",  condition: "OTIMO",    location: "Datacenter",         value: 12000, created_at: ago(90)  },
-    { id:  7, name: "Switch Cisco Catalyst 2960", asset_tag: "USCS-007", category: "Informática",  condition: "OTIMO",    location: "Datacenter",         value:  3200, created_at: ago(88)  },
-    /* Audiovisual */
-    { id:  8, name: "Projetor Epson EB-X41",      asset_tag: "USCS-008", category: "Audiovisual",  condition: "OTIMO",    location: "Sala 201",           value:  2400, created_at: ago(118) },
-    { id:  9, name: "Projetor BenQ MX532",        asset_tag: "USCS-009", category: "Audiovisual",  condition: "OTIMO",    location: "Auditório",          value:  2200, created_at: ago(116) },
-    { id: 10, name: "Sistema de Som JBL",         asset_tag: "USCS-010", category: "Audiovisual",  condition: "REPARO",   location: "Auditório",          value:  3800, created_at: ago(95)  },
-    { id: 11, name: "Câmera Sony FHD",            asset_tag: "USCS-011", category: "Audiovisual",  condition: "DESCARTAR",location: "Almoxarifado",       value:   600, created_at: ago(400) },
-    /* Mobiliário */
-    { id: 12, name: "Mesa de Reunião 10 lugares", asset_tag: "USCS-012", category: "Mobiliário",   condition: "OTIMO",    location: "Sala Diretoria",     value:  1800, created_at: ago(125) },
-    { id: 13, name: "Cadeira Ergonômica",         asset_tag: "USCS-013", category: "Mobiliário",   condition: "OTIMO",    location: "Lab. Informática 1", value:   650, created_at: ago(122) },
-    { id: 14, name: "Armário de Aço 4 Portas",   asset_tag: "USCS-014", category: "Mobiliário",   condition: "OTIMO",    location: "Almoxarifado",       value:   980, created_at: ago(110) },
-    { id: 15, name: "Mesa para Aluno",            asset_tag: "USCS-015", category: "Mobiliário",   condition: "REPARO",   location: "Sala 103",           value:   280, created_at: ago(380) },
-    { id: 16, name: "Quadro Branco 200×120",      asset_tag: "USCS-016", category: "Mobiliário",   condition: "DESCARTAR",location: "Almoxarifado",       value:   320, created_at: ago(520) },
-    /* Laboratório */
-    { id: 17, name: "Microscópio Óptico Binocular",asset_tag: "USCS-017", category: "Laboratório", condition: "OTIMO",    location: "Lab. Biologia",      value:  5200, created_at: ago(130) },
-    { id: 18, name: "Centrífuga Digital Excelsa", asset_tag: "USCS-018", category: "Laboratório",  condition: "OTIMO",    location: "Lab. Química",       value:  3600, created_at: ago(128) },
-    { id: 19, name: "Estufa Bacteriológica",      asset_tag: "USCS-019", category: "Laboratório",  condition: "REPARO",   location: "Lab. Microbiologia", value:  4100, created_at: ago(45)  },
-    { id: 20, name: "Balança Analítica 0,1mg",   asset_tag: "USCS-020", category: "Laboratório",  condition: "OTIMO",    location: "Lab. Química",       value:  2900, created_at: ago(30)  },
-    /* Limpeza */
-    { id: 21, name: "Aspirador Industrial 30L",   asset_tag: "USCS-021", category: "Limpeza",      condition: "OTIMO",    location: "Almoxarifado",       value:   750, created_at: ago(113) },
-    { id: 22, name: "Lavadora de Pisos Kärcher",  asset_tag: "USCS-022", category: "Limpeza",      condition: "OTIMO",    location: "Almoxarifado",       value:  2100, created_at: ago(105) },
-    /* Segurança */
-    { id: 23, name: "Câmera IP Intelbras VIP",    asset_tag: "USCS-023", category: "Segurança",    condition: "OTIMO",    location: "Entrada Principal",  value:   480, created_at: ago(118) },
-    { id: 24, name: "DVR Intelbras 16 Canais",    asset_tag: "USCS-024", category: "Segurança",    condition: "OTIMO",    location: "Recepção",           value:  1200, created_at: ago(118) },
-    { id: 25, name: "Controle de Acesso HID",     asset_tag: "USCS-025", category: "Segurança",    condition: "DESCARTAR",location: "Almoxarifado",       value:   890, created_at: ago(600) },
-  ];
-
   const MOCK_MOVEMENTS = [
-    { id:  1, item_id:  1, item_name: "Notebook Dell Inspiron 15",  asset_tag: "USCS-001", movement_type: "ENTRADA",       quantity: 1, user_name: "Carlos Silva",   created_at: ago(1)  },
-    { id:  2, item_id:  8, item_name: "Projetor Epson EB-X41",      asset_tag: "USCS-008", movement_type: "SAIDA",         quantity: 1, user_name: "Ana Pereira",    created_at: ago(1)  },
-    { id:  3, item_id:  3, item_name: "Desktop HP ProDesk",         asset_tag: "USCS-003", movement_type: "SAIDA",         quantity: 1, user_name: "Carlos Silva",   created_at: ago(2)  },
-    { id:  4, item_id: 17, item_name: "Microscópio Óptico Binocular",asset_tag: "USCS-017", movement_type: "ENTRADA",      quantity: 1, user_name: "Prof. Maria",    created_at: ago(3)  },
-    { id:  5, item_id: 12, item_name: "Mesa de Reunião 10 lugares", asset_tag: "USCS-012", movement_type: "TRANSFERENCIA", quantity: 1, user_name: "Fernanda Lima",  created_at: ago(3)  },
-    { id:  6, item_id:  5, item_name: "Impressora HP LaserJet",     asset_tag: "USCS-005", movement_type: "SAIDA",         quantity: 1, user_name: "Carlos Silva",   created_at: ago(4)  },
-    { id:  7, item_id: 21, item_name: "Aspirador Industrial 30L",   asset_tag: "USCS-021", movement_type: "ENTRADA",       quantity: 1, user_name: "João Santos",    created_at: ago(5)  },
-    { id:  8, item_id: 11, item_name: "Câmera Sony FHD",            asset_tag: "USCS-011", movement_type: "DESCARTE",      quantity: 1, user_name: "Carlos Silva",   created_at: ago(6)  },
-    { id:  9, item_id:  6, item_name: "Servidor Dell PowerEdge",    asset_tag: "USCS-006", movement_type: "ENTRADA",       quantity: 1, user_name: "Equipe TI",      created_at: ago(7)  },
-    { id: 10, item_id: 19, item_name: "Estufa Bacteriológica",      asset_tag: "USCS-019", movement_type: "SAIDA",         quantity: 1, user_name: "Prof. Roberto",  created_at: ago(8)  },
+    { id: 1,  item_id: "item_001", nome: "Notebook Dell Inspiron",    patrimonio: "PAT-2024-001", tipo: "ENTRADA",       quantidade: 3, responsavel: "Carlos",       created_at: ago(1) },
+    { id: 2,  item_id: "item_004", nome: "Projetor Epson EB-X41",     patrimonio: "PAT-2024-004", tipo: "SAIDA",         quantidade: 1, responsavel: "Ana Pereira",  created_at: ago(1) },
+    { id: 3,  item_id: "item_003", nome: "Impressora HP LaserJet",    patrimonio: "PAT-2024-003", tipo: "SAIDA",         quantidade: 2, responsavel: "Carlos",       created_at: ago(2) },
+    { id: 4,  item_id: "item_008", nome: "Microscópio Óptico",        patrimonio: "PAT-2024-008", tipo: "ENTRADA",       quantidade: 2, responsavel: "Prof. Maria",  created_at: ago(3) },
+    { id: 5,  item_id: "item_007", nome: "Mesa de Reunião",           patrimonio: "PAT-2024-007", tipo: "TRANSFERENCIA", quantidade: 1, responsavel: "Fernanda Lima",created_at: ago(3) },
+    { id: 6,  item_id: "item_006", nome: "Monitor Samsung 27\"",      patrimonio: "PAT-2024-006", tipo: "ENTRADA",       quantidade: 5, responsavel: "Carlos",       created_at: ago(4) },
+    { id: 7,  item_id: "item_010", nome: "Aspirador Industrial 30L",  patrimonio: "PAT-2024-010", tipo: "ENTRADA",       quantidade: 1, responsavel: "João Santos",  created_at: ago(5) },
+    { id: 8,  item_id: "item_011", nome: "Controle de Acesso HID",    patrimonio: "PAT-2022-011", tipo: "DESCARTE",      quantidade: 2, responsavel: "Carlos",       created_at: ago(6) },
+    { id: 9,  item_id: "item_005", nome: "Servidor Dell PowerEdge",   patrimonio: "PAT-2024-005", tipo: "ENTRADA",       quantidade: 1, responsavel: "Carlos",       created_at: ago(7) },
+    { id: 10, item_id: "item_012", nome: "Estufa Bacteriológica",     patrimonio: "PAT-2024-012", tipo: "SAIDA",         quantidade: 1, responsavel: "Prof. Roberto",created_at: ago(8) },
   ];
 
   const MOCK_ALERTS = [
-    { id: 1, type: "LOW_STOCK", title: "Estoque baixo: Impressora HP LaserJet (1 unid.)", created_at: ago(0), unread: true  },
-    { id: 2, type: "DISCARD",   title: "3 itens aguardando descarte formal",              created_at: ago(1), unread: true  },
-    { id: 3, type: "REPARO",    title: "Estufa Bacteriológica em manutenção",             created_at: ago(2), unread: true  },
-    { id: 4, type: "INFO",      title: "Inventário mensal agendado para o dia 30",        created_at: ago(3), unread: false },
+    { id: 1, type: "LOW_STOCK", title: "Estoque baixo: Impressora HP LaserJet (1 disponível)",  created_at: ago(0), unread: true  },
+    { id: 2, type: "DISCARD",   title: "Controle de Acesso HID aguardando descarte formal",     created_at: ago(1), unread: true  },
+    { id: 3, type: "REPARO",    title: "Estufa Bacteriológica em manutenção externa",           created_at: ago(2), unread: true  },
+    { id: 4, type: "REPARO",    title: "Sistema de Som JBL com defeito no canal direito",       created_at: ago(3), unread: true  },
+    { id: 5, type: "INFO",      title: "Inventário semestral agendado para 30/06/2025",         created_at: ago(4), unread: false },
   ];
 
   const MOCK_GOAL = {
     description     : "Meta de Patrimônio USCS — Semestre 1/2025",
-    current_quantity: 19,
-    target_quantity : 25,
+    current_quantity: 11,
+    target_quantity : 15,
     start_date      : "2025-01-01",
     end_date        : "2025-06-30",
   };
 
+  /* ================================================================
+     SEED — reaplica se localStorage vazio ou schema antigo
+     ================================================================ */
   function seedIfEmpty() {
-    if (!dbGet(KEYS.ITEMS))     dbSet(KEYS.ITEMS,     MOCK_ITEMS);
+    const stored = dbGet(KEYS.ITEMS);
+    const isOldSchema = stored && stored[0] && !stored[0].nome;
+    if (!stored || isOldSchema) dbSet(KEYS.ITEMS, MOCK_ITEMS);
+
     if (!dbGet(KEYS.MOVEMENTS)) dbSet(KEYS.MOVEMENTS, MOCK_MOVEMENTS);
     if (!dbGet(KEYS.ALERTS))    dbSet(KEYS.ALERTS,    MOCK_ALERTS);
     if (!dbGet(KEYS.GOAL))      dbSet(KEYS.GOAL,      MOCK_GOAL);
@@ -124,17 +328,18 @@
     const grid = document.getElementById("kpiGrid");
     if (!grid) return;
 
-    const items     = dbGet(KEYS.ITEMS) || [];
-    const total     = items.length;
-    const otimo     = items.filter(i => i.condition === "OTIMO").length;
-    const reparo    = items.filter(i => i.condition === "REPARO").length;
-    const descartar = items.filter(i => i.condition === "DESCARTAR").length;
+    const items = dbGet(KEYS.ITEMS) || [];
+
+    const totalItens = items.length;
+    const totalDisp  = items.reduce((s, i) => s + (i.disponivel || 0), 0);
+    const emReparo   = items.filter(i => i.condicao === "reparo" || i.condicao === "ruim").length;
+    const inativos   = items.filter(i => i.condicao === "inativo").length;
 
     const kpis = [
       {
         label: "Total de Itens",
-        value: fmt(total),
-        sub:   "itens cadastrados",
+        value: fmt(totalItens),
+        sub:   `${fmt(totalDisp)} unidades disponíveis`,
         iconClass: "blue",
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
@@ -145,28 +350,28 @@
         href: "estoque.html",
       },
       {
-        label: "Em Ótimo Estado",
-        value: fmt(otimo),
-        sub:   pct(otimo, total) + " do estoque",
+        label: "Em Bom Estado",
+        value: fmt(items.filter(i => i.condicao === "otimo" || i.condicao === "bom").length),
+        sub:   pct(items.filter(i => i.condicao === "otimo" || i.condicao === "bom").length, totalItens) + " do acervo",
         iconClass: "green",
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                  <polyline points="20 6 9 17 4 12"/>
                </svg>`,
-        href: "estoque.html?condition=OTIMO",
+        href: "estoque.html",
       },
       {
         label: "Para Reparo",
-        value: fmt(reparo),
+        value: fmt(emReparo),
         sub:   "precisam de atenção",
         iconClass: "yellow",
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
                </svg>`,
-        href: "estoque.html?condition=REPARO",
+        href: "estoque.html",
       },
       {
-        label: "Para Descarte",
-        value: fmt(descartar),
+        label: "Inativos",
+        value: fmt(inativos),
         sub:   "aguardando descarte",
         iconClass: "red",
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -174,7 +379,7 @@
                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                  <path d="M10 11v6"/><path d="M14 11v6"/>
                </svg>`,
-        href: "estoque.html?condition=DESCARTAR",
+        href: "estoque.html",
       },
     ];
 
@@ -185,38 +390,39 @@
           <span class="kpi-icon ${k.iconClass}">${k.icon}</span>
         </div>
         <div class="kpi-value">${k.value}</div>
-        <div class="kpi-change neutral" style="font-size:0.8125rem; margin-top:var(--space-1);">
-          ${k.sub}
-        </div>
+        <div class="kpi-change neutral" style="margin-top:var(--space-1);">${k.sub}</div>
       </a>`).join("");
   }
 
   /* ================================================================
-     DONUT — DISTRIBUIÇÃO POR CONDIÇÃO
+     DONUT — DISTRIBUIÇÃO POR CONDIÇÃO (5 estados)
      ================================================================ */
   function loadConditionChart() {
     const wrap = document.getElementById("conditionChart");
     if (!wrap) return;
 
-    const items     = dbGet(KEYS.ITEMS) || [];
-    const total     = items.length;
-    const otimo     = items.filter(i => i.condition === "OTIMO").length;
-    const reparo    = items.filter(i => i.condition === "REPARO").length;
-    const descartar = items.filter(i => i.condition === "DESCARTAR").length;
-
+    const items = dbGet(KEYS.ITEMS) || [];
+    const total = items.length;
     if (total === 0) { wrap.innerHTML = emptyMsg("Nenhum item cadastrado"); return; }
 
-    const r   = 44;
-    const cx  = 60;
+    const condMap = {
+      otimo  : { label: "Ótimo",   color: "#10B981" },
+      bom    : { label: "Bom",     color: "#3B82F6" },
+      reparo : { label: "Reparo",  color: "#F59E0B" },
+      ruim   : { label: "Ruim",    color: "#F97316" },
+      inativo: { label: "Inativo", color: "#EF4444" },
+    };
+
+    const segments = Object.entries(condMap).map(([key, meta]) => ({
+      value: items.filter(i => i.condicao === key).length,
+      color: meta.color,
+      label: meta.label,
+    })).filter(s => s.value > 0);
+
+    const r    = 44;
+    const cx   = 60;
     const circ = 2 * Math.PI * r;
 
-    const segments = [
-      { value: otimo,     color: "#10B981", label: "Ótimo"     },
-      { value: reparo,    color: "#F59E0B", label: "Reparo"    },
-      { value: descartar, color: "#EF4444", label: "Descartar" },
-    ];
-
-    /* Build SVG arc segments */
     let cumulative = 0;
     const arcs = segments.map(s => {
       const dash   = (s.value / total) * circ;
@@ -237,7 +443,7 @@
         </svg>
         <div class="donut-center">
           <span class="donut-center-value">${fmt(total)}</span>
-          <span class="donut-center-label">total</span>
+          <span class="donut-center-label">itens</span>
         </div>
       </div>
       <div class="donut-legend">
@@ -252,7 +458,7 @@
   }
 
   /* ================================================================
-     BARRAS — TOP CATEGORIAS
+     BARRAS — TOP CATEGORIAS (por nº de itens e quantidade disponível)
      ================================================================ */
   function loadCategoryChart() {
     const wrap = document.getElementById("categoryChart");
@@ -261,12 +467,14 @@
     const items  = dbGet(KEYS.ITEMS) || [];
     const catMap = {};
     items.forEach(i => {
-      const cat = i.category || "Sem categoria";
-      catMap[cat] = (catMap[cat] || 0) + 1;
+      const cat = i.categoria || "Sem categoria";
+      if (!catMap[cat]) catMap[cat] = { count: 0, disp: 0 };
+      catMap[cat].count++;
+      catMap[cat].disp += (i.disponivel || 0);
     });
 
     const cats = Object.entries(catMap)
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, d]) => ({ name, count: d.count, disp: d.disp }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
 
@@ -278,7 +486,7 @@
       <div class="bar-item">
         <div class="bar-item-header">
           <span class="bar-item-label">${SC.escHtml(c.name)}</span>
-          <span class="bar-item-value">${fmt(c.count)}</span>
+          <span class="bar-item-value">${fmt(c.count)} item${c.count !== 1 ? "s" : ""}</span>
         </div>
         <div class="bar-track">
           <div class="bar-fill" style="width:${Math.round((c.count / max) * 100)}%;"></div>
@@ -308,14 +516,14 @@
         <td>
           <div class="table-item-info">
             <div>
-              <div class="table-item-name">${SC.escHtml(r.item_name || "—")}</div>
-              <div class="table-item-meta">${SC.escHtml(r.asset_tag || "")}</div>
+              <div class="table-item-name">${SC.escHtml(r.nome || "—")}</div>
+              <div class="table-item-meta">${SC.escHtml(r.patrimonio || "")}</div>
             </div>
           </div>
         </td>
-        <td>${movBadge(r.movement_type)}</td>
-        <td style="text-align:right; font-weight:600;">${fmt(r.quantity)}</td>
-        <td>${SC.escHtml(r.user_name || "—")}</td>
+        <td>${movBadge(r.tipo)}</td>
+        <td style="text-align:right; font-weight:600;">${fmt(r.quantidade)}</td>
+        <td>${SC.escHtml(r.responsavel || "—")}</td>
         <td style="color:var(--color-text-muted); font-size:0.8125rem;">${SC.fmtDate(r.created_at)}</td>
       </tr>`).join("");
   }
@@ -331,8 +539,8 @@
     const alerts = (dbGet(KEYS.ALERTS) || []).filter(a => a.unread);
 
     if (countBadge) {
-      countBadge.textContent    = alerts.length || "";
-      countBadge.style.display  = alerts.length ? "inline-flex" : "none";
+      countBadge.textContent   = alerts.length || "";
+      countBadge.style.display = alerts.length ? "inline-flex" : "none";
     }
 
     if (!alerts.length) {
@@ -341,10 +549,10 @@
     }
 
     const iconMap = {
-      LOW_STOCK: { cls: "warning", svg: iconWarn() },
-      DISCARD:   { cls: "danger",  svg: iconTrash() },
-      REPARO:    { cls: "warning", svg: iconWrench() },
-      INFO:      { cls: "info",    svg: iconInfo() },
+      LOW_STOCK: { cls: "warning", svg: iconWarn()   },
+      DISCARD  : { cls: "danger",  svg: iconTrash()  },
+      REPARO   : { cls: "warning", svg: iconWrench() },
+      INFO     : { cls: "info",    svg: iconInfo()   },
     };
 
     wrap.innerHTML = alerts.map(a => {
@@ -368,7 +576,6 @@
     if (!wrap) return;
 
     const goal = dbGet(KEYS.GOAL);
-
     if (!goal || !goal.target_quantity) {
       wrap.innerHTML = `
         <p style="font-size:0.875rem; color:var(--color-text-muted);">Nenhuma meta configurada.</p>
@@ -376,10 +583,10 @@
       return;
     }
 
-    const current  = goal.current_quantity || 0;
-    const target   = goal.target_quantity;
-    const pctVal   = Math.min(100, Math.round((current / target) * 100));
-    const barCls   = pctVal >= 100 ? "success" : pctVal >= 60 ? "" : "warning";
+    const current = goal.current_quantity || 0;
+    const target  = goal.target_quantity;
+    const pctVal  = Math.min(100, Math.round((current / target) * 100));
+    const barCls  = pctVal >= 100 ? "success" : pctVal >= 60 ? "" : "warning";
 
     wrap.innerHTML = `
       <div class="goal-header">
@@ -402,7 +609,7 @@
   }
 
   /* ================================================================
-     MODAL QR
+     MODAL QR — busca por patrimônio ou id
      ================================================================ */
   function wireQRModal() {
     const qrScanBtn  = document.getElementById("qrScanBtn");
@@ -420,8 +627,9 @@
 
       const items = dbGet(KEYS.ITEMS) || [];
       const found = items.find(i =>
-        (i.asset_tag || "").toLowerCase() === token.toLowerCase() ||
-        String(i.id)  === token
+        (i.patrimonio || "").toLowerCase() === token.toLowerCase() ||
+        (i.id         || "").toLowerCase() === token.toLowerCase() ||
+        (i.numeroSerie|| "").toLowerCase() === token.toLowerCase()
       );
 
       if (found) {
@@ -461,20 +669,20 @@
     return `<p style="font-size:0.875rem; color:var(--color-text-muted); padding:var(--space-4) 0; text-align:center;">${msg}</p>`;
   }
 
-  /* Movement type badge (local, sem depender de SC.movTypeBadge para evitar regressão) */
-  function movBadge(type) {
+  /* Badge de tipo de movimentação */
+  function movBadge(tipo) {
     const map = {
-      ENTRADA      : ["movement-entrada",       "↑ Entrada"      ],
-      SAIDA        : ["movement-saida",         "↓ Saída"        ],
-      DOACAO       : ["movement-doacao",        "♥ Doação"       ],
-      DESCARTE     : ["movement-descarte",      "✕ Descarte"     ],
-      TRANSFERENCIA: ["movement-transferencia", "⇄ Transferência"],
+      ENTRADA      : ["movement-entrada",       "↑ Entrada"       ],
+      SAIDA        : ["movement-saida",         "↓ Saída"         ],
+      DOACAO       : ["movement-doacao",        "♥ Doação"        ],
+      DESCARTE     : ["movement-descarte",      "✕ Descarte"      ],
+      TRANSFERENCIA: ["movement-transferencia", "⇄ Transferência" ],
     };
-    const [cls, label] = map[type] || ["", type || "—"];
+    const [cls, label] = map[tipo] || ["", tipo || "—"];
     return `<span class="movement-type ${cls}">${SC.escHtml(label)}</span>`;
   }
 
-  /* Inline SVG icons para alertas */
+  /* SVG icons para alertas */
   function iconWarn()   { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`; }
   function iconTrash()  { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`; }
   function iconWrench() { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`; }
