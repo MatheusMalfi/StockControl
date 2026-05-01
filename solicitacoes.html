@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solicitações — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    .request-status-pending  { background: #FEF9C3; color: #854D0E; }
+    .request-status-approved { background: #DCFCE7; color: #166534; }
+    .request-status-rejected { background: #FEE2E2; color: #991B1B; }
+    .request-status-completed{ background: #EDE9FE; color: #5B21B6; }
+    .request-status-cancelled{ background: var(--color-surface-alt); color: var(--color-text-muted); }
+
+    .urgency-low    { color: var(--color-text-muted); }
+    .urgency-medium { color: var(--color-warning); }
+    .urgency-high   { color: var(--color-danger); font-weight: 600; }
+
+    .approval-actions { display: flex; gap: 8px; }
+
+    .request-timeline {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      position: relative;
+    }
+    .request-timeline::before {
+      content: "";
+      position: absolute;
+      left: 11px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: var(--color-border);
+    }
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 16px;
+      position: relative;
+    }
+    .timeline-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      z-index: 1;
+    }
+    .timeline-dot.pending   { background: #FEF9C3; color: #854D0E; border: 2px solid #FDE047; }
+    .timeline-dot.approved  { background: #DCFCE7; color: #166534; border: 2px solid #4ADE80; }
+    .timeline-dot.rejected  { background: #FEE2E2; color: #991B1B; border: 2px solid #F87171; }
+    .timeline-dot.completed { background: #EDE9FE; color: #5B21B6; border: 2px solid #A78BFA; }
+    .timeline-dot.created   { background: var(--color-primary-light); color: var(--color-primary); border: 2px solid var(--color-primary); }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="#2563EB"/>
+            <path d="M8 10h16M8 16h10M8 22h13" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <span class="sidebar-logo-text">StockControl</span>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <span class="nav-section-label">Principal</span>
+          <a href="index.html" class="nav-item" data-tooltip="Dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span class="nav-label">Dashboard</span>
+          </a>
+          <a href="estoque.html" class="nav-item" data-tooltip="Estoque">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span class="nav-label">Estoque</span>
+          </a>
+          <a href="movimentacoes.html" class="nav-item" data-tooltip="Movimentações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            <span class="nav-label">Movimentações</span>
+          </a>
+          <a href="solicitacoes.html" class="nav-item active" data-tooltip="Solicitações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span class="nav-label">Solicitações</span>
+          </a>
+          <a href="relatorios.html" class="nav-item" data-tooltip="Relatórios">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="nav-label">Relatórios</span>
+          </a>
+          <a href="notificacoes.html" class="nav-item" data-tooltip="Notificações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="nav-label">Notificações</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-label">Gerenciar</span>
+          <a href="form-item.html" class="nav-item" data-tooltip="Novo Item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span class="nav-label">Novo Item</span>
+          </a>
+          <a href="parceiros.html" class="nav-item" data-tooltip="Parceiros">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="nav-label">Parceiros</span>
+          </a>
+          <a href="etiquetas.html" class="nav-item" data-tooltip="Etiquetas">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <span class="nav-label">Etiquetas</span>
+          </a>
+          <a href="configuracoes.html" class="nav-item" data-tooltip="Configurações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            <span class="nav-label">Configurações</span>
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user" id="sidebarUser">
+          <div class="user-avatar" id="userAvatar">U</div>
+          <div class="user-info">
+            <span class="user-name" id="userName">Carregando…</span>
+            <span class="user-role" id="userRole"></span>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main -->
+    <div class="main-wrapper">
+      <header class="top-bar">
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Abrir menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="top-bar-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" placeholder="Buscar…" id="globalSearch" aria-label="Busca global" />
+        </div>
+        <div class="top-bar-actions">
+          <button class="icon-btn" id="notifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="badge-dot" id="notifBadge" style="display:none"></span>
+          </button>
+          <div class="user-menu" id="userMenu">
+            <button class="user-menu-trigger" id="userMenuBtn" aria-expanded="false">
+              <div class="user-avatar sm" id="topUserAvatar">U</div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="dropdown-menu" id="userDropdown">
+              <a href="configuracoes.html" class="dropdown-item">Perfil</a>
+              <a href="configuracoes.html" class="dropdown-item">Configurações</a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item danger" id="logoutBtn">Sair</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <div class="page-toolbar">
+          <div>
+            <h1 class="page-title">Solicitações</h1>
+            <p class="page-subtitle">Gerencie pedidos de retirada de itens do estoque</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="btn-new-request">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova Solicitação
+            </button>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:var(--space-5)">
+          <div class="kpi-card">
+            <span class="kpi-label">Total</span>
+            <span class="kpi-value" id="kpi-total"><span class="skeleton" style="width:40px;height:28px;display:inline-block"></span></span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Pendentes</span>
+            <span class="kpi-value" style="color:#854D0E" id="kpi-pending"><span class="skeleton" style="width:40px;height:28px;display:inline-block"></span></span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Aprovadas</span>
+            <span class="kpi-value" style="color:var(--color-success)" id="kpi-approved"><span class="skeleton" style="width:40px;height:28px;display:inline-block"></span></span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Recusadas</span>
+            <span class="kpi-value" style="color:var(--color-danger)" id="kpi-rejected"><span class="skeleton" style="width:40px;height:28px;display:inline-block"></span></span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Concluídas</span>
+            <span class="kpi-value" style="color:var(--color-primary)" id="kpi-completed"><span class="skeleton" style="width:40px;height:28px;display:inline-block"></span></span>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar" style="margin-bottom:var(--space-4)">
+          <div class="search-wrap" style="flex:1;max-width:320px">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" class="form-input search-input" id="search-input" placeholder="Buscar por item ou solicitante…" />
+          </div>
+          <select class="form-select" id="filter-status" style="width:160px">
+            <option value="">Todos os status</option>
+            <option value="PENDING">Pendente</option>
+            <option value="APPROVED">Aprovada</option>
+            <option value="REJECTED">Recusada</option>
+            <option value="COMPLETED">Concluída</option>
+            <option value="CANCELLED">Cancelada</option>
+          </select>
+          <select class="form-select" id="filter-urgency" style="width:140px">
+            <option value="">Qualquer urgência</option>
+            <option value="low">Baixa</option>
+            <option value="medium">Média</option>
+            <option value="high">Alta</option>
+          </select>
+          <input type="date" class="form-input" id="filter-date-from" style="width:150px" title="Data inicial" />
+          <input type="date" class="form-input" id="filter-date-to" style="width:150px" title="Data final" />
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-sort="created_at">Data</th>
+                <th>Item</th>
+                <th data-sort="quantity" style="text-align:right">Qtd</th>
+                <th>Solicitante</th>
+                <th>Urgência</th>
+                <th>Status</th>
+                <th style="width:120px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="requests-tbody"></tbody>
+          </table>
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display:none">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p>Nenhuma solicitação encontrada</p>
+        </div>
+
+        <div id="pagination"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal: Nova Solicitação -->
+  <div class="modal-backdrop" id="modal-new-request">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <h2 class="modal-title">Nova Solicitação</h2>
+        <button class="modal-close" onclick="SC.closeModal('modal-new-request')" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="new-req-error" class="alert alert-danger" style="display:none;margin-bottom:12px"></div>
+        <div class="form-group">
+          <label class="form-label">Item solicitado <span class="required">*</span></label>
+          <div style="position:relative">
+            <input type="text" class="form-input" id="req-item-search" placeholder="Buscar item pelo nome…" autocomplete="off" />
+            <div id="req-item-results" style="position:absolute;top:100%;left:0;right:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);z-index:100;max-height:200px;overflow-y:auto;display:none"></div>
+          </div>
+          <div id="req-selected-item" style="display:none;margin-top:8px;padding:8px 12px;background:var(--color-primary-light);border-radius:var(--radius-md);display:none;align-items:center;gap:8px">
+            <span id="req-selected-name" style="font-size:13px;font-weight:500;color:var(--color-primary)"></span>
+            <span id="req-selected-stock" style="font-size:12px;color:var(--color-text-muted)"></span>
+            <button type="button" id="btn-clear-req-item" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--color-text-muted);font-size:16px">×</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label" for="req-qty">Quantidade <span class="required">*</span></label>
+            <input type="number" class="form-input" id="req-qty" min="1" value="1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="req-urgency">Urgência</label>
+            <select class="form-select" id="req-urgency">
+              <option value="low">Baixa</option>
+              <option value="medium" selected>Média</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="req-justification">Justificativa <span class="required">*</span></label>
+          <textarea class="form-textarea" id="req-justification" rows="3" placeholder="Descreva o motivo da solicitação…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="req-needed-by">Necessário até</label>
+          <input type="date" class="form-input" id="req-needed-by" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="SC.closeModal('modal-new-request')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-save-request">Enviar Solicitação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Aprovar/Recusar -->
+  <div class="modal-backdrop" id="modal-review">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h2 class="modal-title" id="review-modal-title">Revisar Solicitação</h2>
+        <button class="modal-close" onclick="SC.closeModal('modal-review')" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="review-summary" style="padding:12px;background:var(--color-surface-alt);border-radius:var(--radius-md);margin-bottom:16px;font-size:13px"></div>
+        <div class="form-group">
+          <label class="form-label" for="review-comment">Comentário</label>
+          <textarea class="form-textarea" id="review-comment" rows="3" placeholder="Opcional: adicione uma observação…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="SC.closeModal('modal-review')">Cancelar</button>
+        <button class="btn btn-danger" id="btn-reject">Recusar</button>
+        <button class="btn btn-primary" id="btn-approve">Aprovar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer: Detalhes -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="item-drawer" id="request-drawer">
+    <div class="drawer-header">
+      <h2 class="drawer-title">Detalhes da Solicitação</h2>
+      <button class="drawer-close" id="drawer-close" aria-label="Fechar">×</button>
+    </div>
+    <div class="drawer-body" id="drawer-body">
+      <div class="skeleton" style="height:200px;border-radius:8px"></div>
+    </div>
+  </aside>
+
+  <script src="js/main.js"></script>
+  <script src="js/solicitacoes.js"></script>
+</body>
+</html>

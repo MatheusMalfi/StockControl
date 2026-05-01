@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Etiquetas — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    .label-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: var(--space-5);
+      align-items: start;
+    }
+    @media (max-width: 1024px) { .label-layout { grid-template-columns: 1fr; } }
+
+    .item-selector-list {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+    .item-selector-header {
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      background: var(--color-surface-alt);
+    }
+    .item-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      transition: background 0.1s;
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-row:hover { background: var(--color-surface-alt); }
+    .item-row.selected { background: var(--color-primary-light); }
+
+    .label-preview-panel {
+      position: sticky;
+      top: 80px;
+    }
+    .label-preview-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+    .label-preview-header {
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* Label templates */
+    .label-template-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .label-tpl {
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+    .label-tpl.active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+    .label-tpl-icon { font-size: 20px; margin-bottom: 4px; }
+
+    /* Printed label styles */
+    .label-preview-area {
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 200px;
+      align-items: center;
+    }
+    .label-item {
+      border: 1.5px solid #222;
+      border-radius: 6px;
+      background: #fff;
+      font-family: 'Inter', sans-serif;
+      color: #000;
+      display: flex;
+      flex-direction: column;
+    }
+    .label-sm  { width: 180px; min-height: 80px;  padding: 8px; font-size: 10px; }
+    .label-md  { width: 240px; min-height: 100px; padding: 10px; font-size: 11px; }
+    .label-lg  { width: 300px; min-height: 120px; padding: 12px; font-size: 12px; }
+    .label-org { font-size: 9px; color: #888; margin-bottom: 2px; }
+    .label-name { font-weight: 700; line-height: 1.2; margin-bottom: 4px; }
+    .label-meta { display: flex; gap: 6px; align-items: center; }
+    .label-asset { font-family: monospace; font-size: 10px; background: #f3f3f3; padding: 1px 4px; border-radius: 3px; }
+    .label-cond  { font-size: 9px; padding: 1px 5px; border-radius: 99px; font-weight: 600; }
+    .label-cond-otimo    { background: #DCFCE7; color: #166534; }
+    .label-cond-reparo   { background: #FEF9C3; color: #854D0E; }
+    .label-cond-descartar{ background: #FEE2E2; color: #991B1B; }
+    .label-qr { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; }
+    .label-qr-placeholder { width: 36px; height: 36px; background: repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 0 0 / 6px 6px; border-radius: 2px; flex-shrink: 0; }
+    .label-qty { font-size: 10px; color: #555; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area {
+        position: fixed; top: 0; left: 0;
+        display: flex; flex-wrap: wrap; gap: 8px; padding: 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563EB"/><path d="M8 10h16M8 16h10M8 22h13" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <span class="sidebar-logo-text">StockControl</span>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <span class="nav-section-label">Principal</span>
+          <a href="index.html" class="nav-item" data-tooltip="Dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span class="nav-label">Dashboard</span>
+          </a>
+          <a href="estoque.html" class="nav-item" data-tooltip="Estoque">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span class="nav-label">Estoque</span>
+          </a>
+          <a href="movimentacoes.html" class="nav-item" data-tooltip="Movimentações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            <span class="nav-label">Movimentações</span>
+          </a>
+          <a href="solicitacoes.html" class="nav-item" data-tooltip="Solicitações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span class="nav-label">Solicitações</span>
+          </a>
+          <a href="relatorios.html" class="nav-item" data-tooltip="Relatórios">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="nav-label">Relatórios</span>
+          </a>
+          <a href="notificacoes.html" class="nav-item" data-tooltip="Notificações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="nav-label">Notificações</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-label">Gerenciar</span>
+          <a href="form-item.html" class="nav-item" data-tooltip="Novo Item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span class="nav-label">Novo Item</span>
+          </a>
+          <a href="parceiros.html" class="nav-item" data-tooltip="Parceiros">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="nav-label">Parceiros</span>
+          </a>
+          <a href="etiquetas.html" class="nav-item active" data-tooltip="Etiquetas">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <span class="nav-label">Etiquetas</span>
+          </a>
+          <a href="configuracoes.html" class="nav-item" data-tooltip="Configurações">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            <span class="nav-label">Configurações</span>
+          </a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user" id="sidebarUser">
+          <div class="user-avatar" id="userAvatar">U</div>
+          <div class="user-info"><span class="user-name" id="userName">Carregando…</span><span class="user-role" id="userRole"></span></div>
+        </div>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrapper">
+      <header class="top-bar">
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Abrir menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="top-bar-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" placeholder="Buscar…" id="globalSearch" aria-label="Busca global" />
+        </div>
+        <div class="top-bar-actions">
+          <button class="icon-btn" id="notifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="badge-dot" id="notifBadge" style="display:none"></span>
+          </button>
+          <div class="user-menu" id="userMenu">
+            <button class="user-menu-trigger" id="userMenuBtn" aria-expanded="false">
+              <div class="user-avatar sm" id="topUserAvatar">U</div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="dropdown-menu" id="userDropdown">
+              <a href="configuracoes.html" class="dropdown-item">Perfil</a>
+              <a href="configuracoes.html" class="dropdown-item">Configurações</a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item danger" id="logoutBtn">Sair</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <div class="page-toolbar">
+          <div>
+            <h1 class="page-title">Gerador de Etiquetas</h1>
+            <p class="page-subtitle">Selecione itens e imprima etiquetas com QR Code</p>
+          </div>
+        </div>
+
+        <div class="label-layout">
+          <!-- Left: item selector -->
+          <div>
+            <div class="filter-bar" style="margin-bottom:var(--space-3)">
+              <div class="search-wrap" style="flex:1">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="search" class="form-input search-input" id="search-input" placeholder="Buscar itens…" />
+              </div>
+              <select class="form-select" id="filter-category" style="width:180px">
+                <option value="">Todas as categorias</option>
+              </select>
+            </div>
+
+            <div class="item-selector-list">
+              <div class="item-selector-header">
+                <input type="checkbox" id="select-all" class="form-checkbox" />
+                <label for="select-all" style="font-size:13px;font-weight:500;cursor:pointer">
+                  Selecionar todos
+                </label>
+                <span id="selected-count" style="margin-left:auto;font-size:12px;color:var(--color-text-muted)">0 selecionados</span>
+              </div>
+              <div id="items-list">
+                <div style="padding:24px;text-align:center">
+                  <div class="skeleton" style="height:44px;border-radius:6px;margin-bottom:8px"></div>
+                  <div class="skeleton" style="height:44px;border-radius:6px;margin-bottom:8px"></div>
+                  <div class="skeleton" style="height:44px;border-radius:6px"></div>
+                </div>
+              </div>
+            </div>
+            <div id="items-pagination" style="margin-top:8px"></div>
+          </div>
+
+          <!-- Right: preview & controls -->
+          <div class="label-preview-panel">
+            <div class="label-preview-card">
+              <div class="label-preview-header">Configurações de Impressão</div>
+
+              <div class="label-template-selector">
+                <div class="label-tpl active" data-size="sm">
+                  <div class="label-tpl-icon">▪</div>
+                  Pequena<br>4 × 2 cm
+                </div>
+                <div class="label-tpl" data-size="md">
+                  <div class="label-tpl-icon">◼</div>
+                  Média<br>6 × 3 cm
+                </div>
+                <div class="label-tpl" data-size="lg">
+                  <div class="label-tpl-icon">⬛</div>
+                  Grande<br>8 × 4 cm
+                </div>
+              </div>
+
+              <div style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-border)">
+                <label class="form-label" style="font-size:12px">Campos visíveis</label>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="show-asset" checked class="form-checkbox"> Patrimônio</label>
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="show-condition" checked class="form-checkbox"> Condição</label>
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="show-qty" checked class="form-checkbox"> Quantidade</label>
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="show-org" checked class="form-checkbox"> Organização</label>
+                </div>
+              </div>
+
+              <div style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-border)">
+                <div style="font-size:12px;font-weight:600;margin-bottom:8px">Pré-visualização</div>
+                <div id="label-preview-area" class="label-preview-area">
+                  <div style="color:var(--color-text-muted);font-size:13px;text-align:center">Selecione itens para visualizar</div>
+                </div>
+              </div>
+
+              <div style="padding:var(--space-4) var(--space-5);display:flex;flex-direction:column;gap:8px">
+                <button class="btn btn-primary" id="btn-print" disabled>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Imprimir Etiquetas (<span id="print-count">0</span>)
+                </button>
+                <button class="btn btn-secondary" id="btn-export-pdf" disabled>Exportar PDF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Hidden print area -->
+  <div id="print-area" style="display:none"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/etiquetas.js"></script>
+</body>
+</html>
