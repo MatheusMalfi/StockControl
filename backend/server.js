@@ -6,6 +6,10 @@ const fs = require("fs");
 const cors = require("cors");
 const bcrypt = require("bcrypt"); // se der erro no Windows, troque por 'bcryptjs'
 const mysql = require("mysql2/promise");
+const jwt = require("jsonwebtoken");
+
+const JWT_SECRET  = process.env.JWT_SECRET  || "stockcontrol_secret_change_in_production";
+const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || "7d";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +64,93 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || "stockcontrol",
   waitForConnections: true,
   connectionLimit: 10,
+});
+
+// ==================== AUTH (JWT) ====================
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { org_type, org_name, cnpj, phone, address, name, email, password } = req.body;
+
+    if (!org_name || !email || !password || !name) {
+      return res.status(400).json({ message: "Campos obrigatórios ausentes." });
+    }
+
+    const [dup] = await pool.query("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
+    if (dup.length) {
+      return res.status(409).json({ message: "E-mail já cadastrado." });
+    }
+
+    let organizationId;
+    if (cnpj) {
+      const [org] = await pool.query("SELECT id FROM organizations WHERE cnpj = ? LIMIT 1", [cnpj]);
+      if (org.length) organizationId = org[0].id;
+    }
+    if (!organizationId) {
+      const [insOrg] = await pool.execute(
+        `INSERT INTO organizations (org_type, name, cnpj, email, phone, address_line1) VALUES (?, ?, ?, ?, ?, ?)`,
+        [org_type || "ONG", org_name, cnpj || null, email, phone || null, address || null]
+      );
+      organizationId = insOrg.insertId;
+    }
+
+    const hash = await bcrypt.hash(password, parseInt(process.env.BCRYPT_ROUNDS) || 10);
+    const [insUser] = await pool.execute(
+      `INSERT INTO users (organization_id, email, password_hash, name, role, is_active) VALUES (?, ?, ?, ?, 'ADMIN', 1)`,
+      [organizationId, email, hash, name]
+    );
+
+    const payload = { id: insUser.insertId, email, name, role: "ADMIN", organizationId };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+
+    res.status(201).json({ token, user: payload });
+  } catch (err) {
+    console.error("Erro em /api/auth/register:", err);
+    res.status(500).json({ message: "Erro interno no servidor." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "E-mail e senha são obrigatórios." });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT u.id, u.email, u.name, u.role, u.password_hash, u.organization_id,
+              o.name AS org_name, o.org_type
+       FROM users u
+       JOIN organizations o ON o.id = u.organization_id
+       WHERE u.email = ? AND u.is_active = 1 LIMIT 1`,
+      [email]
+    );
+    if (!rows.length) {
+      return res.status(401).json({ message: "E-mail ou senha incorretos." });
+    }
+
+    const user = rows[0];
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) {
+      return res.status(401).json({ message: "E-mail ou senha incorretos." });
+    }
+
+    const payload = {
+      id:             user.id,
+      email:          user.email,
+      name:           user.name,
+      role:           user.role,
+      organizationId: user.organization_id,
+      orgName:        user.org_name,
+      orgType:        user.org_type,
+    };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+
+    res.json({ token, user: payload });
+  } catch (err) {
+    console.error("Erro em /api/auth/login:", err);
+    res.status(500).json({ message: "Erro interno no servidor." });
+  }
 });
 
 // ========== EXCLUIR ITEM E IMAGEM ==========
