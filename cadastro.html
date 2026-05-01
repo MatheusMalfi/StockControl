@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      background: var(--color-bg);
+    }
+
+    /* Left panel */
+    .register-panel {
+      display: none;
+      flex: 1;
+      background: linear-gradient(145deg, #0F172A 0%, #1E3A5F 60%, #1D4ED8 100%);
+      position: relative;
+      overflow: hidden;
+      padding: var(--space-12) var(--space-10);
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    @media (min-width: 1024px) { .register-panel { display: flex; } }
+
+    .register-panel-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 20% 30%, #3B82F6 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, #8B5CF6 0%, transparent 50%);
+      opacity: 0.07;
+    }
+
+    .register-panel-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .register-panel-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      position: relative;
+      z-index: 1;
+    }
+
+    .register-panel-logo {
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .register-panel-brand-name { font-size: 1.125rem; font-weight: 700; color: #fff; }
+    .register-panel-brand-sub  { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 1px; }
+
+    .register-panel-content { position: relative; z-index: 1; }
+
+    .register-panel-headline {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-4);
+    }
+
+    .register-panel-headline span { color: #60A5FA; }
+
+    .register-panel-desc {
+      font-size: 0.9375rem;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.6;
+      max-width: 360px;
+    }
+
+    .register-panel-steps {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .register-step {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+
+    .register-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .register-step-text { font-size: 0.875rem; color: rgba(255,255,255,0.65); line-height: 1.5; }
+    .register-step-title { font-weight: 600; color: rgba(255,255,255,0.9); }
+
+    /* Right form side */
+    .register-form-side {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: var(--space-8);
+      background: var(--color-surface);
+      overflow-y: auto;
+    }
+
+    @media (max-width: 1023px) {
+      .register-form-side { max-width: 100%; min-height: 100vh; }
+    }
+    @media (max-width: 480px) {
+      .register-form-side { padding: var(--space-6) var(--space-5); }
+    }
+
+    .register-form-inner {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    /* Mobile brand */
+    .register-mobile-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-8);
+    }
+    @media (min-width: 1024px) { .register-mobile-brand { display: none; } }
+
+    .register-mobile-logo {
+      width: 40px;
+      height: 40px;
+      background: var(--color-primary);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .register-mobile-brand-name { font-size: 1.125rem; font-weight: 700; color: var(--color-text-primary); }
+    .register-mobile-brand-sub  { font-size: 0.75rem; color: var(--color-text-muted); }
+
+    /* Heading */
+    .register-heading { margin-bottom: var(--space-6); }
+    .register-heading h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-1-5);
+    }
+    .register-heading p { font-size: 0.9375rem; color: var(--color-text-muted); }
+
+    /* Section divider inside form */
+    .form-section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-muted);
+      margin: var(--space-5) 0 var(--space-3);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    /* Org type toggle */
+    .org-type-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3);
+    }
+
+    .org-type-option { position: relative; }
+    .org-type-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+
+    .org-type-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      user-select: none;
+    }
+
+    .org-type-label:hover { border-color: var(--color-border-strong); background: var(--color-surface-alt); }
+
+    .org-type-option input:checked + .org-type-label {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .org-type-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .org-type-icon svg { width: 16px; height: 16px; }
+
+    .org-type-text-name  { font-size: 0.875rem; font-weight: 600; color: var(--color-text-primary); }
+    .org-type-text-desc  { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 1px; }
+
+    .org-type-option input:checked + .org-type-label .org-type-text-name { color: var(--color-primary-dark); }
+
+    /* Password strength */
+    .pwd-strength-wrap { margin-top: var(--space-2); }
+    .pwd-strength-bar-track {
+      height: 4px;
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-bottom: var(--space-1);
+    }
+    .pwd-strength-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 0.3s ease, background 0.3s ease;
+      width: 0%;
+    }
+    .pwd-strength-label {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+
+    /* Submit + login link */
+    .register-submit { width: 100%; height: 46px; font-size: 0.9375rem; margin-top: var(--space-2); }
+
+    .register-login-link {
+      margin-top: var(--space-5);
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      text-align: center;
+    }
+    .register-login-link a { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+    .register-login-link a:hover { text-decoration: underline; }
+
+    /* Error banner */
+    .register-error {
+      display: none;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-danger-light);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      color: var(--color-danger-dark);
+      margin-bottom: var(--space-4);
+    }
+    .register-error.is-visible { display: flex; }
+    .register-error svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    /* Toggle password */
+    .password-toggle {
+      position: absolute;
+      right: var(--space-3);
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: var(--space-1);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      transition: color var(--transition-fast);
+    }
+    .password-toggle:hover { color: var(--color-text-secondary); }
+    .password-toggle svg  { width: 17px; height: 17px; }
+    .icon-eye-off { display: none; }
+    .password-visible .icon-eye     { display: none; }
+    .password-visible .icon-eye-off { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Left decorative panel -->
+  <aside class="register-panel" aria-hidden="true">
+    <div class="register-panel-bg"></div>
+    <div class="register-panel-grid"></div>
+
+    <div class="register-panel-brand">
+      <div class="register-panel-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <div>
+        <div class="register-panel-brand-name">StockControl</div>
+        <div class="register-panel-brand-sub">USCS — Gestão de Estoque</div>
+      </div>
+    </div>
+
+    <div class="register-panel-content">
+      <h2 class="register-panel-headline">
+        Comece a controlar<br/>
+        <span>seu estoque hoje</span>
+      </h2>
+      <p class="register-panel-desc">
+        Cadastre sua organização em minutos e tenha acesso completo ao sistema de gestão de patrimônio.
+      </p>
+    </div>
+
+    <div class="register-panel-steps">
+      <div class="register-step">
+        <span class="register-step-num">1</span>
+        <div class="register-step-text">
+          <div class="register-step-title">Dados da Organização</div>
+          Informe nome, tipo e contato da sua instituição.
+        </div>
+      </div>
+      <div class="register-step">
+        <span class="register-step-num">2</span>
+        <div class="register-step-text">
+          <div class="register-step-title">Conta do Administrador</div>
+          Crie o acesso do responsável principal pelo sistema.
+        </div>
+      </div>
+      <div class="register-step">
+        <span class="register-step-num">3</span>
+        <div class="register-step-text">
+          <div class="register-step-title">Pronto para usar</div>
+          Adicione itens, convide equipe e gerencie tudo em um só lugar.
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right form panel -->
+  <main class="register-form-side">
+    <div class="register-form-inner">
+
+      <!-- Mobile brand -->
+      <div class="register-mobile-brand">
+        <div class="register-mobile-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div>
+          <div class="register-mobile-brand-name">StockControl</div>
+          <div class="register-mobile-brand-sub">USCS — Gestão de Estoque</div>
+        </div>
+      </div>
+
+      <div class="register-heading">
+        <h1>Criar conta</h1>
+        <p>Preencha os dados abaixo para começar.</p>
+      </div>
+
+      <!-- Error banner -->
+      <div class="register-error" id="registerError" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="registerErrorMsg">Ocorreu um erro. Tente novamente.</span>
+      </div>
+
+      <form id="registerForm" novalidate>
+
+        <!-- ── Organização ── -->
+        <div class="form-section-label">Dados da Organização</div>
+
+        <!-- Org type -->
+        <div class="form-group" id="groupOrgType" style="margin-bottom:var(--space-4);">
+          <label class="form-label required">Tipo de organização</label>
+          <div class="org-type-group">
+            <div class="org-type-option">
+              <input type="radio" name="org_type" id="typeOng" value="ONG" required />
+              <label class="org-type-label" for="typeOng">
+                <div class="org-type-icon" style="background:var(--color-primary-light); color:var(--color-primary);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="org-type-text-name">ONG</div>
+                  <div class="org-type-text-desc">Organização sem fins lucrativos</div>
+                </div>
+              </label>
+            </div>
+            <div class="org-type-option">
+              <input type="radio" name="org_type" id="typeRecycler" value="RECYCLER" />
+              <label class="org-type-label" for="typeRecycler">
+                <div class="org-type-icon" style="background:var(--color-success-light); color:var(--color-success-dark);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <polyline points="23 20 23 14 17 14"/>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="org-type-text-name">Reciclador</div>
+                  <div class="org-type-text-desc">Empresa de reciclagem</div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <span class="form-error" id="errorOrgType">Selecione o tipo de organização.</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group form-col-span-2" id="groupOrgName">
+            <label class="form-label required" for="orgName">Nome da organização</label>
+            <input type="text" id="orgName" name="org_name" class="form-control"
+              placeholder="Ex: USCS — Inovação Social" required maxlength="150" />
+            <span class="form-error" id="errorOrgName">Informe o nome da organização.</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="orgCnpj">CNPJ</label>
+            <input type="text" id="orgCnpj" name="cnpj" class="form-control"
+              placeholder="00.000.000/0001-00" maxlength="18" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="orgPhone">Telefone</label>
+            <input type="tel" id="orgPhone" name="phone" class="form-control"
+              placeholder="(11) 99999-9999" maxlength="20" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="orgAddress">Endereço</label>
+          <input type="text" id="orgAddress" name="address" class="form-control"
+            placeholder="Rua, número, cidade, estado" maxlength="200" />
+        </div>
+
+        <!-- ── Administrador ── -->
+        <div class="form-section-label">Conta do Administrador</div>
+
+        <div class="form-group" id="groupAdminName">
+          <label class="form-label required" for="adminName">Nome completo</label>
+          <div class="input-group">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <input type="text" id="adminName" name="admin_name" class="form-control"
+              placeholder="Seu nome completo" required maxlength="100" />
+          </div>
+          <span class="form-error" id="errorAdminName">Informe seu nome.</span>
+        </div>
+
+        <div class="form-group" id="groupAdminEmail">
+          <label class="form-label required" for="adminEmail">E-mail institucional</label>
+          <div class="input-group">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <input type="email" id="adminEmail" name="email" class="form-control"
+              placeholder="admin@organização.com" required maxlength="150" autocomplete="email" />
+          </div>
+          <span class="form-error" id="errorAdminEmail">Informe um e-mail válido.</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" id="groupAdminPwd">
+            <label class="form-label required" for="adminPwd">Senha</label>
+            <div class="input-group" style="position:relative;">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <input type="password" id="adminPwd" name="password" class="form-control"
+                placeholder="Mínimo 8 caracteres" required minlength="8" style="padding-right:44px;" autocomplete="new-password" />
+              <button type="button" class="password-toggle" id="togglePwd" aria-label="Mostrar senha">
+                <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
+            </div>
+            <!-- Password strength -->
+            <div class="pwd-strength-wrap" id="pwdStrengthWrap" style="display:none;">
+              <div class="pwd-strength-bar-track">
+                <div class="pwd-strength-bar-fill" id="pwdStrengthFill"></div>
+              </div>
+              <span class="pwd-strength-label" id="pwdStrengthLabel"></span>
+            </div>
+            <span class="form-error" id="errorAdminPwd">Mínimo 8 caracteres.</span>
+          </div>
+
+          <div class="form-group" id="groupConfirmPwd">
+            <label class="form-label required" for="confirmPwd">Confirmar senha</label>
+            <div class="input-group" style="position:relative;">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <input type="password" id="confirmPwd" name="confirm_password" class="form-control"
+                placeholder="Repita a senha" required style="padding-right:44px;" autocomplete="new-password" />
+              <button type="button" class="password-toggle" id="toggleConfirmPwd" aria-label="Mostrar senha">
+                <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
+            </div>
+            <span class="form-error" id="errorConfirmPwd">As senhas não coincidem.</span>
+          </div>
+        </div>
+
+        <!-- Terms -->
+        <div class="form-group" style="margin-top:var(--space-2);" id="groupTerms">
+          <label class="form-check">
+            <input type="checkbox" id="acceptTerms" required />
+            <span class="form-check-label">
+              Li e concordo com os
+              <a href="#" style="color:var(--color-primary); font-weight:500;">Termos de Uso</a>
+              e a
+              <a href="#" style="color:var(--color-primary); font-weight:500;">Política de Privacidade</a>
+            </span>
+          </label>
+          <span class="form-error" id="errorTerms">Você deve aceitar os termos para continuar.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg register-submit" id="registerBtn">
+          Criar Conta
+        </button>
+      </form>
+
+      <p class="register-login-link">
+        Já tem uma conta? <a href="login.html">Entrar</a>
+      </p>
+
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const form         = document.getElementById("registerForm");
+      const registerBtn  = document.getElementById("registerBtn");
+      const errorBanner  = document.getElementById("registerError");
+      const errorMsg     = document.getElementById("registerErrorMsg");
+
+      /* ── Password visibility toggles ── */
+      function wireToggle(btnId, inputId) {
+        const btn   = document.getElementById(btnId);
+        const input = document.getElementById(inputId);
+        if (!btn || !input) return;
+        btn.addEventListener("click", () => {
+          const visible = input.type === "text";
+          input.type = visible ? "password" : "text";
+          btn.classList.toggle("password-visible", !visible);
+          btn.setAttribute("aria-label", visible ? "Mostrar senha" : "Ocultar senha");
+        });
+      }
+      wireToggle("togglePwd",        "adminPwd");
+      wireToggle("toggleConfirmPwd", "confirmPwd");
+
+      /* ── Password strength ── */
+      const pwdInput  = document.getElementById("adminPwd");
+      const strengthWrap  = document.getElementById("pwdStrengthWrap");
+      const strengthFill  = document.getElementById("pwdStrengthFill");
+      const strengthLabel = document.getElementById("pwdStrengthLabel");
+
+      const strengthLevels = [
+        { min: 0,  pct: 20,  color: "var(--color-danger)",  label: "Muito fraca" },
+        { min: 1,  pct: 40,  color: "var(--color-danger)",  label: "Fraca" },
+        { min: 2,  pct: 60,  color: "var(--color-warning)", label: "Razoável" },
+        { min: 3,  pct: 80,  color: "var(--color-primary)", label: "Boa" },
+        { min: 4,  pct: 100, color: "var(--color-success)", label: "Forte" },
+      ];
+
+      function calcStrength(pwd) {
+        let score = 0;
+        if (pwd.length >= 8)            score++;
+        if (pwd.length >= 12)           score++;
+        if (/[A-Z]/.test(pwd))          score++;
+        if (/[0-9]/.test(pwd))          score++;
+        if (/[^A-Za-z0-9]/.test(pwd))   score++;
+        return Math.min(score, 4);
+      }
+
+      pwdInput && pwdInput.addEventListener("input", () => {
+        const val = pwdInput.value;
+        if (!val) { strengthWrap.style.display = "none"; return; }
+        strengthWrap.style.display = "block";
+        const score = calcStrength(val);
+        const lvl   = strengthLevels[score];
+        strengthFill.style.width      = lvl.pct + "%";
+        strengthFill.style.background = lvl.color;
+        strengthLabel.textContent     = lvl.label;
+        strengthLabel.style.color     = lvl.color;
+      });
+
+      /* ── CNPJ mask ── */
+      const cnpjInput = document.getElementById("orgCnpj");
+      cnpjInput && cnpjInput.addEventListener("input", () => {
+        let v = cnpjInput.value.replace(/\D/g, "").slice(0, 14);
+        if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+        else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, "$1.$2.$3/$4");
+        else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d+)$/, "$1.$2.$3");
+        else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, "$1.$2");
+        cnpjInput.value = v;
+      });
+
+      /* ── Phone mask ── */
+      const phoneInput = document.getElementById("orgPhone");
+      phoneInput && phoneInput.addEventListener("input", () => {
+        let v = phoneInput.value.replace(/\D/g, "").slice(0, 11);
+        if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+        else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4,5})(\d*)$/, "($1) $2-$3");
+        else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, "($1) $2");
+        phoneInput.value = v;
+      });
+
+      /* ── Validation helpers ── */
+      function setError(groupId, errorId, show) {
+        document.getElementById(groupId)?.classList.toggle("has-error", show);
+        const errEl = document.getElementById(errorId);
+        if (errEl) errEl.style.display = show ? "block" : "none";
+      }
+
+      function isValidEmail(v) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+      }
+
+      /* Clear server error on any input */
+      form.addEventListener("input", () => errorBanner.classList.remove("is-visible"));
+
+      /* ── Submit ── */
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const orgType     = form.querySelector("input[name=org_type]:checked")?.value || "";
+        const orgName     = document.getElementById("orgName").value.trim();
+        const adminName   = document.getElementById("adminName").value.trim();
+        const adminEmail  = document.getElementById("adminEmail").value.trim();
+        const pwd         = document.getElementById("adminPwd").value;
+        const confirmPwd  = document.getElementById("confirmPwd").value;
+        const terms       = document.getElementById("acceptTerms").checked;
+
+        let valid = true;
+
+        if (!orgType)              { setError("groupOrgType",    "errorOrgType",    true); valid = false; }
+        else                       { setError("groupOrgType",    "errorOrgType",    false); }
+
+        if (!orgName)              { setError("groupOrgName",    "errorOrgName",    true); valid = false; }
+        else                       { setError("groupOrgName",    "errorOrgName",    false); }
+
+        if (!adminName)            { setError("groupAdminName",  "errorAdminName",  true); valid = false; }
+        else                       { setError("groupAdminName",  "errorAdminName",  false); }
+
+        if (!isValidEmail(adminEmail)) { setError("groupAdminEmail","errorAdminEmail", true); valid = false; }
+        else                           { setError("groupAdminEmail","errorAdminEmail", false); }
+
+        if (pwd.length < 8)        { setError("groupAdminPwd",  "errorAdminPwd",   true); valid = false; }
+        else                       { setError("groupAdminPwd",  "errorAdminPwd",   false); }
+
+        if (pwd !== confirmPwd)    { setError("groupConfirmPwd","errorConfirmPwd", true); valid = false; }
+        else                       { setError("groupConfirmPwd","errorConfirmPwd", false); }
+
+        if (!terms)                { setError("groupTerms",     "errorTerms",      true); valid = false; }
+        else                       { setError("groupTerms",     "errorTerms",      false); }
+
+        if (!valid) return;
+
+        registerBtn.classList.add("is-loading");
+        registerBtn.disabled = true;
+        errorBanner.classList.remove("is-visible");
+
+        try {
+          const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              org_type:  orgType,
+              org_name:  orgName,
+              cnpj:      document.getElementById("orgCnpj").value.trim()    || undefined,
+              phone:     document.getElementById("orgPhone").value.trim()   || undefined,
+              address:   document.getElementById("orgAddress").value.trim() || undefined,
+              name:      adminName,
+              email:     adminEmail,
+              password:  pwd,
+            }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (res.ok) {
+            /* Auto-login with returned token */
+            if (data.token) {
+              sessionStorage.setItem("sc_token", data.token);
+              sessionStorage.setItem("sc_user", JSON.stringify(data.user || {}));
+            }
+            window.location.href = "index.html";
+          } else {
+            const msg = data.message || data.error || "Erro ao criar conta. Verifique os dados e tente novamente.";
+            errorMsg.textContent = msg;
+            errorBanner.classList.add("is-visible");
+          }
+        } catch {
+          errorMsg.textContent = "Não foi possível conectar ao servidor. Tente novamente.";
+          errorBanner.classList.add("is-visible");
+        } finally {
+          registerBtn.classList.remove("is-loading");
+          registerBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

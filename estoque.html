@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estoque — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    /* View toggle (table / grid) */
+    .view-toggle {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .view-toggle-btn {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+    .view-toggle-btn:hover  { background: var(--color-surface-alt); color: var(--color-text-primary); }
+    .view-toggle-btn.active { background: var(--color-primary-light); color: var(--color-primary); }
+    .view-toggle-btn svg { width: 16px; height: 16px; }
+
+    /* Grid view cards */
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .item-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+    }
+    .item-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-border-strong);
+    }
+
+    .item-card-img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      background: var(--color-surface-alt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+    }
+    .item-card-img svg { width: 32px; height: 32px; }
+
+    .item-card-body {
+      padding: var(--space-3) var(--space-4) var(--space-4);
+    }
+
+    .item-card-name {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-1);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-card-meta {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-3);
+    }
+
+    .item-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .item-card-qty {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+
+    /* Quantity input inline */
+    .qty-cell {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+    .qty-value {
+      min-width: 28px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    /* Detail drawer (right slide-in panel) */
+    .detail-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 420px;
+      max-width: 100vw;
+      height: 100vh;
+      background: var(--color-surface);
+      border-left: 1px solid var(--color-border);
+      box-shadow: var(--shadow-xl);
+      z-index: var(--z-modal);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform var(--transition-base);
+    }
+    .detail-drawer.is-open { transform: translateX(0); }
+
+    .detail-drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+    .detail-drawer-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+    .detail-drawer-close {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: none;
+      border-radius: var(--radius-sm);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+    .detail-drawer-close:hover { background: var(--color-surface-alt); }
+    .detail-drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-5);
+    }
+    .detail-drawer-footer {
+      padding: var(--space-4) var(--space-5);
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      gap: var(--space-2);
+      flex-shrink: 0;
+    }
+
+    .detail-photo {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-alt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-5);
+      border: 1px solid var(--color-border);
+    }
+    .detail-photo svg { width: 48px; height: 48px; }
+
+    .detail-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: var(--space-4);
+    }
+    .detail-field-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+    }
+    .detail-field-value {
+      font-size: 0.9375rem;
+      color: var(--color-text-primary);
+    }
+
+    .detail-fields-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4) var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    .qr-token-box {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2-5) var(--space-3);
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: monospace;
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      word-break: break-all;
+    }
+    .qr-copy-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: var(--space-1);
+      border-radius: var(--radius-sm);
+      transition: color var(--transition-fast);
+    }
+    .qr-copy-btn:hover { color: var(--color-primary); }
+    .qr-copy-btn svg { width: 14px; height: 14px; }
+
+    /* Discard modal fields */
+    .discard-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+    }
+    .discard-info-name {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--color-text-primary);
+    }
+    .discard-info-meta {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+
+    @media (max-width: 768px) {
+      .detail-drawer { width: 100vw; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div class="sidebar-logo-text">
+          <span class="sidebar-logo-name">StockControl</span>
+          <span class="sidebar-logo-sub">USCS</span>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-label">Principal</span>
+        <a href="index.html" class="nav-item" data-tooltip="Dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="estoque.html" class="nav-item active" data-tooltip="Estoque">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6"  x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          <span class="nav-label">Estoque</span>
+        </a>
+        <a href="movimentacoes.html" class="nav-item" data-tooltip="Movimentações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          <span class="nav-label">Movimentações</span>
+        </a>
+        <a href="relatorios.html" class="nav-item" data-tooltip="Relatórios">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+          <span class="nav-label">Relatórios</span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-label">Gerenciar</span>
+        <a href="form-item.html" class="nav-item" data-tooltip="Novo Item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          <span class="nav-label">Novo Item</span>
+        </a>
+        <a href="configuracoes.html" class="nav-item" data-tooltip="Configurações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+          </svg>
+          <span class="nav-label">Configurações</span>
+        </a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar"><span id="sidebarInitials">--</span></div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebarUserName">Carregando…</span>
+          <span class="sidebar-user-role" id="sidebarUserRole">—</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+      <button class="header-menu-btn" id="headerMenuBtn" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="header-search">
+        <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" class="header-search-input" placeholder="Buscar item, patrimônio, QR…" id="globalSearch" />
+      </div>
+      <div class="header-actions">
+        <div class="dropdown" id="notifDropdown">
+          <button class="header-notif-btn" id="notifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+          </button>
+          <div class="dropdown-menu" id="notifMenu" style="min-width:300px; right:0;">
+            <div class="dropdown-header">Notificações</div>
+            <div id="notifListDrop">
+              <div style="padding:var(--space-4); text-align:center; color:var(--color-text-muted); font-size:0.875rem;">Sem notificações</div>
+            </div>
+          </div>
+        </div>
+        <div class="dropdown" id="userDropdown">
+          <button class="header-user-btn" id="userBtn">
+            <div class="avatar avatar-sm" id="headerAvatar">--</div>
+            <span class="header-user-name" id="headerUserName">Usuário</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="configuracoes.html" class="dropdown-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Meu Perfil
+            </a>
+            <div class="dropdown-separator"></div>
+            <button class="dropdown-item danger" id="logoutBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Estoque</h1>
+          <p class="page-subtitle" id="stockSubtitle">Carregando itens…</p>
+        </div>
+        <div style="display:flex; gap:var(--space-2);">
+          <a href="form-item.html" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Novo Item
+          </a>
+        </div>
+      </div>
+
+      <!-- Toolbar: search + filters + view toggle -->
+      <div class="page-toolbar">
+        <div class="page-toolbar-left">
+          <div class="search-input-wrap" style="max-width:320px;">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search" id="searchInput" placeholder="Buscar por nome, patrimônio…" />
+          </div>
+
+          <!-- Condition filter -->
+          <div class="filters-bar" style="padding: var(--space-1-5) var(--space-3);">
+            <span class="filter-label">Condição</span>
+            <button class="filter-chip active" data-condition="">Todos</button>
+            <button class="filter-chip" data-condition="OTIMO">Ótimo</button>
+            <button class="filter-chip" data-condition="REPARO">Reparo</button>
+            <button class="filter-chip" data-condition="DESCARTAR">Descartar</button>
+          </div>
+
+          <!-- Category select -->
+          <select class="form-control" id="categoryFilter" style="width:auto; height:38px;">
+            <option value="">Todas as categorias</option>
+          </select>
+        </div>
+
+        <div class="page-toolbar-right">
+          <div class="view-toggle">
+            <button class="view-toggle-btn active" id="viewTable" data-tooltip="Tabela" aria-label="Visualização em tabela">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6"  x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/>
+                <line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+            </button>
+            <button class="view-toggle-btn" id="viewGrid" data-tooltip="Grade" aria-label="Visualização em grade">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk action bar -->
+      <div class="bulk-bar" id="bulkBar">
+        <span class="bulk-bar-count" id="bulkCount">0 selecionados</span>
+        <div class="bulk-bar-actions">
+          <button class="btn btn-secondary btn-sm" id="bulkMove">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            </svg>
+            Movimentar
+          </button>
+          <button class="btn btn-danger btn-sm" id="bulkDiscard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+            Descartar
+          </button>
+        </div>
+      </div>
+
+      <!-- TABLE VIEW -->
+      <div id="tableView">
+        <div class="table-wrapper">
+          <table class="table" id="stockTable">
+            <thead>
+              <tr>
+                <th class="col-check">
+                  <input type="checkbox" id="selectAll" aria-label="Selecionar todos" />
+                </th>
+                <th data-sort="product_name">
+                  <span class="th-sort">Nome
+                    <svg class="th-sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 3 18 9"/><polyline points="6 15 12 21 18 15"/>
+                    </svg>
+                  </span>
+                </th>
+                <th data-sort="category">Categoria</th>
+                <th data-sort="condition">Condição</th>
+                <th data-sort="quantity_available" style="text-align:right;">Disponível</th>
+                <th data-sort="quantity" style="text-align:right;">Total</th>
+                <th>Patrimônio</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="stockBody">
+              <tr><td colspan="8" style="text-align:center; padding:var(--space-10);">
+                <div class="skeleton" style="height:14px; width:200px; margin:0 auto var(--space-2);"></div>
+                <div class="skeleton" style="height:14px; width:140px; margin:0 auto;"></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="tablePagination" style="display:none;">
+          <span class="pagination-info" id="paginationInfo">—</span>
+          <div class="pagination-controls" id="paginationControls"></div>
+          <div class="pagination-per-page">
+            Itens por página
+            <select id="perPageSelect">
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID VIEW (hidden by default) -->
+      <div id="gridView" style="display:none;">
+        <div class="items-grid" id="stockGrid"></div>
+        <div class="pagination" id="gridPagination" style="display:none;">
+          <span class="pagination-info" id="gridPaginationInfo">—</span>
+          <div class="pagination-controls" id="gridPaginationControls"></div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-state-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </div>
+        <h3 class="empty-state-title">Nenhum item encontrado</h3>
+        <p class="empty-state-desc">Tente ajustar os filtros ou cadastre um novo item.</p>
+        <a href="form-item.html" class="btn btn-primary">Cadastrar Item</a>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Detail Drawer -->
+  <div class="detail-drawer" id="detailDrawer" role="dialog" aria-modal="true" aria-label="Detalhes do item">
+    <div class="detail-drawer-header">
+      <span class="detail-drawer-title" id="drawerTitle">Detalhes do Item</span>
+      <button class="detail-drawer-close" id="drawerClose" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="detail-drawer-body" id="drawerBody">
+      <!-- Filled by JS -->
+    </div>
+    <div class="detail-drawer-footer">
+      <a href="#" class="btn btn-primary" id="drawerEditBtn">Editar</a>
+      <button class="btn btn-secondary" id="drawerMoveBtn">Movimentar</button>
+      <button class="btn btn-ghost btn-danger" id="drawerDiscardBtn" style="margin-left:auto; color:var(--color-danger);">Descartar</button>
+    </div>
+  </div>
+  <div class="sidebar-overlay" id="drawerOverlay" style="z-index:calc(var(--z-modal) - 1);"></div>
+
+  <!-- Discard confirm modal -->
+  <div class="modal-backdrop" id="discardModal">
+    <div class="modal modal-sm modal-confirm">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirmar Descarte</h3>
+        <button class="modal-close" data-close-modal="discardModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-confirm-icon danger">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+        </div>
+        <p class="modal-confirm-title">Descartar item?</p>
+        <p class="modal-confirm-desc" id="discardDesc">Esta ação registrará o descarte e reduzirá o estoque. Não pode ser desfeita.</p>
+        <div class="form-group" style="margin-top:var(--space-4); text-align:left;">
+          <label class="form-label" for="discardReason">Motivo do descarte</label>
+          <select class="form-control" id="discardReason">
+            <option value="">Selecione…</option>
+            <option value="Defeito irreparável">Defeito irreparável</option>
+            <option value="Fim de vida útil">Fim de vida útil</option>
+            <option value="Dano físico">Dano físico</option>
+            <option value="Obsolescência">Obsolescência</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-top:var(--space-3); text-align:left;">
+          <label class="form-label" for="discardNotes">Observações</label>
+          <textarea class="form-control" id="discardNotes" rows="2" placeholder="Opcional…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="discardModal">Cancelar</button>
+        <button class="btn btn-danger" id="discardConfirmBtn">Confirmar Descarte</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+  <script src="js/estoque.js"></script>
+</body>
+</html>

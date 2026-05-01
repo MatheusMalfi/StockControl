@@ -1,14 +1,525 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Redirecionando para Login</title>
-    <meta http-equiv="refresh" content="0; url=acesso/login/login.html" />
-  </head>
-  <body>
-    <p>
-      Se você não for redirecionado automaticamente, clique
-      <a href="acesso/login/login.html">aqui</a>.
-    </p>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    /* Condition donut chart */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .donut {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+    .donut svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .donut-track {
+      fill: none;
+      stroke: var(--color-surface-alt);
+      stroke-width: 12;
+    }
+    .donut-segment {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      transition: stroke-dasharray 0.8s ease;
+    }
+    .donut-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .donut-center-value {
+      font-size: 1.375rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      line-height: 1;
+    }
+    .donut-center-label {
+      font-size: 0.6875rem;
+      color: var(--color-text-muted);
+      margin-top: 3px;
+    }
+    .donut-legend {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2-5);
+      flex: 1;
+    }
+    .donut-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: 0.8125rem;
+    }
+    .donut-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .donut-legend-label { flex: 1; color: var(--color-text-secondary); }
+    .donut-legend-val   { font-weight: 600; color: var(--color-text-primary); }
+    .donut-legend-pct   { color: var(--color-text-muted); font-size: 0.75rem; min-width: 36px; text-align: right; }
+
+    /* Horizontal bar chart */
+    .bar-chart { display: flex; flex-direction: column; gap: var(--space-3); }
+    .bar-item   { display: flex; flex-direction: column; gap: var(--space-1); }
+    .bar-item-header { display: flex; align-items: center; justify-content: space-between; }
+    .bar-item-label  { font-size: 0.8125rem; color: var(--color-text-secondary); }
+    .bar-item-value  { font-size: 0.8125rem; font-weight: 600; color: var(--color-text-primary); }
+    .bar-track { height: 6px; background: var(--color-surface-alt); border-radius: var(--radius-full); overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: var(--radius-full); background: var(--color-primary); transition: width 0.8s ease; }
+
+    /* Movement type label */
+    .movement-type {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1-5);
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+    .movement-type svg { width: 14px; height: 14px; }
+    .movement-entrada  { color: var(--color-success-dark); }
+    .movement-saida    { color: var(--color-danger-dark); }
+    .movement-doacao   { color: var(--color-primary-dark); }
+    .movement-descarte { color: var(--color-warning-dark); }
+
+    /* Alert items */
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-item-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .alert-item-icon svg { width: 15px; height: 15px; }
+    .alert-item-icon.warning { background: var(--color-warning-light); color: var(--color-warning-dark); }
+    .alert-item-icon.danger  { background: var(--color-danger-light);  color: var(--color-danger-dark); }
+    .alert-item-icon.info    { background: var(--color-primary-light); color: var(--color-primary); }
+    .alert-item-body { flex: 1; }
+    .alert-item-title { font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary); line-height: 1.3; }
+    .alert-item-meta  { font-size: 0.8125rem; color: var(--color-text-muted); margin-top: 2px; }
+
+    /* Skeleton helpers */
+    .skeleton-kpi { height: 110px; border-radius: var(--radius-xl); }
+
+    /* Quick actions */
+    .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+    .quick-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-4) var(--space-2);
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+      color: var(--color-text-secondary);
+    }
+    .quick-action-btn:hover {
+      background: var(--color-primary-light);
+      border-color: rgba(37,99,235,0.25);
+      color: var(--color-primary);
+    }
+    .quick-action-btn svg { width: 22px; height: 22px; }
+    .quick-action-label  { font-size: 0.8125rem; font-weight: 500; text-align: center; line-height: 1.3; }
+
+    /* Goal card */
+    .goal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+    .goal-title  { font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary); }
+    .goal-sub    { font-size: 0.8125rem; color: var(--color-text-muted); margin-top: 2px; }
+    .goal-pct    { font-size: 1.125rem; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       SIDEBAR
+       ============================================================ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div class="sidebar-logo-text">
+          <span class="sidebar-logo-name">StockControl</span>
+          <span class="sidebar-logo-sub">USCS</span>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-label">Principal</span>
+        <a href="index.html" class="nav-item active" data-tooltip="Dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="estoque.html" class="nav-item" data-tooltip="Estoque">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6"  x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          <span class="nav-label">Estoque</span>
+        </a>
+        <a href="movimentacoes.html" class="nav-item" data-tooltip="Movimentações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          <span class="nav-label">Movimentações</span>
+        </a>
+        <a href="relatorios.html" class="nav-item" data-tooltip="Relatórios">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+          <span class="nav-label">Relatórios</span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-label">Gerenciar</span>
+        <a href="form-item.html" class="nav-item" data-tooltip="Novo Item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          <span class="nav-label">Novo Item</span>
+        </a>
+        <a href="configuracoes.html" class="nav-item" data-tooltip="Configurações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+          </svg>
+          <span class="nav-label">Configurações</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar"><span id="sidebarInitials">--</span></div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebarUserName">Carregando…</span>
+          <span class="sidebar-user-role" id="sidebarUserRole">—</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- ============================================================
+       MAIN WRAPPER
+       ============================================================ -->
+  <div class="main-wrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+      <button class="header-menu-btn" id="headerMenuBtn" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="header-search">
+        <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" class="header-search-input" placeholder="Buscar item, patrimônio, QR…" id="globalSearch" />
+      </div>
+
+      <div class="header-actions">
+        <!-- Notifications -->
+        <div class="dropdown" id="notifDropdown">
+          <button class="header-notif-btn" id="notifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+          </button>
+          <div class="dropdown-menu" id="notifMenu" style="min-width:300px; right:0; max-height:360px; overflow-y:auto;">
+            <div class="dropdown-header">Notificações</div>
+            <div id="notifListDrop">
+              <div style="padding:var(--space-4); text-align:center; color:var(--color-text-muted); font-size:0.875rem;">
+                Sem notificações
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User menu -->
+        <div class="dropdown" id="userDropdown">
+          <button class="header-user-btn" id="userBtn">
+            <div class="avatar avatar-sm" id="headerAvatar">--</div>
+            <span class="header-user-name" id="headerUserName">Usuário</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="configuracoes.html" class="dropdown-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Meu Perfil
+            </a>
+            <a href="configuracoes.html" class="dropdown-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+              </svg>
+              Configurações
+            </a>
+            <div class="dropdown-separator"></div>
+            <button class="dropdown-item danger" id="logoutBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Visão geral do estoque e movimentações recentes</p>
+        </div>
+        <div style="display:flex; gap:var(--space-2);">
+          <a href="form-item.html" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Novo Item
+          </a>
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="grid grid-4" id="kpiGrid">
+        <div class="skeleton skeleton-kpi"></div>
+        <div class="skeleton skeleton-kpi"></div>
+        <div class="skeleton skeleton-kpi"></div>
+        <div class="skeleton skeleton-kpi"></div>
+      </div>
+
+      <!-- Row 2: donut + quick actions -->
+      <div class="grid grid-3" style="margin-top:var(--space-5);">
+        <div class="card" style="grid-column: span 2;">
+          <div class="card-header">
+            <h2 class="card-title">Distribuição por Condição</h2>
+            <a href="estoque.html" class="btn btn-ghost btn-sm">Ver estoque</a>
+          </div>
+          <div class="card-body">
+            <div class="donut-wrap" id="conditionChart">
+              <div style="width:100%; padding:var(--space-6); display:flex; justify-content:center;">
+                <div class="skeleton" style="width:120px; height:120px; border-radius:50%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Ações Rápidas</h2></div>
+          <div class="card-body">
+            <div class="quick-actions">
+              <a href="form-item.html" class="quick-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span class="quick-action-label">Cadastrar Item</span>
+              </a>
+              <a href="movimentacoes.html" class="quick-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                  <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+                <span class="quick-action-label">Movimentar</span>
+              </a>
+              <a href="relatorios.html" class="quick-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <span class="quick-action-label">Relatório</span>
+              </a>
+              <button class="quick-action-btn" id="qrScanBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
+                  <rect x="3" y="16" width="5" height="5"/>
+                  <line x1="21" y1="16" x2="21" y2="21"/><line x1="16" y1="21" x2="21" y2="21"/>
+                  <line x1="16" y1="16" x2="16" y2="16"/>
+                </svg>
+                <span class="quick-action-label">Buscar QR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: categories + movements -->
+      <div class="grid grid-3" style="margin-top:var(--space-5);">
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Top Categorias</h2></div>
+          <div class="card-body">
+            <div class="bar-chart" id="categoryChart">
+              <div class="skeleton" style="height:14px; border-radius:4px;"></div>
+              <div class="skeleton" style="height:14px; border-radius:4px; width:80%;"></div>
+              <div class="skeleton" style="height:14px; border-radius:4px; width:65%;"></div>
+              <div class="skeleton" style="height:14px; border-radius:4px; width:50%;"></div>
+              <div class="skeleton" style="height:14px; border-radius:4px; width:35%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="grid-column: span 2;">
+          <div class="card-header">
+            <h2 class="card-title">Movimentações Recentes</h2>
+            <a href="movimentacoes.html" class="btn btn-ghost btn-sm">Ver todas</a>
+          </div>
+          <div class="table-wrapper" style="border:none; border-radius:0;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Tipo</th>
+                  <th>Qtd</th>
+                  <th>Responsável</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="movementsBody">
+                <tr><td colspan="5" style="text-align:center; padding:var(--space-6); color:var(--color-text-muted);">
+                  Carregando…
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 4: alerts + goal -->
+      <div class="grid grid-3" style="margin-top:var(--space-5);">
+        <div class="card" style="grid-column: span 2;">
+          <div class="card-header">
+            <h2 class="card-title">Alertas do Sistema</h2>
+            <span class="badge badge-danger" id="alertCount" style="display:none;">0</span>
+          </div>
+          <div class="card-body" id="systemAlerts">
+            <div style="padding:var(--space-4); text-align:center; color:var(--color-text-muted); font-size:0.875rem;">
+              Nenhum alerta ativo
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2 class="card-title">Meta de Coleta</h2></div>
+          <div class="card-body" id="goalCard">
+            <div class="skeleton" style="height:14px; width:70%; margin-bottom:var(--space-3);"></div>
+            <div class="skeleton" style="height:8px; margin-bottom:var(--space-3);"></div>
+            <div class="skeleton" style="height:14px; width:50%;"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- QR Search Modal -->
+  <div class="modal-backdrop" id="qrModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title">Buscar por QR Code</h3>
+        <button class="modal-close" data-close-modal="qrModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="qrInput">Token / Código QR</label>
+          <input type="text" id="qrInput" class="form-control" placeholder="Cole ou digite o token UUID…" />
+          <span class="form-hint">Formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="qrModal">Cancelar</button>
+        <button class="btn btn-primary" id="qrSearchConfirm">Buscar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
 </html>

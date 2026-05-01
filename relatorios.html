@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatórios — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    /* Report type card grid */
+    .report-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .report-card {
+      background: var(--color-surface);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      user-select: none;
+    }
+
+    .report-card:hover {
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .report-card.active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .report-card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .report-card-icon svg { width: 20px; height: 20px; }
+
+    .report-card-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+    }
+
+    .report-card-desc {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+
+    /* Report builder panel */
+    .report-builder {
+      display: none;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .report-builder.is-visible { display: block; }
+
+    .report-builder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+
+    .report-builder-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .report-builder-title svg { width: 18px; height: 18px; color: var(--color-primary); }
+
+    .report-builder-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    /* Filters row inside builder */
+    .report-filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface);
+    }
+
+    .report-filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 140px;
+    }
+
+    .report-filter-label {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+    }
+
+    /* Chart area */
+    .chart-area {
+      padding: var(--space-5);
+    }
+
+    .chart-placeholder {
+      width: 100%;
+      height: 280px;
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      border: 1px dashed var(--color-border);
+      color: var(--color-text-muted);
+    }
+
+    .chart-placeholder svg { width: 32px; height: 32px; }
+
+    /* Bar chart (CSS visual) */
+    .css-bar-chart {
+      width: 100%;
+      height: 240px;
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-2);
+      padding: var(--space-2) 0;
+      border-bottom: 2px solid var(--color-border);
+      position: relative;
+    }
+
+    .css-bar-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-1);
+      height: 100%;
+    }
+
+    .css-bar-fill {
+      width: 100%;
+      max-width: 40px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: var(--color-primary);
+      transition: height 0.6s ease;
+      min-height: 4px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .css-bar-fill:hover { background: var(--color-primary-dark); }
+
+    .css-bar-fill .bar-tooltip {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-text-primary);
+      color: var(--color-surface);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-fast);
+    }
+
+    .css-bar-fill:hover .bar-tooltip { opacity: 1; }
+
+    .css-bar-label {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    /* Multi-bar (grouped) */
+    .css-bar-fill.success { background: var(--color-success); }
+    .css-bar-fill.success:hover { background: var(--color-success-dark); }
+    .css-bar-fill.danger  { background: var(--color-danger); }
+    .css-bar-fill.danger:hover  { background: var(--color-danger-dark); }
+    .css-bar-fill.warning { background: var(--color-warning); }
+
+    /* Chart legend */
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      margin-top: var(--space-3);
+    }
+
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+    }
+
+    .chart-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Summary table below chart */
+    .report-summary-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-5);
+      border-bottom: 1px solid var(--color-border-light);
+      font-size: 0.875rem;
+    }
+
+    .report-summary-row:last-child { border-bottom: none; }
+
+    .report-summary-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      color: var(--color-text-secondary);
+    }
+
+    .report-summary-value {
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    /* KPI highlight row */
+    .report-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--color-border);
+      border-top: 1px solid var(--color-border);
+    }
+
+    @media (max-width: 768px) {
+      .report-kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .report-kpi-cell {
+      background: var(--color-surface);
+      padding: var(--space-4) var(--space-5);
+    }
+
+    .report-kpi-cell-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-1);
+    }
+
+    .report-kpi-cell-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      line-height: 1.1;
+    }
+
+    .report-kpi-cell-sub {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    /* Condition distribution visual */
+    .cond-bar {
+      width: 100%;
+      height: 10px;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      display: flex;
+      margin: var(--space-3) 0;
+    }
+
+    .cond-bar-seg {
+      height: 100%;
+      transition: width 0.6s ease;
+    }
+
+    /* Export format buttons */
+    .export-opts {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .export-opt {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1-5);
+      height: 34px;
+      padding: 0 var(--space-3);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .export-opt:hover {
+      border-color: var(--color-border-strong);
+      color: var(--color-text-primary);
+      background: var(--color-surface-alt);
+    }
+
+    .export-opt svg { width: 14px; height: 14px; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div class="sidebar-logo-text">
+          <span class="sidebar-logo-name">StockControl</span>
+          <span class="sidebar-logo-sub">USCS</span>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-label">Principal</span>
+        <a href="index.html" class="nav-item" data-tooltip="Dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="estoque.html" class="nav-item" data-tooltip="Estoque">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6"  x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          <span class="nav-label">Estoque</span>
+        </a>
+        <a href="movimentacoes.html" class="nav-item" data-tooltip="Movimentações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          <span class="nav-label">Movimentações</span>
+        </a>
+        <a href="relatorios.html" class="nav-item active" data-tooltip="Relatórios">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+          <span class="nav-label">Relatórios</span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-label">Gerenciar</span>
+        <a href="form-item.html" class="nav-item" data-tooltip="Novo Item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          <span class="nav-label">Novo Item</span>
+        </a>
+        <a href="configuracoes.html" class="nav-item" data-tooltip="Configurações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+          </svg>
+          <span class="nav-label">Configurações</span>
+        </a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar"><span id="sidebarInitials">--</span></div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebarUserName">Carregando…</span>
+          <span class="sidebar-user-role" id="sidebarUserRole">—</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+      <button class="header-menu-btn" id="headerMenuBtn" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="header-search">
+        <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" class="header-search-input" placeholder="Buscar item, patrimônio, QR…" id="globalSearch" />
+      </div>
+      <div class="header-actions">
+        <div class="dropdown" id="notifDropdown">
+          <button class="header-notif-btn" id="notifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+          </button>
+          <div class="dropdown-menu" id="notifMenu" style="min-width:300px; right:0;">
+            <div class="dropdown-header">Notificações</div>
+            <div id="notifListDrop">
+              <div style="padding:var(--space-4); text-align:center; color:var(--color-text-muted); font-size:0.875rem;">Sem notificações</div>
+            </div>
+          </div>
+        </div>
+        <div class="dropdown" id="userDropdown">
+          <button class="header-user-btn" id="userBtn">
+            <div class="avatar avatar-sm" id="headerAvatar">--</div>
+            <span class="header-user-name" id="headerUserName">Usuário</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="configuracoes.html" class="dropdown-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Meu Perfil
+            </a>
+            <div class="dropdown-separator"></div>
+            <button class="dropdown-item danger" id="logoutBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Relatórios</h1>
+          <p class="page-subtitle">Analise o estoque, movimentações e impacto das doações</p>
+        </div>
+      </div>
+
+      <!-- Report type selector -->
+      <div class="section-header">
+        <h2 class="section-title">Selecione o Relatório</h2>
+      </div>
+
+      <div class="report-cards">
+
+        <div class="report-card active" data-report="estoque" tabindex="0" role="button">
+          <div class="report-card-icon" style="background:var(--color-primary-light);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6"  x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </div>
+          <div class="report-card-title">Inventário Geral</div>
+          <div class="report-card-desc">Todos os itens com condição, quantidade e localização.</div>
+        </div>
+
+        <div class="report-card" data-report="movimentacoes" tabindex="0" role="button">
+          <div class="report-card-icon" style="background:var(--color-success-light);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-success-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </div>
+          <div class="report-card-title">Movimentações</div>
+          <div class="report-card-desc">Entradas e saídas por período com totais acumulados.</div>
+        </div>
+
+        <div class="report-card" data-report="condicao" tabindex="0" role="button">
+          <div class="report-card-icon" style="background:var(--color-warning-light);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-warning-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <div class="report-card-title">Estado dos Itens</div>
+          <div class="report-card-desc">Distribuição por condição e itens que precisam de atenção.</div>
+        </div>
+
+        <div class="report-card" data-report="doacoes" tabindex="0" role="button">
+          <div class="report-card-icon" style="background:#F5F3FF;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </div>
+          <div class="report-card-title">Doações e Impacto</div>
+          <div class="report-card-desc">Itens doados por organização e valor estimado do impacto.</div>
+        </div>
+
+        <div class="report-card" data-report="descarte" tabindex="0" role="button">
+          <div class="report-card-icon" style="background:var(--color-danger-light);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-danger-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+          </div>
+          <div class="report-card-title">Descartes e Reciclagem</div>
+          <div class="report-card-desc">Histórico de descartes e ordens de reciclagem.</div>
+        </div>
+
+        <div class="report-card" data-report="auditoria" tabindex="0" role="button">
+          <div class="report-card-icon" style="background:var(--color-surface-alt); border:1px solid var(--color-border);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <div class="report-card-title">Log de Auditoria</div>
+          <div class="report-card-desc">Todas as ações registradas no sistema por usuário.</div>
+        </div>
+
+      </div>
+
+      <!-- ── Report builder ── -->
+      <div class="report-builder is-visible" id="reportBuilder">
+
+        <!-- Builder header (title + export) -->
+        <div class="report-builder-header">
+          <div class="report-builder-title" id="builderTitle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6"  x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            Inventário Geral
+          </div>
+          <div class="report-builder-actions">
+            <div class="export-opts">
+              <button class="export-opt" id="exportCsv">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                CSV
+              </button>
+              <button class="export-opt" id="exportPdf">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                PDF
+              </button>
+              <button class="export-opt" id="printBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9"/>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                  <rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                Imprimir
+              </button>
+            </div>
+            <button class="btn btn-primary btn-sm" id="generateBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 .49-4.95"/>
+              </svg>
+              Gerar
+            </button>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="report-filters" id="reportFilters">
+          <div class="report-filter-group">
+            <span class="report-filter-label">De</span>
+            <input type="date" class="form-control" id="rptFrom" style="height:36px; font-size:0.8125rem;" />
+          </div>
+          <div class="report-filter-group">
+            <span class="report-filter-label">Até</span>
+            <input type="date" class="form-control" id="rptTo" style="height:36px; font-size:0.8125rem;" />
+          </div>
+          <div class="report-filter-group" id="rptCondGroup">
+            <span class="report-filter-label">Condição</span>
+            <select class="form-control" id="rptCondition" style="height:36px; font-size:0.8125rem;">
+              <option value="">Todas</option>
+              <option value="OTIMO">Ótimo</option>
+              <option value="REPARO">Reparo</option>
+              <option value="DESCARTAR">Descartar</option>
+            </select>
+          </div>
+          <div class="report-filter-group" id="rptCatGroup">
+            <span class="report-filter-label">Categoria</span>
+            <select class="form-control" id="rptCategory" style="height:36px; font-size:0.8125rem;">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="report-filter-group" id="rptTypeGroup" style="display:none;">
+            <span class="report-filter-label">Tipo</span>
+            <select class="form-control" id="rptMovType" style="height:36px; font-size:0.8125rem;">
+              <option value="">Todos</option>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+              <option value="DOACAO">Doação</option>
+              <option value="DESCARTE">Descarte</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KPI summary row -->
+        <div class="report-kpi-row" id="reportKpiRow">
+          <div class="report-kpi-cell">
+            <div class="report-kpi-cell-label">Total de Itens</div>
+            <div class="report-kpi-cell-value" id="rptKpi1">—</div>
+            <div class="report-kpi-cell-sub" id="rptKpi1Sub">itens cadastrados</div>
+          </div>
+          <div class="report-kpi-cell">
+            <div class="report-kpi-cell-label" id="rptKpi2Label">Em bom estado</div>
+            <div class="report-kpi-cell-value" id="rptKpi2" style="color:var(--color-success-dark);">—</div>
+            <div class="report-kpi-cell-sub" id="rptKpi2Sub">condição ótima</div>
+          </div>
+          <div class="report-kpi-cell">
+            <div class="report-kpi-cell-label" id="rptKpi3Label">Para reparo</div>
+            <div class="report-kpi-cell-value" id="rptKpi3" style="color:var(--color-warning-dark);">—</div>
+            <div class="report-kpi-cell-sub" id="rptKpi3Sub">precisam de atenção</div>
+          </div>
+          <div class="report-kpi-cell">
+            <div class="report-kpi-cell-label" id="rptKpi4Label">Para descarte</div>
+            <div class="report-kpi-cell-value" id="rptKpi4" style="color:var(--color-danger-dark);">—</div>
+            <div class="report-kpi-cell-sub" id="rptKpi4Sub">aguardando descarte</div>
+          </div>
+        </div>
+
+        <!-- Chart area -->
+        <div class="chart-area" id="chartArea">
+          <div class="section-header" style="margin-bottom:var(--space-3);">
+            <h3 class="section-title" id="chartTitle">Distribuição por Categoria</h3>
+          </div>
+          <div class="css-bar-chart" id="mainChart">
+            <!-- Skeleton bars -->
+            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:60%; width:100%; border-radius:var(--radius-sm);"></div></div>
+            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:85%; width:100%; border-radius:var(--radius-sm);"></div></div>
+            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:45%; width:100%; border-radius:var(--radius-sm);"></div></div>
+            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:70%; width:100%; border-radius:var(--radius-sm);"></div></div>
+            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:30%; width:100%; border-radius:var(--radius-sm);"></div></div>
+          </div>
+          <div class="chart-legend" id="chartLegend"></div>
+        </div>
+
+        <!-- Condition bar (estoque / condicao reports) -->
+        <div id="condBarSection" style="padding:0 var(--space-5) var(--space-4);">
+          <div class="section-header" style="margin-bottom:var(--space-3);">
+            <h3 class="section-title">Distribuição por Condição</h3>
+          </div>
+          <div class="cond-bar" id="condBar">
+            <div class="cond-bar-seg" id="condBarOtimo"    style="background:var(--color-success); width:0%;"></div>
+            <div class="cond-bar-seg" id="condBarReparo"   style="background:var(--color-warning); width:0%;"></div>
+            <div class="cond-bar-seg" id="condBarDescartar" style="background:var(--color-danger); width:0%;"></div>
+          </div>
+          <div class="chart-legend">
+            <div class="chart-legend-item">
+              <div class="chart-legend-dot" style="background:var(--color-success);"></div>
+              Ótimo — <strong id="condPctOtimo">—</strong>
+            </div>
+            <div class="chart-legend-item">
+              <div class="chart-legend-dot" style="background:var(--color-warning);"></div>
+              Reparo — <strong id="condPctReparo">—</strong>
+            </div>
+            <div class="chart-legend-item">
+              <div class="chart-legend-dot" style="background:var(--color-danger);"></div>
+              Descartar — <strong id="condPctDescartar">—</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data table -->
+        <div class="table-wrapper" style="border:none; border-radius:0; border-top:1px solid var(--color-border);">
+          <table class="table" id="reportTable">
+            <thead id="reportThead">
+              <!-- filled by JS -->
+            </thead>
+            <tbody id="reportBody">
+              <tr><td colspan="8" style="text-align:center; padding:var(--space-8); color:var(--color-text-muted);">
+                Clique em <strong>Gerar</strong> para carregar o relatório.
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="reportPagination" style="display:none;">
+          <span class="pagination-info" id="rptPagInfo">—</span>
+          <div class="pagination-controls" id="rptPagControls"></div>
+          <div class="pagination-per-page">
+            Por página
+            <select id="rptPerPage">
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+
+      </div><!-- /report-builder -->
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/relatorios.js"></script>
+</body>
+</html>

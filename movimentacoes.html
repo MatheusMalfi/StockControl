@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movimentações — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    /* Movement type icons */
+    .mov-type {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1-5);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .mov-type-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .mov-entrada  { color: var(--color-success-dark); }
+    .mov-saida    { color: var(--color-danger-dark); }
+    .mov-doacao   { color: var(--color-primary-dark); }
+    .mov-descarte { color: var(--color-warning-dark); }
+    .mov-transferencia { color: #7C3AED; }
+
+    .mov-entrada  .mov-type-dot { background: var(--color-success); }
+    .mov-saida    .mov-type-dot { background: var(--color-danger); }
+    .mov-doacao   .mov-type-dot { background: var(--color-primary); }
+    .mov-descarte .mov-type-dot { background: var(--color-warning); }
+    .mov-transferencia .mov-type-dot { background: #7C3AED; }
+
+    /* Qty delta */
+    .qty-delta {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .qty-delta.positive { color: var(--color-success-dark); }
+    .qty-delta.negative { color: var(--color-danger-dark); }
+
+    /* Summary KPI row (compact) */
+    .mov-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
+    }
+    @media (max-width: 1024px) {
+      .mov-kpi-row { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .mov-kpi-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .mov-kpi {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .mov-kpi-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+    }
+    .mov-kpi-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      line-height: 1.1;
+    }
+    .mov-kpi-sub {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+
+    /* Period filter tabs */
+    .period-tabs {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 3px;
+    }
+    .period-tab {
+      padding: var(--space-1) var(--space-3);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      background: none;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    .period-tab:hover  { color: var(--color-text-primary); background: rgba(0,0,0,0.04); }
+    .period-tab.active { background: var(--color-surface); color: var(--color-text-primary);
+                         box-shadow: var(--shadow-sm); font-weight: 600; }
+
+    /* New movement modal: item search */
+    .item-search-result {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      display: none;
+      background: var(--color-surface);
+      box-shadow: var(--shadow-md);
+    }
+    .item-search-result.is-open { display: block; }
+
+    .item-result-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2-5) var(--space-3);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .item-result-row:last-child { border-bottom: none; }
+    .item-result-row:hover      { background: var(--color-surface-alt); }
+
+    .item-result-name { font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary); }
+    .item-result-meta { font-size: 0.8125rem; color: var(--color-text-muted); }
+
+    /* Selected item chip */
+    .selected-item-chip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+    .selected-item-chip-info { flex: 1; }
+    .selected-item-chip-name { font-size: 0.9375rem; font-weight: 600; color: var(--color-text-primary); }
+    .selected-item-chip-meta { font-size: 0.8125rem; color: var(--color-text-muted); }
+
+    /* Movement type button group */
+    .mov-type-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-2);
+    }
+    @media (max-width: 480px) {
+      .mov-type-group { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .mov-type-option { position: relative; }
+    .mov-type-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+
+    .mov-type-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-1-5);
+      padding: var(--space-3) var(--space-2);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-align: center;
+      user-select: none;
+    }
+    .mov-type-label:hover { border-color: var(--color-border-strong); background: var(--color-surface-alt); }
+
+    .mov-type-label-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mov-type-label-icon svg { width: 13px; height: 13px; }
+    .mov-type-label-text { font-size: 0.8125rem; font-weight: 600; line-height: 1.2; }
+
+    /* Checked variants */
+    .mov-type-option input:checked + .mov-type-label[data-mt="ENTRADA"] {
+      border-color: var(--color-success); background: var(--color-success-light);
+    }
+    .mov-type-option input:checked + .mov-type-label[data-mt="SAIDA"] {
+      border-color: var(--color-danger); background: var(--color-danger-light);
+    }
+    .mov-type-option input:checked + .mov-type-label[data-mt="DOACAO"] {
+      border-color: var(--color-primary); background: var(--color-primary-light);
+    }
+    .mov-type-option input:checked + .mov-type-label[data-mt="DESCARTE"] {
+      border-color: var(--color-warning); background: var(--color-warning-light);
+    }
+    .mov-type-option input:checked + .mov-type-label[data-mt="TRANSFERENCIA"] {
+      border-color: #7C3AED; background: #F5F3FF;
+    }
+
+    .mov-type-label[data-mt="ENTRADA"]      .mov-type-label-icon { background: var(--color-success-light); color: var(--color-success-dark); }
+    .mov-type-label[data-mt="SAIDA"]        .mov-type-label-icon { background: var(--color-danger-light);  color: var(--color-danger-dark); }
+    .mov-type-label[data-mt="DOACAO"]       .mov-type-label-icon { background: var(--color-primary-light); color: var(--color-primary-dark); }
+    .mov-type-label[data-mt="DESCARTE"]     .mov-type-label-icon { background: var(--color-warning-light); color: var(--color-warning-dark); }
+    .mov-type-label[data-mt="TRANSFERENCIA"].mov-type-label-icon { background: #F5F3FF; color: #7C3AED; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div class="sidebar-logo-text">
+          <span class="sidebar-logo-name">StockControl</span>
+          <span class="sidebar-logo-sub">USCS</span>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-label">Principal</span>
+        <a href="index.html" class="nav-item" data-tooltip="Dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="estoque.html" class="nav-item" data-tooltip="Estoque">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6"  x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          <span class="nav-label">Estoque</span>
+        </a>
+        <a href="movimentacoes.html" class="nav-item active" data-tooltip="Movimentações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          <span class="nav-label">Movimentações</span>
+        </a>
+        <a href="relatorios.html" class="nav-item" data-tooltip="Relatórios">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+          <span class="nav-label">Relatórios</span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-label">Gerenciar</span>
+        <a href="form-item.html" class="nav-item" data-tooltip="Novo Item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          <span class="nav-label">Novo Item</span>
+        </a>
+        <a href="configuracoes.html" class="nav-item" data-tooltip="Configurações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+          </svg>
+          <span class="nav-label">Configurações</span>
+        </a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar"><span id="sidebarInitials">--</span></div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebarUserName">Carregando…</span>
+          <span class="sidebar-user-role" id="sidebarUserRole">—</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+      <button class="header-menu-btn" id="headerMenuBtn" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="header-search">
+        <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" class="header-search-input" placeholder="Buscar item, patrimônio, QR…" id="globalSearch" />
+      </div>
+      <div class="header-actions">
+        <div class="dropdown" id="notifDropdown">
+          <button class="header-notif-btn" id="notifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+          </button>
+          <div class="dropdown-menu" id="notifMenu" style="min-width:300px; right:0;">
+            <div class="dropdown-header">Notificações</div>
+            <div id="notifListDrop">
+              <div style="padding:var(--space-4); text-align:center; color:var(--color-text-muted); font-size:0.875rem;">Sem notificações</div>
+            </div>
+          </div>
+        </div>
+        <div class="dropdown" id="userDropdown">
+          <button class="header-user-btn" id="userBtn">
+            <div class="avatar avatar-sm" id="headerAvatar">--</div>
+            <span class="header-user-name" id="headerUserName">Usuário</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="configuracoes.html" class="dropdown-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Meu Perfil
+            </a>
+            <div class="dropdown-separator"></div>
+            <button class="dropdown-item danger" id="logoutBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Movimentações</h1>
+          <p class="page-subtitle">Histórico completo de entradas, saídas, doações e descartes</p>
+        </div>
+        <div style="display:flex; gap:var(--space-2);">
+          <button class="btn btn-secondary" id="exportBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Exportar
+          </button>
+          <button class="btn btn-primary" id="newMovBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nova Movimentação
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI summary row -->
+      <div class="mov-kpi-row" id="movKpiRow">
+        <div class="mov-kpi">
+          <span class="mov-kpi-label">Total</span>
+          <span class="mov-kpi-value skeleton" style="width:60px; height:32px;" id="kpiTotal">—</span>
+          <span class="mov-kpi-sub" id="kpiTotalSub">no período</span>
+        </div>
+        <div class="mov-kpi">
+          <span class="mov-kpi-label">Entradas</span>
+          <span class="mov-kpi-value" id="kpiEntrada" style="color:var(--color-success-dark);">—</span>
+        </div>
+        <div class="mov-kpi">
+          <span class="mov-kpi-label">Saídas</span>
+          <span class="mov-kpi-value" id="kpiSaida" style="color:var(--color-danger-dark);">—</span>
+        </div>
+        <div class="mov-kpi">
+          <span class="mov-kpi-label">Doações</span>
+          <span class="mov-kpi-value" id="kpiDoacao" style="color:var(--color-primary-dark);">—</span>
+        </div>
+        <div class="mov-kpi">
+          <span class="mov-kpi-label">Descartes</span>
+          <span class="mov-kpi-value" id="kpiDescarte" style="color:var(--color-warning-dark);">—</span>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="page-toolbar">
+        <div class="page-toolbar-left" style="flex-wrap:wrap; gap:var(--space-2);">
+
+          <!-- Period tabs -->
+          <div class="period-tabs" id="periodTabs">
+            <button class="period-tab" data-period="7">7 dias</button>
+            <button class="period-tab active" data-period="30">30 dias</button>
+            <button class="period-tab" data-period="90">90 dias</button>
+            <button class="period-tab" data-period="0">Tudo</button>
+          </div>
+
+          <!-- Date range (custom) -->
+          <div style="display:flex; align-items:center; gap:var(--space-2);">
+            <input type="date" class="form-control" id="dateFrom" style="width:140px; height:34px; font-size:0.8125rem;" />
+            <span style="color:var(--color-text-muted); font-size:0.875rem;">até</span>
+            <input type="date" class="form-control" id="dateTo"   style="width:140px; height:34px; font-size:0.8125rem;" />
+          </div>
+
+          <!-- Type filter -->
+          <select class="form-control" id="typeFilter" style="width:auto; height:34px; font-size:0.8125rem;">
+            <option value="">Todos os tipos</option>
+            <option value="ENTRADA">Entrada</option>
+            <option value="SAIDA">Saída</option>
+            <option value="DOACAO">Doação</option>
+            <option value="DESCARTE">Descarte</option>
+            <option value="TRANSFERENCIA">Transferência</option>
+          </select>
+
+          <!-- Search -->
+          <div class="search-input-wrap" style="max-width:260px;">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search" id="movSearch" placeholder="Item ou responsável…" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper">
+        <table class="table" id="movTable">
+          <thead>
+            <tr>
+              <th data-sort="created_at">
+                <span class="th-sort">Data
+                  <svg class="th-sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 3 18 9"/><polyline points="6 15 12 21 18 15"/>
+                  </svg>
+                </span>
+              </th>
+              <th>Tipo</th>
+              <th data-sort="product_name">Item</th>
+              <th style="text-align:right;">Qtd</th>
+              <th>Responsável</th>
+              <th>Origem / Destino</th>
+              <th>Observação</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="movBody">
+            <tr><td colspan="8" style="text-align:center; padding:var(--space-10); color:var(--color-text-muted);">
+              Carregando…
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" id="movPagination" style="display:none;">
+        <span class="pagination-info" id="movPagInfo">—</span>
+        <div class="pagination-controls" id="movPagControls"></div>
+        <div class="pagination-per-page">
+          Por página
+          <select id="movPerPage">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="movEmpty" style="display:none;">
+        <div class="empty-state-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+        </div>
+        <h3 class="empty-state-title">Nenhuma movimentação encontrada</h3>
+        <p class="empty-state-desc">Ajuste os filtros ou registre uma nova movimentação.</p>
+        <button class="btn btn-primary" id="emptyNewMovBtn">Nova Movimentação</button>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ============================================================
+       NEW MOVEMENT MODAL
+       ============================================================ -->
+  <div class="modal-backdrop" id="newMovModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title" id="movModalTitle">Nova Movimentação</h3>
+        <button class="modal-close" data-close-modal="newMovModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="movForm" novalidate>
+          <input type="hidden" id="movItemId" name="item_id" value="" />
+
+          <!-- Step 1: select item -->
+          <div id="stepItem">
+            <div class="form-group" id="groupMovItem">
+              <label class="form-label required">Item</label>
+
+              <!-- Selected item chip (shown after selection) -->
+              <div class="selected-item-chip" id="selectedItemChip" style="display:none;">
+                <div class="table-item-thumb-placeholder">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+                <div class="selected-item-chip-info">
+                  <div class="selected-item-chip-name" id="selectedItemName">—</div>
+                  <div class="selected-item-chip-meta" id="selectedItemMeta">—</div>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="changeItemBtn">Trocar</button>
+              </div>
+
+              <!-- Search (shown when no item selected) -->
+              <div id="itemSearchWrap">
+                <div class="search-input-wrap">
+                  <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input type="search" id="movItemSearch" placeholder="Buscar item por nome ou patrimônio…" autocomplete="off" />
+                </div>
+                <div class="item-search-result" id="itemSearchResult">
+                  <!-- filled by JS -->
+                </div>
+              </div>
+              <span class="form-error" id="errorMovItem">Selecione um item.</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Step 2: movement type -->
+          <div class="form-group" id="groupMovType" style="margin-bottom:var(--space-5);">
+            <label class="form-label required">Tipo de Movimentação</label>
+            <div class="mov-type-group">
+
+              <div class="mov-type-option">
+                <input type="radio" name="movement_type" id="mtEntrada" value="ENTRADA" required />
+                <label class="mov-type-label" for="mtEntrada" data-mt="ENTRADA">
+                  <div class="mov-type-label-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="19" x2="12" y2="5"/>
+                      <polyline points="5 12 12 19 19 12"/>
+                    </svg>
+                  </div>
+                  <span class="mov-type-label-text">Entrada</span>
+                </label>
+              </div>
+
+              <div class="mov-type-option">
+                <input type="radio" name="movement_type" id="mtSaida" value="SAIDA" />
+                <label class="mov-type-label" for="mtSaida" data-mt="SAIDA">
+                  <div class="mov-type-label-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <polyline points="19 12 12 5 5 12"/>
+                    </svg>
+                  </div>
+                  <span class="mov-type-label-text">Saída</span>
+                </label>
+              </div>
+
+              <div class="mov-type-option">
+                <input type="radio" name="movement_type" id="mtDoacao" value="DOACAO" />
+                <label class="mov-type-label" for="mtDoacao" data-mt="DOACAO">
+                  <div class="mov-type-label-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </div>
+                  <span class="mov-type-label-text">Doação</span>
+                </label>
+              </div>
+
+              <div class="mov-type-option">
+                <input type="radio" name="movement_type" id="mtDescarte" value="DESCARTE" />
+                <label class="mov-type-label" for="mtDescarte" data-mt="DESCARTE">
+                  <div class="mov-type-label-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    </svg>
+                  </div>
+                  <span class="mov-type-label-text">Descarte</span>
+                </label>
+              </div>
+
+              <div class="mov-type-option">
+                <input type="radio" name="movement_type" id="mtTransferencia" value="TRANSFERENCIA" />
+                <label class="mov-type-label" for="mtTransferencia" data-mt="TRANSFERENCIA">
+                  <div class="mov-type-label-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                      <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                  </div>
+                  <span class="mov-type-label-text">Transferência</span>
+                </label>
+              </div>
+
+            </div>
+            <span class="form-error" id="errorMovType">Selecione o tipo de movimentação.</span>
+          </div>
+
+          <!-- Step 3: details -->
+          <div class="form-row">
+            <div class="form-group" id="groupMovQty">
+              <label class="form-label required" for="movQuantity">Quantidade</label>
+              <input type="number" id="movQuantity" name="quantity" class="form-control"
+                min="1" value="1" required />
+              <span class="form-hint" id="movQtyHint">Disponível: —</span>
+              <span class="form-error" id="errorMovQty">Quantidade inválida.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="movDate">Data</label>
+              <input type="datetime-local" id="movDate" name="moved_at" class="form-control" />
+            </div>
+          </div>
+
+          <!-- Conditional: destination (for DOACAO / TRANSFERENCIA) -->
+          <div class="form-row" id="destinationRow" style="display:none;">
+            <div class="form-group">
+              <label class="form-label" for="movDestination">Destino / Beneficiário</label>
+              <input type="text" id="movDestination" name="destination" class="form-control"
+                placeholder="Nome da organização ou setor…" maxlength="200" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="movDonorId">Doador (se aplicável)</label>
+              <select id="movDonorId" name="donor_id" class="form-control">
+                <option value="">Nenhum</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="movNotes">Observações</label>
+            <textarea id="movNotes" name="notes" class="form-control" rows="2"
+              placeholder="Detalhes adicionais sobre esta movimentação…" maxlength="500"></textarea>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="newMovModal">Cancelar</button>
+        <button class="btn btn-primary" id="saveMovBtn">Registrar Movimentação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail modal (view only) -->
+  <div class="modal-backdrop" id="movDetailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Detalhes da Movimentação</h3>
+        <button class="modal-close" data-close-modal="movDetailModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="movDetailBody">
+        <!-- filled by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="movDetailModal">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+  <script src="js/movimentacoes.js"></script>
+</body>
+</html>

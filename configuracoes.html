@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurações — StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    /* Settings layout */
+    .settings-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: var(--space-6);
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .settings-layout { grid-template-columns: 1fr; }
+    }
+
+    /* Side nav */
+    .settings-nav {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      position: sticky;
+      top: calc(var(--header-height) + var(--space-5));
+    }
+
+    .settings-nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border-left: 3px solid transparent;
+      text-decoration: none;
+      background: none;
+      border-right: none;
+      border-top: none;
+      border-bottom: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .settings-nav-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--color-text-muted);
+    }
+
+    .settings-nav-item:hover {
+      background: var(--color-surface-alt);
+      color: var(--color-text-primary);
+    }
+
+    .settings-nav-item.active {
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      border-left-color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .settings-nav-item.active svg { color: var(--color-primary); }
+
+    .settings-nav-separator {
+      height: 1px;
+      background: var(--color-border);
+    }
+
+    /* Settings panel */
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+
+    .settings-section {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      margin-bottom: var(--space-5);
+    }
+    .settings-section:last-child { margin-bottom: 0; }
+
+    .settings-section-header {
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+    }
+
+    .settings-section-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .settings-section-desc {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .settings-section-body {
+      padding: var(--space-5);
+    }
+
+    /* Setting row (toggle style) */
+    .setting-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-5);
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .setting-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .setting-row:first-child { padding-top: 0; }
+
+    .setting-row-info { flex: 1; }
+    .setting-row-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
+    .setting-row-desc {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* Toggle switch */
+    .toggle-switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--color-border-strong);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-fast);
+      pointer-events: none;
+    }
+
+    .toggle-switch input:checked ~ .toggle-track { background: var(--color-primary); }
+    .toggle-switch input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
+    .toggle-switch input:focus-visible ~ .toggle-track {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    /* Profile avatar editor */
+    .profile-avatar-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+    }
+
+    .profile-avatar-large {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 3px solid var(--color-border);
+      overflow: hidden;
+    }
+
+    .profile-avatar-large img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .profile-avatar-large img.is-visible { display: block; }
+
+    .profile-avatar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .profile-avatar-hint {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+
+    /* User table */
+    .user-role-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 var(--space-2);
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+    }
+    .role-admin    { background: var(--color-primary-light); color: var(--color-primary-dark); }
+    .role-operator { background: var(--color-success-light); color: var(--color-success-dark); }
+    .role-viewer   { background: var(--color-surface-alt);   color: var(--color-text-secondary); border: 1px solid var(--color-border); }
+
+    /* Danger zone */
+    .danger-zone {
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .danger-zone-header {
+      padding: var(--space-4) var(--space-5);
+      background: var(--color-danger-light);
+      border-bottom: 1px solid rgba(239,68,68,0.2);
+    }
+
+    .danger-zone-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-danger-dark);
+    }
+
+    .danger-zone-body {
+      padding: var(--space-5);
+      background: var(--color-surface);
+    }
+
+    .danger-action {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .danger-action:last-child { border-bottom: none; padding-bottom: 0; }
+    .danger-action:first-child { padding-top: 0; }
+
+    .danger-action-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
+
+    .danger-action-desc {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    /* Invite row */
+    .invite-row {
+      display: flex;
+      gap: var(--space-3);
+      align-items: flex-end;
+    }
+
+    .invite-row .form-group { flex: 1; }
+
+    /* Category / brand list */
+    .tag-list-edit {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+
+    .tag-edit-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1-5);
+      height: 30px;
+      padding: 0 var(--space-3);
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+    }
+
+    .tag-edit-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color var(--transition-fast);
+    }
+    .tag-edit-remove:hover { color: var(--color-danger); }
+    .tag-edit-remove svg { width: 13px; height: 13px; }
+
+    .tag-add-row {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+    }
+    .tag-add-row input { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div class="sidebar-logo-text">
+          <span class="sidebar-logo-name">StockControl</span>
+          <span class="sidebar-logo-sub">USCS</span>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-section-label">Principal</span>
+        <a href="index.html" class="nav-item" data-tooltip="Dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="estoque.html" class="nav-item" data-tooltip="Estoque">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6"  x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          <span class="nav-label">Estoque</span>
+        </a>
+        <a href="movimentacoes.html" class="nav-item" data-tooltip="Movimentações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          <span class="nav-label">Movimentações</span>
+        </a>
+        <a href="relatorios.html" class="nav-item" data-tooltip="Relatórios">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+          <span class="nav-label">Relatórios</span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-section-label">Gerenciar</span>
+        <a href="form-item.html" class="nav-item" data-tooltip="Novo Item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          <span class="nav-label">Novo Item</span>
+        </a>
+        <a href="configuracoes.html" class="nav-item active" data-tooltip="Configurações">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+          </svg>
+          <span class="nav-label">Configurações</span>
+        </a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar"><span id="sidebarInitials">--</span></div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebarUserName">Carregando…</span>
+          <span class="sidebar-user-role" id="sidebarUserRole">—</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+      <button class="header-menu-btn" id="headerMenuBtn" aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="header-search">
+        <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" class="header-search-input" placeholder="Buscar item, patrimônio, QR…" id="globalSearch" />
+      </div>
+      <div class="header-actions">
+        <div class="dropdown" id="notifDropdown">
+          <button class="header-notif-btn" id="notifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+          </button>
+          <div class="dropdown-menu" id="notifMenu" style="min-width:300px; right:0;">
+            <div class="dropdown-header">Notificações</div>
+            <div id="notifListDrop">
+              <div style="padding:var(--space-4); text-align:center; color:var(--color-text-muted); font-size:0.875rem;">Sem notificações</div>
+            </div>
+          </div>
+        </div>
+        <div class="dropdown" id="userDropdown">
+          <button class="header-user-btn" id="userBtn">
+            <div class="avatar avatar-sm" id="headerAvatar">--</div>
+            <span class="header-user-name" id="headerUserName">Usuário</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="dropdown-menu" id="userMenu">
+            <a href="configuracoes.html" class="dropdown-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Meu Perfil
+            </a>
+            <div class="dropdown-separator"></div>
+            <button class="dropdown-item danger" id="logoutBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Configurações</h1>
+          <p class="page-subtitle">Gerencie perfil, organização, usuários e preferências do sistema</p>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+
+        <!-- Settings nav -->
+        <nav class="settings-nav" aria-label="Configurações">
+          <button class="settings-nav-item active" data-panel="perfil">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            Meu Perfil
+          </button>
+          <button class="settings-nav-item" data-panel="organizacao">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Organização
+          </button>
+          <button class="settings-nav-item" data-panel="usuarios">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Usuários
+          </button>
+          <div class="settings-nav-separator"></div>
+          <button class="settings-nav-item" data-panel="categorias">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6"  x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            Categorias
+          </button>
+          <button class="settings-nav-item" data-panel="locais">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            Localizações
+          </button>
+          <button class="settings-nav-item" data-panel="notificacoes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            Notificações
+          </button>
+          <div class="settings-nav-separator"></div>
+          <button class="settings-nav-item" data-panel="seguranca">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Segurança
+          </button>
+        </nav>
+
+        <!-- Panels -->
+        <div id="settingsPanels">
+
+          <!-- ── PERFIL ── -->
+          <div class="settings-panel active" id="panel-perfil">
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Dados Pessoais</div>
+                <div class="settings-section-desc">Suas informações de identificação no sistema</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="profile-avatar-wrap">
+                  <div class="profile-avatar-large" id="profileAvatarLarge">
+                    <img id="profileAvatarImg" src="" alt="Avatar" />
+                    <span id="profileAvatarInitials">--</span>
+                  </div>
+                  <div class="profile-avatar-actions">
+                    <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                      Trocar foto
+                      <input type="file" accept="image/*" style="display:none;" id="avatarInput" />
+                    </label>
+                    <button class="btn btn-ghost btn-sm" id="removeAvatarBtn">Remover</button>
+                    <span class="profile-avatar-hint">JPG ou PNG, máx. 2 MB</span>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="profileName">Nome completo</label>
+                    <input type="text" id="profileName" class="form-control" placeholder="Seu nome" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="profileEmail">E-mail</label>
+                    <input type="email" id="profileEmail" class="form-control" placeholder="seu@email.com" />
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-top:var(--space-4);">
+                  <label class="form-label" for="profileRole">Função</label>
+                  <input type="text" id="profileRole" class="form-control" disabled />
+                  <span class="form-hint">A função é definida pelo administrador da organização.</span>
+                </div>
+
+                <div style="margin-top:var(--space-5); display:flex; justify-content:flex-end;">
+                  <button class="btn btn-primary" id="saveProfileBtn">Salvar Alterações</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── ORGANIZAÇÃO ── -->
+          <div class="settings-panel" id="panel-organizacao">
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Dados da Organização</div>
+                <div class="settings-section-desc">Informações exibidas em relatórios e documentos</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="orgName">Nome da organização</label>
+                    <input type="text" id="orgName" class="form-control" placeholder="Ex: USCS — Inovação Social" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="orgType">Tipo</label>
+                    <select id="orgType" class="form-control" disabled>
+                      <option value="ONG">ONG</option>
+                      <option value="RECYCLER">Reciclador</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="orgEmail">E-mail institucional</label>
+                    <input type="email" id="orgEmail" class="form-control" placeholder="contato@org.com" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="orgPhone">Telefone</label>
+                    <input type="tel" id="orgPhone" class="form-control" placeholder="(11) 99999-9999" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="orgAddress">Endereço</label>
+                  <input type="text" id="orgAddress" class="form-control" placeholder="Rua, número, cidade…" />
+                </div>
+                <div style="margin-top:var(--space-5); display:flex; justify-content:flex-end;">
+                  <button class="btn btn-primary" id="saveOrgBtn">Salvar Organização</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Meta de Coleta</div>
+                <div class="settings-section-desc">Meta de itens a coletar no período atual</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="form-row cols-3">
+                  <div class="form-group">
+                    <label class="form-label" for="goalTarget">Meta (unidades)</label>
+                    <input type="number" id="goalTarget" class="form-control" min="1" placeholder="100" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="goalStart">Início</label>
+                    <input type="date" id="goalStart" class="form-control" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="goalEnd">Fim</label>
+                    <input type="date" id="goalEnd" class="form-control" />
+                  </div>
+                </div>
+                <div style="margin-top:var(--space-4); display:flex; justify-content:flex-end;">
+                  <button class="btn btn-primary" id="saveGoalBtn">Salvar Meta</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── USUÁRIOS ── -->
+          <div class="settings-panel" id="panel-usuarios">
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Convidar Usuário</div>
+                <div class="settings-section-desc">Adicione membros à sua organização</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="invite-row">
+                  <div class="form-group">
+                    <label class="form-label" for="inviteEmail">E-mail</label>
+                    <input type="email" id="inviteEmail" class="form-control" placeholder="colaborador@email.com" />
+                  </div>
+                  <div class="form-group" style="min-width:160px;">
+                    <label class="form-label" for="inviteRole">Função</label>
+                    <select id="inviteRole" class="form-control">
+                      <option value="OPERATOR">Operador</option>
+                      <option value="VIEWER">Visualizador</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
+                  </div>
+                  <button class="btn btn-primary" id="inviteBtn" style="margin-bottom:1px; flex-shrink:0;">Convidar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Membros da Organização</div>
+              </div>
+              <div class="table-wrapper" style="border:none; border-radius:0;">
+                <table class="table" id="usersTable">
+                  <thead>
+                    <tr>
+                      <th>Usuário</th>
+                      <th>Função</th>
+                      <th>Status</th>
+                      <th>Desde</th>
+                      <th class="col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="usersBody">
+                    <tr><td colspan="5" style="text-align:center; padding:var(--space-6); color:var(--color-text-muted);">
+                      Carregando…
+                    </td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── CATEGORIAS ── -->
+          <div class="settings-panel" id="panel-categorias">
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Categorias de Itens</div>
+                <div class="settings-section-desc">Categorias disponíveis para classificar os itens do estoque</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="tag-list-edit" id="categoriesList">
+                  <div class="skeleton" style="height:30px; width:80px; border-radius:20px;"></div>
+                  <div class="skeleton" style="height:30px; width:100px; border-radius:20px;"></div>
+                  <div class="skeleton" style="height:30px; width:70px; border-radius:20px;"></div>
+                </div>
+                <div class="tag-add-row">
+                  <input type="text" id="newCategory" class="form-control" placeholder="Nova categoria…" maxlength="60" style="max-width:240px;" />
+                  <button class="btn btn-secondary" id="addCategoryBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Marcas</div>
+                <div class="settings-section-desc">Marcas disponíveis ao cadastrar itens</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="tag-list-edit" id="brandsList">
+                  <div class="skeleton" style="height:30px; width:60px; border-radius:20px;"></div>
+                  <div class="skeleton" style="height:30px; width:90px; border-radius:20px;"></div>
+                </div>
+                <div class="tag-add-row">
+                  <input type="text" id="newBrand" class="form-control" placeholder="Nova marca…" maxlength="60" style="max-width:240px;" />
+                  <button class="btn btn-secondary" id="addBrandBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Localizações de Armazenamento</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="tag-list-edit" id="locationsList"></div>
+                <div class="tag-add-row">
+                  <input type="text" id="newLocation" class="form-control" placeholder="Ex: Sala 3 — Armário B" maxlength="80" style="max-width:280px;" />
+                  <button class="btn btn-secondary" id="addLocationBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── LOCALIZAÇÕES (alias) ── -->
+          <div class="settings-panel" id="panel-locais">
+            <div class="alert alert-info">
+              <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <div>As localizações são gerenciadas na aba <strong>Categorias</strong>, na seção "Localizações de Armazenamento".</div>
+            </div>
+          </div>
+
+          <!-- ── NOTIFICAÇÕES ── -->
+          <div class="settings-panel" id="panel-notificacoes">
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Alertas de Estoque</div>
+                <div class="settings-section-desc">Quando e como você recebe notificações do sistema</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="setting-row">
+                  <div class="setting-row-info">
+                    <div class="setting-row-label">Estoque baixo</div>
+                    <div class="setting-row-desc">Notificar quando a quantidade disponível de um item cair abaixo do mínimo configurado.</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="notifLowStock" checked />
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </label>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-row-info">
+                    <div class="setting-row-label">Itens para descarte</div>
+                    <div class="setting-row-desc">Alertar quando um item com condição "Descartar" estiver sem movimentação há mais de 30 dias.</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="notifDiscard" checked />
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </label>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-row-info">
+                    <div class="setting-row-label">Doações pendentes</div>
+                    <div class="setting-row-desc">Lembrete quando uma doação for registrada mas não confirmada pelo recebedor.</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="notifDonation" />
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </label>
+                </div>
+                <div class="setting-row" style="margin-top:var(--space-2);">
+                  <div class="setting-row-info">
+                    <div class="setting-row-label">Quantidade mínima padrão</div>
+                    <div class="setting-row-desc">Limite abaixo do qual o alerta de estoque baixo é ativado.</div>
+                  </div>
+                  <input type="number" id="lowStockThreshold" class="form-control" min="1" value="5"
+                    style="width:80px; text-align:center;" />
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Canal de Notificações</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="setting-row">
+                  <div class="setting-row-info">
+                    <div class="setting-row-label">Notificações no sistema</div>
+                    <div class="setting-row-desc">Exibir alertas no sino do cabeçalho (sempre ativo).</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked disabled />
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </label>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-row-info">
+                    <div class="setting-row-label">Notificações por e-mail</div>
+                    <div class="setting-row-desc">Enviar resumo diário de alertas para o e-mail cadastrado.</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="notifEmail" />
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:var(--space-2);">
+              <button class="btn btn-primary" id="saveNotifBtn">Salvar Preferências</button>
+            </div>
+
+          </div>
+
+          <!-- ── SEGURANÇA ── -->
+          <div class="settings-panel" id="panel-seguranca">
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Alterar Senha</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="form-group" id="groupCurrentPwd">
+                  <label class="form-label required" for="currentPwd">Senha atual</label>
+                  <div class="input-group" style="position:relative;">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <input type="password" id="currentPwd" class="form-control" placeholder="••••••••" style="padding-right:44px;" />
+                    <button type="button" class="password-toggle" data-target="currentPwd" aria-label="Mostrar senha">
+                      <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <span class="form-error" id="errorCurrentPwd">Senha incorreta.</span>
+                </div>
+                <div class="form-row">
+                  <div class="form-group" id="groupNewPwd">
+                    <label class="form-label required" for="newPwd">Nova senha</label>
+                    <input type="password" id="newPwd" class="form-control" placeholder="Mínimo 8 caracteres" />
+                    <span class="form-error" id="errorNewPwd">Mínimo 8 caracteres.</span>
+                  </div>
+                  <div class="form-group" id="groupConfirmPwd">
+                    <label class="form-label required" for="confirmPwd">Confirmar nova senha</label>
+                    <input type="password" id="confirmPwd" class="form-control" placeholder="Repita a senha" />
+                    <span class="form-error" id="errorConfirmPwd">As senhas não coincidem.</span>
+                  </div>
+                </div>
+
+                <!-- Password strength -->
+                <div style="margin-top:var(--space-3);">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:var(--space-1);">
+                    <span style="font-size:0.8125rem; color:var(--color-text-muted);">Força da senha</span>
+                    <span id="pwdStrengthLabel" style="font-size:0.8125rem; font-weight:600; color:var(--color-text-muted);">—</span>
+                  </div>
+                  <div class="progress">
+                    <div class="progress-bar" id="pwdStrengthBar" style="width:0%;"></div>
+                  </div>
+                </div>
+
+                <div style="margin-top:var(--space-5); display:flex; justify-content:flex-end;">
+                  <button class="btn btn-primary" id="changePasswordBtn">Alterar Senha</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="danger-zone">
+              <div class="danger-zone-header">
+                <div class="danger-zone-title">Zona de Perigo</div>
+              </div>
+              <div class="danger-zone-body">
+                <div class="danger-action">
+                  <div>
+                    <div class="danger-action-label">Encerrar todas as sessões</div>
+                    <div class="danger-action-desc">Desconecta todos os dispositivos onde esta conta está ativa.</div>
+                  </div>
+                  <button class="btn btn-secondary btn-sm" id="logoutAllBtn">Encerrar Sessões</button>
+                </div>
+                <div class="danger-action">
+                  <div>
+                    <div class="danger-action-label">Excluir minha conta</div>
+                    <div class="danger-action-desc">Remove permanentemente sua conta. Esta ação não pode ser desfeita.</div>
+                  </div>
+                  <button class="btn btn-danger btn-sm" id="deleteAccountBtn">Excluir Conta</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div><!-- /settingsPanels -->
+      </div><!-- /settings-layout -->
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Delete account confirm -->
+  <div class="modal-backdrop" id="deleteAccountModal">
+    <div class="modal modal-sm modal-confirm">
+      <div class="modal-header">
+        <h3 class="modal-title">Excluir Conta</h3>
+        <button class="modal-close" data-close-modal="deleteAccountModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-confirm-icon danger">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <p class="modal-confirm-title">Tem certeza absoluta?</p>
+        <p class="modal-confirm-desc">Esta ação é irreversível. Sua conta será excluída permanentemente.</p>
+        <div class="form-group" style="margin-top:var(--space-4); text-align:left;">
+          <label class="form-label">Digite sua senha para confirmar</label>
+          <input type="password" id="deleteConfirmPwd" class="form-control" placeholder="••••••••" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="deleteAccountModal">Cancelar</button>
+        <button class="btn btn-danger" id="confirmDeleteAccountBtn">Excluir Permanentemente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change user role modal -->
+  <div class="modal-backdrop" id="changeRoleModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title">Alterar Função</h3>
+        <button class="modal-close" data-close-modal="changeRoleModal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="changeRoleUserId" />
+        <p style="font-size:0.875rem; color:var(--color-text-secondary); margin-bottom:var(--space-4);">
+          Alterar função de <strong id="changeRoleUserName">—</strong>
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="newRoleSelect">Nova função</label>
+          <select id="newRoleSelect" class="form-control">
+            <option value="ADMIN">Admin</option>
+            <option value="OPERATOR">Operador</option>
+            <option value="VIEWER">Visualizador</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="changeRoleModal">Cancelar</button>
+        <button class="btn btn-primary" id="confirmChangeRoleBtn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password toggle helper -->
+  <style>
+    .password-toggle {
+      position: absolute;
+      right: var(--space-3);
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: var(--space-1);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      transition: color var(--transition-fast);
+    }
+    .password-toggle:hover { color: var(--color-text-secondary); }
+  </style>
+
+  <script src="js/main.js"></script>
+  <script src="js/configuracoes.js"></script>
+</body>
+</html>
