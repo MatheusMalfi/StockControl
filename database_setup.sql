@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash   VARCHAR(255)     NOT NULL,
   name            VARCHAR(120)     DEFAULT NULL,
   role            ENUM('ADMIN','OPERATOR','VIEWER') NOT NULL DEFAULT 'OPERATOR',
-  is_active       TINYINT(1)       NOT NULL DEFAULT 1,
+  is_active       TINYINT       NOT NULL DEFAULT 1,
   created_at      TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_users_org FOREIGN KEY (organization_id) REFERENCES organizations(id)
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS items (
   currency            CHAR(3)          NOT NULL DEFAULT 'BRL',
   photo_url           VARCHAR(500)     DEFAULT NULL,
   qr_code_token       CHAR(36)         UNIQUE,
-  is_active           TINYINT(1)       NOT NULL DEFAULT 1,
+  is_active           TINYINT       NOT NULL DEFAULT 1,
   deactivated_at      DATETIME         DEFAULT NULL,
   deactivated_by      BIGINT UNSIGNED  DEFAULT NULL,
   deactivation_reason VARCHAR(255)     DEFAULT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS item_photos (
   id         BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   item_id    BIGINT UNSIGNED NOT NULL,
   photo_url  VARCHAR(500)    NOT NULL,
-  is_cover   TINYINT(1)      NOT NULL DEFAULT 0,
+  is_cover   TINYINT      NOT NULL DEFAULT 0,
   sort_order INT UNSIGNED    NOT NULL DEFAULT 0,
   created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_ip_item FOREIGN KEY (item_id) REFERENCES items(id)
@@ -340,10 +340,10 @@ CREATE TABLE IF NOT EXISTS user_permissions (
   id         INT UNSIGNED    PRIMARY KEY AUTO_INCREMENT,
   user_id    BIGINT UNSIGNED NOT NULL,
   module     ENUM('ITEMS','DONATIONS','DISPOSAL','REPORTS','USERS','SETTINGS','STOCK','PARTNERS') NOT NULL,
-  can_view   TINYINT(1) NOT NULL DEFAULT 0,
-  can_create TINYINT(1) NOT NULL DEFAULT 0,
-  can_edit   TINYINT(1) NOT NULL DEFAULT 0,
-  can_delete TINYINT(1) NOT NULL DEFAULT 0,
+  can_view   TINYINT NOT NULL DEFAULT 0,
+  can_create TINYINT NOT NULL DEFAULT 0,
+  can_edit   TINYINT NOT NULL DEFAULT 0,
+  can_delete TINYINT NOT NULL DEFAULT 0,
   created_at TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_up_user FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -373,19 +373,19 @@ CREATE TABLE IF NOT EXISTS collection_goals (
 CREATE TABLE IF NOT EXISTS organization_settings (
   id                    INT UNSIGNED    PRIMARY KEY AUTO_INCREMENT,
   organization_id       BIGINT UNSIGNED NOT NULL UNIQUE,
-  notify_low_stock      TINYINT(1)      NOT NULL DEFAULT 1,
+  notify_low_stock      TINYINT      NOT NULL DEFAULT 1,
   low_stock_threshold   INT UNSIGNED             DEFAULT 5,
-  notify_new_donation   TINYINT(1)      NOT NULL DEFAULT 1,
-  notify_pickup         TINYINT(1)      NOT NULL DEFAULT 1,
+  notify_new_donation   TINYINT      NOT NULL DEFAULT 1,
+  notify_pickup         TINYINT      NOT NULL DEFAULT 1,
   report_email          VARCHAR(150)             DEFAULT NULL,
   auto_report_day       TINYINT UNSIGNED         DEFAULT NULL,
   auto_report_format    ENUM('CSV','XLSX','PDF') DEFAULT 'PDF',
   logo_url              VARCHAR(500)             DEFAULT NULL,
   primary_color_hex     CHAR(7)         NOT NULL DEFAULT '#2ECC71',
-  require_photo_on_item TINYINT(1)      NOT NULL DEFAULT 0,
-  allow_anonymous_donor TINYINT(1)      NOT NULL DEFAULT 1,
-  require_serial_number TINYINT(1)      NOT NULL DEFAULT 0,
-  auto_stock_movement   TINYINT(1)      NOT NULL DEFAULT 1,
+  require_photo_on_item TINYINT      NOT NULL DEFAULT 0,
+  allow_anonymous_donor TINYINT      NOT NULL DEFAULT 1,
+  require_serial_number TINYINT      NOT NULL DEFAULT 0,
+  auto_stock_movement   TINYINT      NOT NULL DEFAULT 1,
   updated_at            TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_os_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -396,6 +396,7 @@ CREATE TABLE IF NOT EXISTS organization_settings (
 
 DELIMITER $$
 
+DROP TRIGGER IF EXISTS trg_items_qr_code$$
 CREATE TRIGGER trg_items_qr_code
 BEFORE INSERT ON items
 FOR EACH ROW
@@ -405,6 +406,7 @@ BEGIN
   END IF;
 END$$
 
+DROP TRIGGER IF EXISTS trg_items_quantity_update$$
 CREATE TRIGGER trg_items_quantity_update
 AFTER UPDATE ON items
 FOR EACH ROW
@@ -431,6 +433,7 @@ BEGIN
   END IF;
 END$$
 
+DROP TRIGGER IF EXISTS trg_items_condition_history$$
 CREATE TRIGGER trg_items_condition_history
 AFTER UPDATE ON items
 FOR EACH ROW
@@ -445,6 +448,7 @@ BEGIN
   END IF;
 END$$
 
+DROP TRIGGER IF EXISTS trg_audit_no_delete$$
 CREATE TRIGGER trg_audit_no_delete
 BEFORE DELETE ON audit_logs
 FOR EACH ROW
@@ -453,6 +457,7 @@ BEGIN
     SET MESSAGE_TEXT = 'audit_logs é imutável: DELETE não permitido';
 END$$
 
+DROP TRIGGER IF EXISTS trg_audit_no_update$$
 CREATE TRIGGER trg_audit_no_update
 BEFORE UPDATE ON audit_logs
 FOR EACH ROW
@@ -461,6 +466,7 @@ BEGIN
     SET MESSAGE_TEXT = 'audit_logs é imutável: UPDATE não permitido';
 END$$
 
+DROP TRIGGER IF EXISTS trg_donation_items_insert$$
 CREATE TRIGGER trg_donation_items_insert
 AFTER INSERT ON donation_items
 FOR EACH ROW
@@ -472,6 +478,7 @@ BEGIN
   WHERE id = NEW.donation_id;
 END$$
 
+DROP TRIGGER IF EXISTS trg_donation_items_update$$
 CREATE TRIGGER trg_donation_items_update
 AFTER UPDATE ON donation_items
 FOR EACH ROW
@@ -483,6 +490,7 @@ BEGIN
   WHERE id = NEW.donation_id;
 END$$
 
+DROP TRIGGER IF EXISTS trg_donation_items_delete$$
 CREATE TRIGGER trg_donation_items_delete
 AFTER DELETE ON donation_items
 FOR EACH ROW
@@ -494,6 +502,7 @@ BEGIN
   WHERE id = OLD.donation_id;
 END$$
 
+DROP TRIGGER IF EXISTS trg_low_stock_notification$$
 CREATE TRIGGER trg_low_stock_notification
 AFTER UPDATE ON items
 FOR EACH ROW
