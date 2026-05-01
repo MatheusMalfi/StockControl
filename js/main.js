@@ -22,7 +22,6 @@
   const API_BASE   = "/api";
   const TOKEN_KEY  = "sc_token";
   const USER_KEY   = "sc_user";
-  const SIDEBAR_KEY = "sc_sidebar_collapsed";
 
   /* ============================================================
      SESSION
@@ -187,27 +186,13 @@
   });
 
   /* ============================================================
-     SIDEBAR
+     SIDEBAR — expande por hover (CSS), drawer no mobile
      ============================================================ */
   const sidebar        = document.getElementById("sidebar");
-  const sidebarToggle  = document.getElementById("sidebarToggle");
   const sidebarOverlay = document.getElementById("sidebarOverlay");
   const headerMenuBtn  = document.getElementById("headerMenuBtn");
 
-  function isMobile() { return window.innerWidth < 1024; }
-
-  function collapseSidebar()  {
-    sidebar && sidebar.classList.add("collapsed");
-    localStorage.setItem(SIDEBAR_KEY, "1");
-  }
-  function expandSidebar() {
-    sidebar && sidebar.classList.remove("collapsed");
-    localStorage.setItem(SIDEBAR_KEY, "0");
-  }
-  function toggleSidebar() {
-    if (sidebar.classList.contains("collapsed")) expandSidebar();
-    else collapseSidebar();
-  }
+  function isMobile() { return window.innerWidth < 769; }
 
   function openMobileDrawer() {
     sidebar && sidebar.classList.add("mobile-open");
@@ -220,19 +205,8 @@
     document.body.style.overflow = "";
   }
 
-  /* Restore collapsed state on desktop */
-  if (!isMobile() && localStorage.getItem(SIDEBAR_KEY) === "1") {
-    collapseSidebar();
-  }
-
-  sidebarToggle && sidebarToggle.addEventListener("click", () => {
-    if (isMobile()) closeMobileDrawer();
-    else toggleSidebar();
-  });
-
   headerMenuBtn && headerMenuBtn.addEventListener("click", () => {
     if (isMobile()) openMobileDrawer();
-    else toggleSidebar();
   });
 
   sidebarOverlay && sidebarOverlay.addEventListener("click", closeMobileDrawer);
