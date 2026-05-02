@@ -921,18 +921,32 @@
                       </svg>
                     </button>
                   </div>
-                  <span class="form-error" id="errorCurrentPwd">Senha incorreta.</span>
+                  <span class="form-error" id="errorCurrentPwd" style="display:none;">Senha incorreta.</span>
                 </div>
                 <div class="form-row">
                   <div class="form-group" id="groupNewPwd">
                     <label class="form-label required" for="newPwd">Nova senha</label>
-                    <input type="password" id="newPwd" class="form-control" placeholder="Mínimo 8 caracteres" />
-                    <span class="form-error" id="errorNewPwd">Mínimo 8 caracteres.</span>
+                    <div style="position:relative;">
+                      <input type="password" id="newPwd" class="form-control" placeholder="Mínimo 8 caracteres" style="padding-right:44px;" />
+                      <button type="button" class="password-toggle" data-target="newPwd" aria-label="Mostrar senha">
+                        <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <span class="form-error" id="errorNewPwd" style="display:none;">Mínimo 8 caracteres.</span>
                   </div>
                   <div class="form-group" id="groupConfirmPwd">
                     <label class="form-label required" for="confirmPwd">Confirmar nova senha</label>
-                    <input type="password" id="confirmPwd" class="form-control" placeholder="Repita a senha" />
-                    <span class="form-error" id="errorConfirmPwd">As senhas não coincidem.</span>
+                    <div style="position:relative;">
+                      <input type="password" id="confirmPwd" class="form-control" placeholder="Repita a senha" style="padding-right:44px;" />
+                      <button type="button" class="password-toggle" data-target="confirmPwd" aria-label="Mostrar senha">
+                        <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <span class="form-error" id="errorConfirmPwd" style="display:none;">As senhas não coincidem.</span>
                   </div>
                 </div>
 
@@ -947,9 +961,51 @@
                   </div>
                 </div>
 
+                <ul id="pwdRequirements" style="margin-top:var(--space-3);list-style:none;padding:0;font-size:0.8125rem;display:flex;flex-direction:column;gap:4px;">
+                  <li data-req="len"     data-text="Mínimo 8 caracteres"           style="color:var(--color-text-muted);">✗ Mínimo 8 caracteres</li>
+                  <li data-req="upper"   data-text="Pelo menos 1 letra maiúscula"  style="color:var(--color-text-muted);">✗ Pelo menos 1 letra maiúscula</li>
+                  <li data-req="number"  data-text="Pelo menos 1 número"           style="color:var(--color-text-muted);">✗ Pelo menos 1 número</li>
+                  <li data-req="special" data-text="Pelo menos 1 caractere especial" style="color:var(--color-text-muted);">✗ Pelo menos 1 caractere especial</li>
+                </ul>
+
                 <div style="margin-top:var(--space-5); display:flex; justify-content:flex-end;">
                   <button class="btn btn-primary" id="changePasswordBtn">Alterar Senha</button>
                 </div>
+              </div>
+            </div>
+
+            <!-- Log de Acessos -->
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Log de Acessos</div>
+                <div class="settings-section-desc">Histórico de sessões desta conta</div>
+              </div>
+              <div class="settings-section-body">
+                <div id="logAcessosLista" style="margin-bottom:var(--space-3);">
+                  <p style="color:var(--color-text-muted);font-size:0.875rem;">Carregando…</p>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btnVerMaisLog" style="display:none;">Ver mais</button>
+              </div>
+            </div>
+
+            <!-- Exportar Dados -->
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Exportar Dados</div>
+                <div class="settings-section-desc">Baixe um backup completo de todos os dados do sistema</div>
+              </div>
+              <div class="settings-section-body">
+                <p style="font-size:0.875rem;color:var(--color-text-secondary);margin-bottom:var(--space-4);">
+                  Gera um arquivo JSON com todos os dados armazenados localmente — itens, movimentações, usuários, configurações e logs.
+                </p>
+                <button class="btn btn-secondary" id="btnExportarDados">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Baixar Backup JSON
+                </button>
               </div>
             </div>
 
@@ -964,6 +1020,13 @@
                     <div class="danger-action-desc">Desconecta todos os dispositivos onde esta conta está ativa.</div>
                   </div>
                   <button class="btn btn-secondary btn-sm" id="logoutAllBtn">Encerrar Sessões</button>
+                </div>
+                <div class="danger-action">
+                  <div>
+                    <div class="danger-action-label">Limpar todos os dados</div>
+                    <div class="danger-action-desc">Remove permanentemente todos os dados do sistema. Esta ação não pode ser desfeita.</div>
+                  </div>
+                  <button class="btn btn-danger btn-sm" id="btnLimparDados">Limpar Dados</button>
                 </div>
                 <div class="danger-action">
                   <div>
