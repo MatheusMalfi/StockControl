@@ -109,7 +109,7 @@
           <div class="filtros-lista">
             <div class="busca-wrapper">
               <span class="icone-busca" aria-hidden="true">🔍</span>
-              <input type="text" id="buscaInput"
+              <input type="text" id="buscaItens"
                      placeholder="Buscar por nome ou patrimônio…"
                      autocomplete="off" />
               <button class="btn-limpar-busca" id="btnLimparBusca"
@@ -121,8 +121,8 @@
           </div>
 
           <div class="header-selecao">
-            <label class="checkbox-wrapper" for="selecionarTodos">
-              <input type="checkbox" id="selecionarTodos" />
+            <label class="checkbox-wrapper" for="checkboxTodos">
+              <input type="checkbox" id="checkboxTodos" />
               <span>Selecionar todos</span>
             </label>
             <span class="contador-selecionados" id="contadorSelecionados">0 selecionados</span>
@@ -151,8 +151,8 @@
           </div>
 
           <div class="rodape-lista">
-            <span id="infoItens">Carregando…</span>
-            <button class="btn-limpar-sel" id="btnLimparSel">Limpar seleção</button>
+            <span id="infoTotal">Carregando…</span>
+            <button class="btn-limpar-sel" onclick="limparSelecao()">Limpar seleção</button>
           </div>
         </div>
 
@@ -164,17 +164,17 @@
             <h3>⚙ Configurações</h3>
 
             <div class="tamanhos-wrapper">
-              <div class="card-tamanho ativo" data-tamanho="pequena">
+              <div class="card-tamanho ativo" data-tamanho="pequena" onclick="setTamanho(this.dataset.tamanho)">
                 <div class="icone-tamanho pequena"></div>
                 <span class="nome-tamanho">Pequena</span>
                 <span class="dims-tamanho">40×20mm</span>
               </div>
-              <div class="card-tamanho" data-tamanho="media">
+              <div class="card-tamanho" data-tamanho="media" onclick="setTamanho(this.dataset.tamanho)">
                 <div class="icone-tamanho media"></div>
                 <span class="nome-tamanho">Média</span>
                 <span class="dims-tamanho">60×30mm</span>
               </div>
-              <div class="card-tamanho" data-tamanho="grande">
+              <div class="card-tamanho" data-tamanho="grande" onclick="setTamanho(this.dataset.tamanho)">
                 <div class="icone-tamanho grande"></div>
                 <span class="nome-tamanho">Grande</span>
                 <span class="dims-tamanho">80×40mm</span>
@@ -184,22 +184,22 @@
             <div class="campos-config">
               <h4>Campos visíveis</h4>
               <label class="campo-toggle">
-                <input type="checkbox" id="showPatrimonio" checked /> Patrimônio
+                <input type="checkbox" data-campo="patrimonio" onchange="setCampo(this.dataset.campo, this.checked)" checked /> Patrimônio
               </label>
               <label class="campo-toggle">
-                <input type="checkbox" id="showCondicao" checked /> Condição
+                <input type="checkbox" data-campo="condicao"   onchange="setCampo(this.dataset.campo, this.checked)" checked /> Condição
               </label>
               <label class="campo-toggle">
-                <input type="checkbox" id="showQtd" checked /> Quantidade
+                <input type="checkbox" data-campo="quantidade" onchange="setCampo(this.dataset.campo, this.checked)" checked /> Quantidade
               </label>
               <label class="campo-toggle">
-                <input type="checkbox" id="showCategoria" /> Categoria
+                <input type="checkbox" data-campo="organizacao" onchange="setCampo(this.dataset.campo, this.checked)" checked /> Organização
               </label>
               <label class="campo-toggle">
-                <input type="checkbox" id="showOrg" /> Organização
+                <input type="checkbox" data-campo="categoria"  onchange="setCampo(this.dataset.campo, this.checked)" /> Categoria
               </label>
               <label class="campo-toggle">
-                <input type="checkbox" id="showSerie" /> Série / Modelo
+                <input type="checkbox" data-campo="serie"      onchange="setCampo(this.dataset.campo, this.checked)" /> Série / Modelo
               </label>
             </div>
           </div>
@@ -217,10 +217,10 @@
 
           <!-- Ação -->
           <div class="botoes-acao">
-            <button class="btn-imprimir" id="btnImprimir" disabled>
+            <button class="btn-imprimir" id="btnImprimir" disabled onclick="imprimir()">
               🖨️ Imprimir (<span id="contadorImpressao">0</span>)
             </button>
-            <button class="btn-pdf" id="btnPdf" disabled>
+            <button class="btn-pdf" id="btnPdf" disabled onclick="exportarPDF()">
               📄 Exportar PDF
             </button>
           </div>

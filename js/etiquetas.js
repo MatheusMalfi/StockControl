@@ -1,456 +1,559 @@
 "use strict";
 
-document.addEventListener("sc:ready", function () {
-  const ITEMS_KEY = "sc_items";
+// ════════════════════════════════════════════════════════
+// DADOS MOCK
+// ════════════════════════════════════════════════════════
+const MOCK_ITENS = [
+  { id: '101', nome: 'Notebook Dell XPS 15',           patrimonio: 'PAT-2024-001', condicao: 'otimo',    qtdTotal: 5,  qtdDisponivel: 3,  categoria: 'Informática',       numeroSerie: 'SN-DL-XPS-001' },
+  { id: '102', nome: 'Projetor Epson 3200',            patrimonio: 'PAT-2024-002', condicao: 'reparo',   qtdTotal: 2,  qtdDisponivel: 0,  categoria: 'Audiovisual',        numeroSerie: 'SN-EP-3200-01' },
+  { id: '103', nome: 'Cadeira Herman Miller',          patrimonio: 'PAT-2024-003', condicao: 'otimo',    qtdTotal: 20, qtdDisponivel: 15, categoria: 'Mobiliário',         numeroSerie: '' },
+  { id: '104', nome: 'Switch TP-Link 24 portas',       patrimonio: 'PAT-2024-004', condicao: 'bom',      qtdTotal: 3,  qtdDisponivel: 2,  categoria: 'Informática',        numeroSerie: 'SN-TP-24P-002' },
+  { id: '105', nome: 'Mesa de Escritório 160cm',       patrimonio: 'PAT-2024-005', condicao: 'otimo',    qtdTotal: 10, qtdDisponivel: 8,  categoria: 'Mobiliário',         numeroSerie: '' },
+  { id: '106', nome: 'Monitor LG 27" 4K',              patrimonio: 'PAT-2024-006', condicao: 'otimo',    qtdTotal: 8,  qtdDisponivel: 6,  categoria: 'Informática',        numeroSerie: 'SN-LG-27K-006' },
+  { id: '107', nome: 'Impressora HP LaserJet Pro',     patrimonio: 'PAT-2024-007', condicao: 'reparo',   qtdTotal: 2,  qtdDisponivel: 1,  categoria: 'Informática',        numeroSerie: 'SN-HP-LJ-007' },
+  { id: '108', nome: 'Ar-Condicionado Springer 12000', patrimonio: 'PAT-2024-008', condicao: 'otimo',    qtdTotal: 5,  qtdDisponivel: 5,  categoria: 'Eletrodomésticos',   numeroSerie: 'SN-SP-12K-008' },
+  { id: '109', nome: 'Tablet Samsung Galaxy Tab S8',   patrimonio: 'PAT-2024-009', condicao: 'descarte', qtdTotal: 3,  qtdDisponivel: 0,  categoria: 'Eletrônicos',        numeroSerie: 'SN-SM-S8-009' },
+  { id: '110', nome: 'Telefone IP Cisco 7961',         patrimonio: 'PAT-2024-010', condicao: 'bom',      qtdTotal: 15, qtdDisponivel: 12, categoria: 'Informática',        numeroSerie: 'SN-CS-7961-010' },
+  { id: '111', nome: 'Estabilizador NHS 1400VA',       patrimonio: 'PAT-2024-011', condicao: 'otimo',    qtdTotal: 6,  qtdDisponivel: 4,  categoria: 'Eletrônicos',        numeroSerie: 'SN-NH-14K-011' },
+  { id: '112', nome: 'Webcam Logitech C920',           patrimonio: 'PAT-2024-012', condicao: 'regular',  qtdTotal: 10, qtdDisponivel: 7,  categoria: 'Informática',        numeroSerie: 'SN-LG-C920-012' },
+];
 
-  const BADGE_MAP = {
-    otimo:   { cls: "badge-otimo",    label: "Ótimo" },
-    bom:     { cls: "badge-bom",      label: "Bom" },
-    reparo:  { cls: "badge-reparo",   label: "Reparo" },
-    ruim:    { cls: "badge-regular",  label: "Regular" },
-    inativo: { cls: "badge-descarte", label: "Descarte" },
-  };
+// ════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════════════════════
+const Estado = {
+  itens: [],
+  itensFiltrados: [],
+  itensSelecionados: [],
+  tamanho: 'pequena',
+  orgName: 'StockControl / USCS',
+  campos: {
+    patrimonio: true,
+    condicao: true,
+    quantidade: true,
+    organizacao: true,
+    categoria: false,
+    serie: false,
+  },
+};
 
-  const EMOJI_MAP = {
-    "Informática": "💻", "Audiovisual": "📽️", "Mobiliário": "🪑",
-    "Rede": "🌐", "Climatização": "❄️", "Telecomunicações": "📞",
-    "Energia": "⚡", "Periféricos": "🖱️", "Ferramentas": "🔧",
-  };
+// ════════════════════════════════════════════════════════
+// 1. INICIALIZAÇÃO
+// ════════════════════════════════════════════════════════
+function initEtiquetas() {
+  mostrarSkeleton();
+  carregarPreferencias();
 
-  // QR canvas size in pixels (preview / print)
-  const QR_PX = {
-    pequena: { preview: 32, print: 56 },
-    media:   { preview: 40, print: 72 },
-    grande:  { preview: 50, print: 88 },
-  };
+  setTimeout(() => {
+    carregarItens();
+    carregarCategorias();
+    bindEventos();
+    renderListaItens(Estado.itens);
+    atualizarBotaoImprimir();
+  }, 600);
+}
 
-  const MOCK_ITEMS = [
-    { id: "101", nome: "Notebook Dell XPS 15",           patrimonio: "PAT-2024-001", condicao: "otimo",   total: 5,  disponivel: 3,  categoria: "Informática",       localizacao: "Sala 201",     responsavel: "TI",             valor: 4500, tags: ["notebook","dell"],     created_at: "2024-01-10T10:00:00Z" },
-    { id: "102", nome: "Projetor Epson 3200",            patrimonio: "PAT-2024-002", condicao: "reparo",  total: 2,  disponivel: 0,  categoria: "Audiovisual",        localizacao: "Auditório",    responsavel: "TI",             valor: 2800, tags: ["projetor"],            created_at: "2024-02-15T10:00:00Z" },
-    { id: "103", nome: "Cadeira Herman Miller",          patrimonio: "PAT-2024-003", condicao: "otimo",   total: 20, disponivel: 15, categoria: "Mobiliário",         localizacao: "Escritório",   responsavel: "Administrativo", valor: 1200, tags: ["cadeira"],             created_at: "2024-03-01T10:00:00Z" },
-    { id: "104", nome: "Switch TP-Link 24 portas",       patrimonio: "PAT-2024-004", condicao: "bom",     total: 3,  disponivel: 2,  categoria: "Rede",               localizacao: "Servidor",     responsavel: "TI",             valor: 650,  tags: ["rede","switch"],       created_at: "2024-03-15T10:00:00Z" },
-    { id: "105", nome: "Mesa de Escritório 160cm",       patrimonio: "PAT-2024-005", condicao: "otimo",   total: 10, disponivel: 8,  categoria: "Mobiliário",         localizacao: "Coworking",    responsavel: "Administrativo", valor: 850,  tags: ["mesa"],               created_at: "2024-04-01T10:00:00Z" },
-    { id: "106", nome: "Monitor LG 27\" 4K",             patrimonio: "PAT-2024-006", condicao: "otimo",   total: 8,  disponivel: 6,  categoria: "Informática",        localizacao: "Sala 102",     responsavel: "TI",             valor: 1800, tags: ["monitor"],             created_at: "2024-04-10T10:00:00Z" },
-    { id: "107", nome: "Impressora HP LaserJet Pro",     patrimonio: "PAT-2024-007", condicao: "reparo",  total: 2,  disponivel: 1,  categoria: "Informática",        localizacao: "Recepção",     responsavel: "TI",             valor: 1200, tags: ["impressora"],          created_at: "2024-04-20T10:00:00Z" },
-    { id: "108", nome: "Ar-Condicionado Springer 12000", patrimonio: "PAT-2024-008", condicao: "otimo",   total: 5,  disponivel: 5,  categoria: "Climatização",       localizacao: "Sala 301",     responsavel: "Manutenção",     valor: 2200, tags: ["ar-condicionado"],     created_at: "2024-05-01T10:00:00Z" },
-    { id: "109", nome: "Tablet Samsung Galaxy Tab S8",   patrimonio: "PAT-2024-009", condicao: "inativo", total: 3,  disponivel: 0,  categoria: "Informática",        localizacao: "Almoxarifado", responsavel: "TI",             valor: 900,  tags: ["tablet","samsung"],    created_at: "2024-05-10T10:00:00Z" },
-    { id: "110", nome: "Telefone IP Cisco 7961",         patrimonio: "PAT-2024-010", condicao: "bom",     total: 15, disponivel: 12, categoria: "Telecomunicações",   localizacao: "Geral",        responsavel: "TI",             valor: 350,  tags: ["telefone","voip"],     created_at: "2024-05-20T10:00:00Z" },
-    { id: "111", nome: "Estabilizador NHS 1400VA",       patrimonio: "PAT-2024-011", condicao: "otimo",   total: 6,  disponivel: 4,  categoria: "Energia",            localizacao: "Servidor",     responsavel: "TI",             valor: 280,  tags: ["estabilizador","nhs"], created_at: "2024-06-01T10:00:00Z" },
-    { id: "112", nome: "Webcam Logitech C920",           patrimonio: "PAT-2024-012", condicao: "otimo",   total: 10, disponivel: 7,  categoria: "Periféricos",        localizacao: "Home Office",  responsavel: "TI",             valor: 420,  tags: ["webcam","logitech"],   created_at: "2024-06-10T10:00:00Z" },
-  ];
+function carregarItens() {
+  const salvo = localStorage.getItem('estoque_itens');
+  Estado.itens = salvo ? JSON.parse(salvo) : MOCK_ITENS;
+  if (!salvo) localStorage.setItem('estoque_itens', JSON.stringify(MOCK_ITENS));
+  Estado.itensFiltrados = [...Estado.itens];
 
-  const state = {
-    search: "", category: "",
-    allItems: [],
-    selected: new Set(),
-    tamanho: "pequena",
-    showPatrimonio: true, showCondicao: true, showQtd: true,
-    showCategoria: false, showOrg: false, showSerie: false,
-    orgName: "StockControl / USCS",
-  };
-
-  // ── DOM refs ────────────────────────────────────────────────────────────────
-  const listaItens    = document.getElementById("listaItens");
-  const areaPreview   = document.getElementById("areaPreview");
-  const gridImpressao = document.getElementById("gridImpressao");
-  const areaImpressao = document.getElementById("areaImpressao");
-  const btnImprimir   = document.getElementById("btnImprimir");
-  const btnPdf        = document.getElementById("btnPdf");
-
-  // ── Storage ─────────────────────────────────────────────────────────────────
-  function getStoredItems() {
-    try { return JSON.parse(localStorage.getItem(ITEMS_KEY) || "[]"); } catch { return []; }
+  // Pegar nome da org do usuário logado se disponível
+  const user = window.SC?.currentUser;
+  if (user) {
+    Estado.orgName =
+      user.organizationName ||
+      user.organization?.name ||
+      Estado.orgName;
   }
+}
 
-  function seedIfEmpty() {
-    if (!getStoredItems().length) localStorage.setItem(ITEMS_KEY, JSON.stringify(MOCK_ITEMS));
-  }
+function carregarPreferencias() {
+  const pref = JSON.parse(localStorage.getItem('etiquetas_prefs') || '{}');
+  if (pref.tamanho) Estado.tamanho = pref.tamanho;
+  if (pref.campos)  Estado.campos  = { ...Estado.campos, ...pref.campos };
+  aplicarPreferenciasUI();
+}
 
-  function getFilteredItems() {
-    let items = getStoredItems();
-    if (state.search) {
-      const q = state.search.toLowerCase();
-      items = items.filter(i =>
-        (i.nome       || "").toLowerCase().includes(q) ||
-        (i.patrimonio || "").toLowerCase().includes(q) ||
-        (i.categoria  || "").toLowerCase().includes(q) ||
-        (i.responsavel|| "").toLowerCase().includes(q)
-      );
-    }
-    if (state.category) items = items.filter(i => (i.categoria || "") === state.category);
-    return items;
-  }
+function salvarPreferencias() {
+  localStorage.setItem('etiquetas_prefs', JSON.stringify({
+    tamanho: Estado.tamanho,
+    campos:  Estado.campos,
+  }));
+}
 
-  function getSelectedItems() {
-    return getStoredItems().filter(i => state.selected.has(String(i.id)));
-  }
+function aplicarPreferenciasUI() {
+  document.querySelectorAll('.card-tamanho').forEach(c => {
+    c.classList.toggle('ativo', c.dataset.tamanho === Estado.tamanho);
+  });
+  Object.keys(Estado.campos).forEach(campo => {
+    const cb = document.querySelector(`[data-campo="${campo}"]`);
+    if (cb) cb.checked = Estado.campos[campo];
+  });
+}
 
-  // ── QR Code ─────────────────────────────────────────────────────────────────
-  async function createQRCanvas(text, size) {
-    if (typeof QRCode === "undefined" || !text) return null;
-    const canvas = document.createElement("canvas");
-    try {
-      await QRCode.toCanvas(canvas, String(text), { width: size, margin: 0,
-        color: { dark: "#000000", light: "#ffffff" } });
-      return canvas;
-    } catch { return null; }
-  }
+function carregarCategorias() {
+  const cats = [...new Set(Estado.itens.map(i => i.categoria).filter(Boolean))].sort();
+  const sel = document.getElementById('filtroCategoria');
+  if (!sel) return;
+  cats.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    sel.appendChild(opt);
+  });
+}
 
-  // ── Init ────────────────────────────────────────────────────────────────────
-  function init() {
-    seedIfEmpty();
-    state.orgName =
-      SC.currentUser?.organizationName ||
-      SC.currentUser?.organization?.name ||
-      "StockControl / USCS";
-    populateCategoryFilter();
-    wireSearch();
-    wireCategoryFilter();
-    wireSelectAll();
-    wireClearButtons();
-    wireSizeCards();
-    wireFieldToggles();
-    wirePrintButtons();
-    loadAndRender();
-  }
-
-  // ── Category filter ─────────────────────────────────────────────────────────
-  function populateCategoryFilter() {
-    const sel = document.getElementById("filtroCategoria");
-    if (!sel) return;
-    const cats = [...new Set(getStoredItems().map(i => i.categoria).filter(Boolean))].sort();
-    sel.innerHTML = '<option value="">Todas as categorias</option>' +
-      cats.map(c => `<option value="${SC.escHtml(c)}">${SC.escHtml(c)}</option>`).join("");
-  }
-
-  // ── Load & render ────────────────────────────────────────────────────────────
-  function loadAndRender() {
-    state.allItems = getFilteredItems();
-    renderList();
-  }
-
-  function renderList() {
-    if (!listaItens) return;
-
-    if (!state.allItems.length) {
-      listaItens.innerHTML = `
-        <div class="estado-vazio">
-          <div class="icone">📦</div>
-          <h3>Nenhum item encontrado</h3>
-          <p>${state.search || state.category ? "Tente ajustar os filtros" : "Cadastre itens no estoque primeiro"}</p>
-          ${!state.search && !state.category ? `<a href="form-item.html"><button class="btn-acao-vazio">Cadastrar item</button></a>` : ""}
-        </div>`;
-      updateCounters();
-      return;
-    }
-
-    listaItens.innerHTML = "";
-    state.allItems.forEach(item => {
-      listaItens.appendChild(createItemRow(item));
-    });
-
-    updateCounters();
-    syncSelectAll();
-  }
-
-  function createItemRow(item) {
-    const isSelected = state.selected.has(String(item.id));
-    const cond = BADGE_MAP[item.condicao] || BADGE_MAP.otimo;
-    const emoji = EMOJI_MAP[item.categoria] || "📦";
-
-    const div = document.createElement("div");
-    div.className = `item-linha${isSelected ? " selecionado" : ""}`;
-    div.dataset.id = String(item.id);
-
-    div.innerHTML = `
-      <input type="checkbox" class="item-check"${isSelected ? " checked" : ""} aria-label="Selecionar ${SC.escHtml(item.nome || "")}">
-      <div class="item-icone">${emoji}</div>
-      <div class="item-info">
-        <div class="item-nome">${SC.escHtml(item.nome || "")}</div>
-        <div class="item-meta">
-          ${item.categoria ? `<span class="item-categoria">${SC.escHtml(item.categoria)}</span>` : ""}
-          <span class="badge-condicao ${cond.cls}">${cond.label}</span>
-        </div>
-      </div>
-      <div class="item-direita">
-        <div class="item-patrimonio">${item.patrimonio ? SC.escHtml(item.patrimonio) : "—"}</div>
-        <div class="item-qtd">Qtd: ${item.total ?? 0}</div>
-      </div>`;
-
-    const cb = div.querySelector(".item-check");
-
-    cb.addEventListener("change", () => {
-      const id = String(item.id);
-      if (cb.checked) state.selected.add(id);
-      else state.selected.delete(id);
-      div.classList.toggle("selecionado", cb.checked);
-      syncSelectAll();
-      updateCounters();
-      schedulePreview();
-    });
-
-    div.addEventListener("click", e => {
-      if (e.target.type === "checkbox") return;
-      cb.checked = !cb.checked;
-      cb.dispatchEvent(new Event("change"));
-    });
-
-    return div;
-  }
-
-  // ── Select all ──────────────────────────────────────────────────────────────
-  function syncSelectAll() {
-    const cb = document.getElementById("selecionarTodos");
-    if (!cb || !state.allItems.length) {
-      if (cb) { cb.checked = false; cb.indeterminate = false; }
-      return;
-    }
-    const ids = state.allItems.map(i => String(i.id));
-    const allOn  = ids.every(id => state.selected.has(id));
-    const someOn = ids.some(id  => state.selected.has(id));
-    cb.checked       = allOn;
-    cb.indeterminate = someOn && !allOn;
-  }
-
-  function updateCounters() {
-    const n = state.selected.size;
-    const total = state.allItems.length;
-
-    const elCount = document.getElementById("contadorSelecionados");
-    if (elCount) {
-      elCount.textContent = `${n} selecionado${n !== 1 ? "s" : ""}`;
-      elCount.classList.toggle("ativo", n > 0);
-    }
-    const elInfo = document.getElementById("infoItens");
-    if (elInfo) elInfo.textContent = `${total} item${total !== 1 ? "s" : ""}`;
-    const elCi = document.getElementById("contadorImpressao");
-    if (elCi) elCi.textContent = n;
-    if (btnImprimir) btnImprimir.disabled = n === 0;
-    if (btnPdf)      btnPdf.disabled      = n === 0;
-  }
-
-  // ── Wiring ───────────────────────────────────────────────────────────────────
-  function wireSearch() {
-    const input = document.getElementById("buscaInput");
-    if (!input) return;
-    input.addEventListener("input", SC.debounce(() => {
-      state.search = input.value.trim();
-      loadAndRender();
+function bindEventos() {
+  const inputBusca = document.getElementById('buscaItens');
+  if (inputBusca) {
+    inputBusca.addEventListener('input', debounce(e => {
+      const btnX = document.getElementById('btnLimparBusca');
+      if (btnX) btnX.style.display = e.target.value ? 'block' : 'none';
+      aplicarFiltros();
     }, 300));
   }
 
-  function wireCategoryFilter() {
-    document.getElementById("filtroCategoria")?.addEventListener("change", e => {
-      state.category = e.target.value;
-      loadAndRender();
+  document.getElementById('btnLimparBusca')?.addEventListener('click', () => {
+    const inp = document.getElementById('buscaItens');
+    if (inp) inp.value = '';
+    const btnX = document.getElementById('btnLimparBusca');
+    if (btnX) btnX.style.display = 'none';
+    aplicarFiltros();
+  });
+
+  document.getElementById('filtroCategoria')?.addEventListener('change', aplicarFiltros);
+  document.getElementById('checkboxTodos')?.addEventListener('change', toggleSelecionarTodos);
+}
+
+// ════════════════════════════════════════════════════════
+// 2. SKELETON LOADING
+// ════════════════════════════════════════════════════════
+function mostrarSkeleton() {
+  const lista = document.getElementById('listaItens');
+  if (!lista) return;
+  lista.innerHTML = Array(5).fill('').map(() => `
+    <div class="skeleton-linha">
+      <div class="skeleton-box sk-check"></div>
+      <div class="skeleton-box sk-icone"></div>
+      <div class="sk-info">
+        <div class="skeleton-box sk-nome"></div>
+        <div class="skeleton-box sk-meta"></div>
+      </div>
+      <div class="skeleton-box sk-pat"></div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// 3. FILTROS
+// ════════════════════════════════════════════════════════
+function aplicarFiltros() {
+  const termo = normalizar(document.getElementById('buscaItens')?.value || '');
+  const cat   = document.getElementById('filtroCategoria')?.value || '';
+
+  Estado.itensFiltrados = Estado.itens.filter(item => {
+    const matchBusca = !termo || [item.nome, item.patrimonio, item.numeroSerie, item.categoria]
+      .some(v => v && normalizar(v).includes(termo));
+    const matchCat = !cat || item.categoria === cat;
+    return matchBusca && matchCat;
+  });
+
+  // Preservar apenas seleções que ainda aparecem
+  const idsVisiveis = Estado.itensFiltrados.map(i => i.id);
+  Estado.itensSelecionados = Estado.itensSelecionados.filter(id => idsVisiveis.includes(id));
+
+  renderListaItens(Estado.itensFiltrados);
+  atualizarUI();
+}
+
+function limparFiltros() {
+  const inp = document.getElementById('buscaItens');
+  if (inp) inp.value = '';
+  const btnX = document.getElementById('btnLimparBusca');
+  if (btnX) btnX.style.display = 'none';
+  const sel = document.getElementById('filtroCategoria');
+  if (sel) sel.value = '';
+  Estado.itensFiltrados = [...Estado.itens];
+  Estado.itensSelecionados = [];
+  renderListaItens(Estado.itens);
+  atualizarUI();
+}
+
+// ════════════════════════════════════════════════════════
+// 4. RENDER LISTA
+// ════════════════════════════════════════════════════════
+function renderListaItens(itens) {
+  const lista  = document.getElementById('listaItens');
+  const infoEl = document.getElementById('infoTotal');
+  if (!lista) return;
+
+  if (!itens.length) {
+    const temFiltro =
+      document.getElementById('buscaItens')?.value ||
+      document.getElementById('filtroCategoria')?.value;
+
+    lista.innerHTML = temFiltro
+      ? `<div class="estado-vazio">
+           <div class="icone">🔍</div>
+           <h3>Nenhum item encontrado</h3>
+           <p>Tente outro termo ou categoria</p>
+           <button class="btn-acao-vazio" onclick="limparFiltros()">Limpar filtros</button>
+         </div>`
+      : `<div class="estado-vazio">
+           <div class="icone">📦</div>
+           <h3>Nenhum item no estoque</h3>
+           <p>Cadastre itens para gerar etiquetas</p>
+           <button class="btn-acao-vazio" onclick="location.href='form-item.html'">Cadastrar item</button>
+         </div>`;
+
+    if (infoEl) infoEl.textContent = '0 itens';
+    return;
+  }
+
+  lista.innerHTML = itens.map(item => renderItemLinha(item)).join('');
+  if (infoEl) infoEl.textContent = `${itens.length} ite${itens.length !== 1 ? 'ns' : 'm'}`;
+}
+
+function renderItemLinha(item) {
+  const sel       = Estado.itensSelecionados.includes(item.id);
+  const icone     = getIconeCategoria(item.categoria);
+  const cond      = item.condicao || 'otimo';
+  const condLabel = { otimo: 'Ótimo', bom: 'Bom', regular: 'Regular', reparo: 'Reparo', descarte: 'Descarte' }[cond] || cond;
+
+  return `
+    <div class="item-linha${sel ? ' selecionado' : ''}" onclick="toggleSelecionarItem('${item.id}')">
+      <input type="checkbox"${sel ? ' checked' : ''} onclick="event.stopPropagation(); toggleSelecionarItem('${item.id}')">
+      <div class="item-icone">${icone}</div>
+      <div class="item-info">
+        <div class="item-nome">${escHtml(item.nome)}</div>
+        <div class="item-meta">
+          <span class="item-categoria">${escHtml(item.categoria || '—')}</span>
+          <span class="badge-condicao badge-${cond}">${condLabel}</span>
+        </div>
+      </div>
+      <div class="item-direita">
+        <div class="item-patrimonio">${escHtml(item.patrimonio || '—')}</div>
+        <div class="item-qtd">Qtd: ${item.qtdDisponivel ?? item.qtdTotal ?? 0}</div>
+      </div>
+    </div>`;
+}
+
+function getIconeCategoria(cat) {
+  return ({
+    'Informática': '💻', 'Mobiliário': '🪑', 'Eletrônicos': '📱',
+    'Ferramentas': '🔧', 'Eletrodomésticos': '🏠', 'Veículos': '🚗',
+    'Material de Escritório': '📎', 'Audiovisual': '📽️',
+  })[cat] || '📦';
+}
+
+// ════════════════════════════════════════════════════════
+// 5. SELEÇÃO
+// ════════════════════════════════════════════════════════
+function toggleSelecionarItem(id) {
+  const idx = Estado.itensSelecionados.indexOf(id);
+  if (idx === -1) Estado.itensSelecionados.push(id);
+  else             Estado.itensSelecionados.splice(idx, 1);
+
+  // Atualizar apenas a linha afetada (sem re-renderizar tudo)
+  document.querySelectorAll('.item-linha').forEach(linha => {
+    if (!linha.getAttribute('onclick')?.includes(`'${id}'`)) return;
+    const sel = Estado.itensSelecionados.includes(id);
+    linha.classList.toggle('selecionado', sel);
+    const cb = linha.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = sel;
+  });
+
+  atualizarUI();
+}
+
+function toggleSelecionarTodos() {
+  const cb         = document.getElementById('checkboxTodos');
+  const idsVisiveis = Estado.itensFiltrados.map(i => i.id);
+
+  if (cb.checked) {
+    idsVisiveis.forEach(id => {
+      if (!Estado.itensSelecionados.includes(id)) Estado.itensSelecionados.push(id);
     });
+  } else {
+    Estado.itensSelecionados = Estado.itensSelecionados.filter(id => !idsVisiveis.includes(id));
   }
 
-  function wireSelectAll() {
-    document.getElementById("selecionarTodos")?.addEventListener("change", e => {
-      state.allItems.forEach(item => {
-        if (e.target.checked) state.selected.add(String(item.id));
-        else state.selected.delete(String(item.id));
-      });
-      renderList();
-      schedulePreview();
-    });
+  renderListaItens(Estado.itensFiltrados);
+  atualizarUI();
+}
+
+function limparSelecao() {
+  Estado.itensSelecionados = [];
+  renderListaItens(Estado.itensFiltrados);
+  atualizarUI();
+  showToast('Seleção limpa', 'info');
+}
+
+function obterItensSelecionados() {
+  return Estado.itensSelecionados
+    .map(id => Estado.itens.find(i => i.id === id))
+    .filter(Boolean);
+}
+
+// ════════════════════════════════════════════════════════
+// 6. ATUALIZAR UI
+// ════════════════════════════════════════════════════════
+function atualizarUI() {
+  const n           = Estado.itensSelecionados.length;
+  const idsVisiveis = Estado.itensFiltrados.map(i => i.id);
+
+  // Contador
+  const elCount = document.getElementById('contadorSelecionados');
+  if (elCount) {
+    elCount.textContent = `${n} selecionado${n !== 1 ? 's' : ''}`;
+    elCount.classList.toggle('ativo', n > 0);
   }
 
-  function wireClearButtons() {
-    document.getElementById("btnLimparBusca")?.addEventListener("click", () => {
-      const input = document.getElementById("buscaInput");
-      if (input) input.value = "";
-      state.search = "";
-      loadAndRender();
-    });
-
-    document.getElementById("btnLimparSel")?.addEventListener("click", () => {
-      state.selected.clear();
-      renderList();
-      schedulePreview();
-    });
+  // Checkbox "todos"
+  const cbAll = document.getElementById('checkboxTodos');
+  if (cbAll && idsVisiveis.length) {
+    const todosOn  = idsVisiveis.every(id => Estado.itensSelecionados.includes(id));
+    const algunsOn = idsVisiveis.some(id  => Estado.itensSelecionados.includes(id));
+    cbAll.checked       = todosOn;
+    cbAll.indeterminate = algunsOn && !todosOn;
+  } else if (cbAll) {
+    cbAll.checked = false;
+    cbAll.indeterminate = false;
   }
 
-  function wireSizeCards() {
-    document.querySelectorAll(".card-tamanho").forEach(card => {
-      card.addEventListener("click", () => {
-        document.querySelectorAll(".card-tamanho").forEach(c => c.classList.remove("ativo"));
-        card.classList.add("ativo");
-        state.tamanho = card.dataset.tamanho;
-        schedulePreview();
-      });
-    });
-  }
+  atualizarBotaoImprimir();
+  agendarPreview();
+}
 
-  function wireFieldToggles() {
-    const map = {
-      showPatrimonio: "showPatrimonio", showCondicao: "showCondicao",
-      showQtd: "showQtd", showCategoria: "showCategoria",
-      showOrg: "showOrg", showSerie: "showSerie",
-    };
-    Object.entries(map).forEach(([id, key]) => {
-      document.getElementById(id)?.addEventListener("change", e => {
-        state[key] = e.target.checked;
-        schedulePreview();
-      });
-    });
-  }
+function atualizarBotaoImprimir() {
+  const n      = Estado.itensSelecionados.length;
+  const btn    = document.getElementById('btnImprimir');
+  const btnPdf = document.getElementById('btnPdf');
+  const ci     = document.getElementById('contadorImpressao');
+  if (ci)     ci.textContent = n;
+  if (btn)    btn.disabled   = n === 0;
+  if (btnPdf) btnPdf.disabled = n === 0;
+}
 
-  // ── Preview ─────────────────────────────────────────────────────────────────
-  let previewTimer = null;
-  function schedulePreview() {
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(renderPreview, 200);
-  }
+// ════════════════════════════════════════════════════════
+// 7. TAMANHO E CAMPOS
+// ════════════════════════════════════════════════════════
+function setTamanho(tamanho) {
+  Estado.tamanho = tamanho;
+  document.querySelectorAll('.card-tamanho').forEach(c => {
+    c.classList.toggle('ativo', c.dataset.tamanho === tamanho);
+  });
+  salvarPreferencias();
+  agendarPreview();
+}
 
-  async function renderPreview() {
-    if (!areaPreview) return;
-    const items = getSelectedItems();
+function setCampo(campo, ativo) {
+  Estado.campos[campo] = ativo;
+  salvarPreferencias();
+  agendarPreview();
+}
 
-    if (!items.length) {
-      areaPreview.innerHTML = `
-        <div class="preview-vazio">
-          <div class="icone-preview">🏷️</div>
-          <p>Selecione itens para visualizar</p>
-        </div>`;
-      return;
-    }
+// ════════════════════════════════════════════════════════
+// 8. PREVIEW COM QR CODE
+// ════════════════════════════════════════════════════════
+const QR_PX = {
+  pequena: { preview: 32, print: 56 },
+  media:   { preview: 40, print: 72 },
+  grande:  { preview: 50, print: 88 },
+};
 
-    areaPreview.innerHTML = `<div class="preview-gerando">Gerando pré-visualização…</div>`;
+const COND_LABEL = {
+  otimo: 'Ótimo', bom: 'Bom', regular: 'Regular',
+  reparo: 'Reparo', descarte: 'Descarte',
+};
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "preview-etiquetas";
+let _previewTimer = null;
+function agendarPreview() {
+  clearTimeout(_previewTimer);
+  _previewTimer = setTimeout(renderPreview, 200);
+}
 
-    const preview = items.slice(0, 3);
-    const qrPx = QR_PX[state.tamanho].preview;
+async function renderPreview() {
+  const area = document.getElementById('areaPreview');
+  if (!area) return;
+  const itensSel = obterItensSelecionados();
 
-    for (const item of preview) {
-      const el = buildPreviewEl(item);
-      wrapper.appendChild(el);
-      const qrDiv = el.querySelector(".preview-qr");
-      if (qrDiv) {
-        const qrText = item.patrimonio || item.nome || String(item.id);
-        const canvas = await createQRCanvas(qrText, qrPx);
-        if (canvas) qrDiv.appendChild(canvas);
-      }
-    }
-
-    if (items.length > 3) {
-      const more = document.createElement("p");
-      more.className = "preview-mais";
-      more.textContent = `+${items.length - 3} etiqueta(s) adicional(is)`;
-      wrapper.appendChild(more);
-    }
-
-    areaPreview.innerHTML = "";
-    areaPreview.appendChild(wrapper);
-  }
-
-  function buildPreviewEl(item) {
-    const cond = BADGE_MAP[item.condicao] || BADGE_MAP.otimo;
-    const sizeClass = state.tamanho !== "pequena" ? ` ${state.tamanho}` : "";
-
-    const div = document.createElement("div");
-    div.className = `etiqueta-preview${sizeClass}`;
-
-    const infoParts = [];
-    if (state.showCategoria && item.categoria) infoParts.push(SC.escHtml(item.categoria));
-    if (state.showQtd) infoParts.push(`Qtd: ${item.total ?? 0}`);
-    if (state.showOrg) infoParts.push(SC.escHtml(state.orgName));
-    if (state.showSerie && item.serie) infoParts.push(`S/N: ${SC.escHtml(item.serie)}`);
-
-    div.innerHTML = `
-      <div class="preview-qr"></div>
-      <div class="preview-campos">
-        <div class="preview-nome">${SC.escHtml(item.nome || "")}</div>
-        ${state.showPatrimonio && item.patrimonio ? `<div class="preview-pat">${SC.escHtml(item.patrimonio)}</div>` : ""}
-        ${infoParts.length ? `<div class="preview-info">${infoParts.join(" · ")}</div>` : ""}
-        ${state.showCondicao ? `<span class="preview-badge ${cond.cls}">${cond.label}</span>` : ""}
+  if (!itensSel.length) {
+    area.innerHTML = `
+      <div class="preview-vazio">
+        <div class="icone-preview">🏷️</div>
+        <p>Selecione itens para visualizar</p>
       </div>`;
-
-    return div;
+    return;
   }
 
-  // ── Print / PDF ─────────────────────────────────────────────────────────────
-  function wirePrintButtons() {
-    btnImprimir?.addEventListener("click", () => doPrint(false));
-    btnPdf?.addEventListener("click",      () => doPrint(true));
-  }
+  area.innerHTML = '<div class="preview-gerando">Gerando pré-visualização…</div>';
 
-  async function doPrint(isPdf) {
-    const items = getSelectedItems();
-    if (!items.length || !gridImpressao || !areaImpressao) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'preview-etiquetas';
 
-    const savedInnerHTML = btnImprimir.innerHTML;
-    btnImprimir.disabled = true;
-    btnImprimir.textContent = "Preparando…";
+  const preview = itensSel.slice(0, 3);
+  const qrPx   = QR_PX[Estado.tamanho].preview;
 
-    if (isPdf) showToast("Selecione 'Salvar como PDF' no diálogo de impressão.", "info");
-
-    // Build print grid
-    gridImpressao.innerHTML = "";
-    const qrPx = QR_PX[state.tamanho].print;
-
-    for (const item of items) {
-      const el = buildPrintEl(item);
-      gridImpressao.appendChild(el);
-      const qrDiv = el.querySelector(".print-qr");
-      if (qrDiv) {
-        const canvas = await createQRCanvas(item.patrimonio || item.nome || String(item.id), qrPx);
-        if (canvas) qrDiv.appendChild(canvas);
-      }
+  for (const item of preview) {
+    const el     = buildPreviewEl(item);
+    wrapper.appendChild(el);
+    const qrDiv = el.querySelector('.preview-qr');
+    if (qrDiv && typeof QRCode !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      try {
+        await QRCode.toCanvas(canvas, item.patrimonio || item.nome || item.id,
+          { width: qrPx, margin: 0, color: { dark: '#000', light: '#fff' } });
+        qrDiv.appendChild(canvas);
+      } catch {}
     }
-
-    // @media print shows .area-impressao via display:block !important
-    await new Promise(r => requestAnimationFrame(r));
-    window.print();
-
-    setTimeout(() => {
-      const n = state.selected.size;
-      btnImprimir.innerHTML = savedInnerHTML;
-      btnImprimir.disabled = n === 0;
-      const ci = document.getElementById("contadorImpressao");
-      if (ci) ci.textContent = n;
-    }, 600);
   }
 
-  function buildPrintEl(item) {
-    const cond = BADGE_MAP[item.condicao] || BADGE_MAP.otimo;
-
-    const infoParts = [];
-    if (state.showCondicao) infoParts.push(cond.label);
-    if (state.showCategoria && item.categoria) infoParts.push(SC.escHtml(item.categoria));
-    if (state.showQtd) infoParts.push(`Qtd: ${item.total ?? 0}`);
-    if (state.showOrg) infoParts.push(SC.escHtml(state.orgName));
-    if (state.showSerie && item.serie) infoParts.push(`S/N: ${SC.escHtml(item.serie)}`);
-
-    const div = document.createElement("div");
-    div.className = `etiqueta-print ${state.tamanho}`;
-    div.innerHTML = `
-      <div class="print-qr"></div>
-      <div class="print-campos">
-        <span class="print-nome">${SC.escHtml(item.nome || "")}</span>
-        ${state.showPatrimonio && item.patrimonio ? `<span class="print-pat">${SC.escHtml(item.patrimonio)}</span>` : ""}
-        ${infoParts.length ? `<span class="print-info">${infoParts.join(" · ")}</span>` : ""}
-      </div>`;
-
-    return div;
+  if (itensSel.length > 3) {
+    const mais = document.createElement('p');
+    mais.className = 'preview-mais';
+    mais.textContent = `+${itensSel.length - 3} etiqueta(s) adicional(is)`;
+    wrapper.appendChild(mais);
   }
 
-  // ── Toast ────────────────────────────────────────────────────────────────────
-  function showToast(msg, type = "info") {
-    const container = document.getElementById("toastContainer");
-    if (!container) return;
-    const el = document.createElement("div");
-    el.className = `toast ${type}`;
-    el.textContent = msg;
-    container.appendChild(el);
-    setTimeout(() => {
-      el.classList.add("saindo");
-      setTimeout(() => el.remove(), 280);
-    }, 4000);
+  area.innerHTML = '';
+  area.appendChild(wrapper);
+}
+
+function buildPreviewEl(item) {
+  const cond      = item.condicao || 'otimo';
+  const condLabel = COND_LABEL[cond] || cond;
+  const sizeClass = Estado.tamanho !== 'pequena' ? ` ${Estado.tamanho}` : '';
+
+  const infoParts = [];
+  if (Estado.campos.categoria  && item.categoria)    infoParts.push(escHtml(item.categoria));
+  if (Estado.campos.quantidade)                       infoParts.push(`Qtd: ${item.qtdDisponivel ?? item.qtdTotal ?? 0}`);
+  if (Estado.campos.organizacao)                      infoParts.push(escHtml(Estado.orgName));
+  if (Estado.campos.serie      && item.numeroSerie)  infoParts.push(`S/N: ${escHtml(item.numeroSerie)}`);
+
+  const div = document.createElement('div');
+  div.className = `etiqueta-preview${sizeClass}`;
+  div.innerHTML = `
+    <div class="preview-qr"></div>
+    <div class="preview-campos">
+      <div class="preview-nome">${escHtml(item.nome || '')}</div>
+      ${Estado.campos.patrimonio && item.patrimonio ? `<div class="preview-pat">${escHtml(item.patrimonio)}</div>` : ''}
+      ${infoParts.length ? `<div class="preview-info">${infoParts.join(' · ')}</div>` : ''}
+      ${Estado.campos.condicao ? `<span class="preview-badge badge-${cond}">${condLabel}</span>` : ''}
+    </div>`;
+  return div;
+}
+
+// ════════════════════════════════════════════════════════
+// 9. IMPRESSÃO
+// ════════════════════════════════════════════════════════
+async function imprimir() {
+  const itensSel = obterItensSelecionados();
+  if (!itensSel.length) return;
+
+  const btn       = document.getElementById('btnImprimir');
+  const savedHTML = btn.innerHTML;
+  btn.disabled    = true;
+  btn.textContent = 'Preparando…';
+
+  const grid = document.getElementById('gridImpressao');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const qrPx = QR_PX[Estado.tamanho].print;
+
+  for (const item of itensSel) {
+    const el    = buildPrintEl(item);
+    grid.appendChild(el);
+    const qrDiv = el.querySelector('.print-qr');
+    if (qrDiv && typeof QRCode !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      try {
+        await QRCode.toCanvas(canvas, item.patrimonio || item.nome || item.id,
+          { width: qrPx, margin: 0, color: { dark: '#000', light: '#fff' } });
+        qrDiv.appendChild(canvas);
+      } catch {}
+    }
   }
 
-  init();
-});
+  // @media print reveals .area-impressao via display:block !important
+  await new Promise(r => requestAnimationFrame(r));
+  window.print();
+
+  setTimeout(() => {
+    const n     = Estado.itensSelecionados.length;
+    btn.innerHTML = savedHTML;
+    btn.disabled  = n === 0;
+    const ci = document.getElementById('contadorImpressao');
+    if (ci) ci.textContent = n;
+  }, 600);
+}
+
+function buildPrintEl(item) {
+  const cond      = item.condicao || 'otimo';
+  const condLabel = COND_LABEL[cond] || cond;
+
+  const infoParts = [];
+  if (Estado.campos.condicao)                         infoParts.push(condLabel);
+  if (Estado.campos.categoria  && item.categoria)    infoParts.push(escHtml(item.categoria));
+  if (Estado.campos.quantidade)                       infoParts.push(`Qtd: ${item.qtdDisponivel ?? item.qtdTotal ?? 0}`);
+  if (Estado.campos.organizacao)                      infoParts.push(escHtml(Estado.orgName));
+  if (Estado.campos.serie      && item.numeroSerie)  infoParts.push(`S/N: ${escHtml(item.numeroSerie)}`);
+
+  const div = document.createElement('div');
+  div.className = `etiqueta-print ${Estado.tamanho}`;
+  div.innerHTML = `
+    <div class="print-qr"></div>
+    <div class="print-campos">
+      <span class="print-nome">${escHtml(item.nome || '')}</span>
+      ${Estado.campos.patrimonio && item.patrimonio ? `<span class="print-pat">${escHtml(item.patrimonio)}</span>` : ''}
+      ${infoParts.length ? `<span class="print-info">${infoParts.join(' · ')}</span>` : ''}
+    </div>`;
+  return div;
+}
+
+async function exportarPDF() {
+  showToast("Selecione 'Salvar como PDF' no diálogo de impressão.", 'info');
+  await imprimir();
+}
+
+// ════════════════════════════════════════════════════════
+// 10. UTILITÁRIOS
+// ════════════════════════════════════════════════════════
+function normalizar(str) {
+  return (str || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showToast(msg, tipo = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = `toast ${tipo}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('saindo');
+    setTimeout(() => el.remove(), 280);
+  }, 4000);
+}
+
+// ════════════════════════════════════════════════════════
+// ENTRY POINT
+// ════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', initEtiquetas);
