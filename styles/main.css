@@ -45,6 +45,8 @@
   --color-border-focus:  #2563EB;
 
   /* Aliases para components.css */
+  --color-surface:       #FFFFFF;
+  --color-border-strong: #CBD5E1;
   --color-text-primary:  #1E293B;
   --color-surface-alt:   #F1F5F9;
   --font-sans:           'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
