@@ -337,6 +337,114 @@
       align-items: center;
     }
     .tag-add-row input { flex: 1; }
+
+    /* Categoria cards */
+    .categoria-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-2);
+      transition: box-shadow var(--transition-fast);
+      user-select: none;
+    }
+    .categoria-item:hover { box-shadow: var(--shadow-sm); }
+    .categoria-item.dragging { opacity: 0.45; cursor: grabbing; }
+    .categoria-item.drag-over { border-top: 2px solid var(--color-primary); }
+    .categoria-drag { cursor: grab; color: var(--color-text-muted); font-size: 14px; flex-shrink: 0; line-height: 1; }
+    .categoria-cor { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    .categoria-nome { flex: 1; font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary); }
+    .categoria-count { font-size: 0.8125rem; color: var(--color-text-muted); flex-shrink: 0; }
+
+    /* Localizacao cards */
+    .localizacao-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-2);
+    }
+    .loc-tipo-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 var(--space-2);
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      background: var(--color-surface-alt);
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+      flex-shrink: 0;
+      min-width: 64px;
+      justify-content: center;
+    }
+    .loc-nome { flex: 1; font-size: 0.875rem; font-weight: 500; color: var(--color-text-primary); }
+    .loc-desc { font-size: 0.8125rem; color: var(--color-text-muted); }
+    .loc-count { font-size: 0.8125rem; color: var(--color-text-muted); flex-shrink: 0; }
+
+    /* Color picker swatches */
+    .cor-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+      flex-shrink: 0;
+    }
+    .cor-swatch:hover { transform: scale(1.15); }
+    .cor-swatch.selecionada { border-color: #1e293b; box-shadow: 0 0 0 2px #fff inset; }
+
+    /* Dark theme overrides */
+    [data-theme="dark"] {
+      --color-bg: #0f172a;
+      --color-surface: #1e293b;
+      --color-surface-alt: #334155;
+      --color-border: #334155;
+      --color-border-light: #1e293b;
+      --color-text-primary: #f1f5f9;
+      --color-text-secondary: #cbd5e1;
+      --color-text-muted: #64748b;
+      --color-card: #1e293b;
+    }
+
+    /* Logo preview */
+    .logo-preview-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .logo-preview-img {
+      width: 80px;
+      height: 60px;
+      object-fit: contain;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-alt);
+      display: none;
+    }
+    .logo-preview-img.is-visible { display: block; }
+    .logo-placeholder {
+      width: 80px;
+      height: 60px;
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-alt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -606,7 +714,55 @@
                 </div>
 
                 <div style="margin-top:var(--space-5); display:flex; justify-content:flex-end;">
-                  <button class="btn btn-primary" id="saveProfileBtn">Salvar Alterações</button>
+                  <button class="btn btn-primary" id="saveProfileBtn" disabled>Salvar Alterações</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="settings-section-header">
+                <div class="settings-section-title">Preferências de Exibição</div>
+                <div class="settings-section-desc">Personalize a aparência e o comportamento do sistema</div>
+              </div>
+              <div class="settings-section-body">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="prefTema">Tema</label>
+                    <select id="prefTema" class="form-control">
+                      <option value="claro">Claro</option>
+                      <option value="escuro">Escuro</option>
+                      <option value="auto">Automático (sistema)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="prefIdioma">Idioma</label>
+                    <select id="prefIdioma" class="form-control">
+                      <option value="pt-BR">Português (BR)</option>
+                      <option value="en-US">English (US)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="prefPaginacao">Itens por página</label>
+                    <select id="prefPaginacao" class="form-control">
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="prefFormatoData">Formato de data</label>
+                    <select id="prefFormatoData" class="form-control">
+                      <option value="DD/MM/AAAA">DD/MM/AAAA</option>
+                      <option value="MM/DD/AAAA">MM/DD/AAAA</option>
+                      <option value="AAAA-MM-DD">AAAA-MM-DD</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;margin-top:var(--space-4);">
+                  <button class="btn btn-primary" id="savePrefsBtn">Salvar Preferências</button>
                 </div>
               </div>
             </div>
@@ -645,10 +801,34 @@
                     <input type="tel" id="orgPhone" class="form-control" placeholder="(11) 99999-9999" />
                   </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="orgAddress">Endereço</label>
-                  <input type="text" id="orgAddress" class="form-control" placeholder="Rua, número, cidade…" />
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="orgAddress">Endereço</label>
+                    <input type="text" id="orgAddress" class="form-control" placeholder="Rua, número, cidade…" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="orgCNPJ">CNPJ</label>
+                    <input type="text" id="orgCNPJ" class="form-control" placeholder="00.000.000/0000-00" maxlength="18" />
+                    <span class="form-error" id="errorOrgCNPJ" style="display:none;">CNPJ inválido.</span>
+                  </div>
                 </div>
+
+                <div class="form-group" style="margin-top:var(--space-2);">
+                  <label class="form-label">Logo da organização</label>
+                  <div class="logo-preview-wrap">
+                    <div class="logo-placeholder" id="logoPlaceholder">Sem logo</div>
+                    <img id="orgLogoImg" class="logo-preview-img" src="" alt="Logo" />
+                    <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+                      <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                        Enviar logo
+                        <input type="file" id="orgLogoInput" accept="image/*" style="display:none;" />
+                      </label>
+                      <button class="btn btn-ghost btn-sm" id="btnRemoverLogo" style="display:none;">Remover</button>
+                      <span style="font-size:0.8125rem;color:var(--color-text-muted);">PNG ou SVG, máx. 1 MB</span>
+                    </div>
+                  </div>
+                </div>
+
                 <div style="margin-top:var(--space-5); display:flex; justify-content:flex-end;">
                   <button class="btn btn-primary" id="saveOrgBtn">Salvar Organização</button>
                 </div>
@@ -687,25 +867,17 @@
           <div class="settings-panel" id="panel-usuarios">
 
             <div class="settings-section">
-              <div class="settings-section-header">
-                <div class="settings-section-title">Convidar Usuário</div>
-                <div class="settings-section-desc">Adicione membros à sua organização</div>
-              </div>
-              <div class="settings-section-body">
-                <div class="invite-row">
-                  <div class="form-group">
-                    <label class="form-label" for="inviteEmail">E-mail</label>
-                    <input type="email" id="inviteEmail" class="form-control" placeholder="colaborador@email.com" />
-                  </div>
-                  <div class="form-group" style="min-width:160px;">
-                    <label class="form-label" for="inviteRole">Função</label>
-                    <select id="inviteRole" class="form-control">
-                      <option value="OPERATOR">Operador</option>
-                      <option value="VIEWER">Visualizador</option>
-                      <option value="ADMIN">Admin</option>
-                    </select>
-                  </div>
-                  <button class="btn btn-primary" id="inviteBtn" style="margin-bottom:1px; flex-shrink:0;">Convidar</button>
+              <div class="settings-section-body" style="padding-bottom:0;">
+                <div style="display:flex;gap:var(--space-3);align-items:center;">
+                  <input type="search" id="buscaUsuarios" class="form-control"
+                    placeholder="Buscar por nome ou e-mail…" style="flex:1;"
+                    oninput="buscarUsuarios(this.value)" />
+                  <button class="btn btn-primary" onclick="abrirModalNovoUsuario()" style="white-space:nowrap;flex-shrink:0;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Novo Usuário
+                  </button>
                 </div>
               </div>
             </div>
@@ -740,24 +912,24 @@
           <div class="settings-panel" id="panel-categorias">
 
             <div class="settings-section">
-              <div class="settings-section-header">
-                <div class="settings-section-title">Categorias de Itens</div>
-                <div class="settings-section-desc">Categorias disponíveis para classificar os itens do estoque</div>
+              <div class="settings-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3);">
+                <div>
+                  <div class="settings-section-title">Categorias de Itens</div>
+                  <div class="settings-section-desc">Organize e reordene arrastando os itens</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="abrirModalNovaCategoria()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Nova Categoria
+                </button>
               </div>
               <div class="settings-section-body">
-                <div class="tag-list-edit" id="categoriesList">
-                  <div class="skeleton" style="height:30px; width:80px; border-radius:20px;"></div>
-                  <div class="skeleton" style="height:30px; width:100px; border-radius:20px;"></div>
-                  <div class="skeleton" style="height:30px; width:70px; border-radius:20px;"></div>
+                <div style="margin-bottom:var(--space-3);">
+                  <input type="search" id="buscaCategorias" class="form-control" placeholder="Buscar categorias…" oninput="buscarCategorias(this.value)" />
                 </div>
-                <div class="tag-add-row">
-                  <input type="text" id="newCategory" class="form-control" placeholder="Nova categoria…" maxlength="60" style="max-width:240px;" />
-                  <button class="btn btn-secondary" id="addCategoryBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    Adicionar
-                  </button>
+                <div id="listaCategorias">
+                  <div class="skeleton" style="height:48px;border-radius:8px;margin-bottom:8px;"></div>
+                  <div class="skeleton" style="height:48px;border-radius:8px;margin-bottom:8px;"></div>
+                  <div class="skeleton" style="height:48px;border-radius:8px;"></div>
                 </div>
               </div>
             </div>
@@ -768,34 +940,11 @@
                 <div class="settings-section-desc">Marcas disponíveis ao cadastrar itens</div>
               </div>
               <div class="settings-section-body">
-                <div class="tag-list-edit" id="brandsList">
-                  <div class="skeleton" style="height:30px; width:60px; border-radius:20px;"></div>
-                  <div class="skeleton" style="height:30px; width:90px; border-radius:20px;"></div>
-                </div>
-                <div class="tag-add-row">
+                <div class="tag-list-edit" id="brandsList"></div>
+                <div class="tag-add-row" style="margin-top:var(--space-3);">
                   <input type="text" id="newBrand" class="form-control" placeholder="Nova marca…" maxlength="60" style="max-width:240px;" />
                   <button class="btn btn-secondary" id="addBrandBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    Adicionar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="settings-section">
-              <div class="settings-section-header">
-                <div class="settings-section-title">Localizações de Armazenamento</div>
-              </div>
-              <div class="settings-section-body">
-                <div class="tag-list-edit" id="locationsList"></div>
-                <div class="tag-add-row">
-                  <input type="text" id="newLocation" class="form-control" placeholder="Ex: Sala 3 — Armário B" maxlength="80" style="max-width:280px;" />
-                  <button class="btn btn-secondary" id="addLocationBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Adicionar
                   </button>
                 </div>
@@ -804,15 +953,43 @@
 
           </div>
 
-          <!-- ── LOCALIZAÇÕES (alias) ── -->
+          <!-- ── LOCALIZAÇÕES ── -->
           <div class="settings-panel" id="panel-locais">
-            <div class="alert alert-info">
-              <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <div>As localizações são gerenciadas na aba <strong>Categorias</strong>, na seção "Localizações de Armazenamento".</div>
+
+            <div class="settings-section">
+              <div class="settings-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3);">
+                <div>
+                  <div class="settings-section-title">Localizações de Armazenamento</div>
+                  <div class="settings-section-desc">Locais onde os itens do estoque são armazenados</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="abrirModalNovaLocalizacao()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Nova Localização
+                </button>
+              </div>
+              <div class="settings-section-body">
+                <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-3);">
+                  <input type="search" id="buscaLocalizacoes" class="form-control"
+                    placeholder="Buscar localizações…" style="flex:1;"
+                    oninput="buscarLocalizacoes(this.value)" />
+                  <select id="filtroTipoLocalizacao" class="form-control" style="max-width:160px;"
+                    onchange="filtrarLocalizacoesPorTipo(this.value)">
+                    <option value="">Todos os tipos</option>
+                    <option value="deposito">Depósito</option>
+                    <option value="sala">Sala</option>
+                    <option value="armario">Armário</option>
+                    <option value="externo">Externo</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div id="listaLocalizacoes">
+                  <div class="skeleton" style="height:56px;border-radius:8px;margin-bottom:8px;"></div>
+                  <div class="skeleton" style="height:56px;border-radius:8px;margin-bottom:8px;"></div>
+                  <div class="skeleton" style="height:56px;border-radius:8px;"></div>
+                </div>
+              </div>
             </div>
+
           </div>
 
           <!-- ── NOTIFICAÇÕES ── -->
@@ -1044,6 +1221,175 @@
       </div><!-- /settings-layout -->
 
     </main>
+  </div>
+
+  <!-- Modal: Novo/Editar Usuário -->
+  <div class="modal-backdrop" id="modalUsuario">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalUsuarioTitulo">Novo Usuário</h3>
+        <button class="modal-close" data-close-modal="modalUsuario" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalUsuarioId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label required" for="modalUsuarioNome">Nome completo</label>
+            <input type="text" id="modalUsuarioNome" class="form-control" placeholder="João Silva" />
+          </div>
+          <div class="form-group">
+            <label class="form-label required" for="modalUsuarioEmail">E-mail</label>
+            <input type="email" id="modalUsuarioEmail" class="form-control" placeholder="joao@email.com" />
+            <span class="form-error" id="errorModalEmail" style="display:none;">E-mail já cadastrado.</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="modalUsuarioCargo">Cargo</label>
+            <input type="text" id="modalUsuarioCargo" class="form-control" placeholder="Operador" />
+          </div>
+          <div class="form-group">
+            <label class="form-label required" for="modalUsuarioRole">Nível de acesso</label>
+            <select id="modalUsuarioRole" class="form-control">
+              <option value="admin">Administrador</option>
+              <option value="operator" selected>Operador</option>
+              <option value="viewer">Visualizador</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" id="grupoSenhaModal">
+          <label class="form-label required" for="modalUsuarioSenha">Senha</label>
+          <div style="display:flex;gap:var(--space-2);">
+            <div style="flex:1;position:relative;">
+              <input type="password" id="modalUsuarioSenha" class="form-control" placeholder="Mínimo 8 caracteres" style="padding-right:44px;" />
+              <button type="button" class="password-toggle" data-target="modalUsuarioSenha" aria-label="Mostrar senha">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="gerarESenha()" style="flex-shrink:0;">Gerar</button>
+          </div>
+          <div class="progress" style="margin-top:var(--space-2);">
+            <div class="progress-bar" id="senhaModalBarra" style="width:0%;"></div>
+          </div>
+          <span id="senhaModalHint" style="font-size:0.8125rem;color:var(--color-text-muted);"></span>
+        </div>
+        <p id="senhaModalOpcional" style="font-size:0.8125rem;color:var(--color-text-muted);display:none;">
+          Deixe em branco para manter a senha atual.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalUsuario">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarUsuario()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nova/Editar Categoria -->
+  <div class="modal-backdrop" id="modalCategoria">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalCategoriaTitulo">Nova Categoria</h3>
+        <button class="modal-close" data-close-modal="modalCategoria" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalCategoriaId" />
+        <div class="form-group">
+          <label class="form-label required" for="modalCategoriaNome">Nome</label>
+          <input type="text" id="modalCategoriaNome" class="form-control" placeholder="Ex: Informática" maxlength="60" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor</label>
+          <div id="corPickerCategoria" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            <div class="cor-swatch selecionada" data-cor="#3b82f6" style="background:#3b82f6;" onclick="selecionarCorCategoria('#3b82f6',this)"></div>
+            <div class="cor-swatch" data-cor="#8b5cf6" style="background:#8b5cf6;" onclick="selecionarCorCategoria('#8b5cf6',this)"></div>
+            <div class="cor-swatch" data-cor="#10b981" style="background:#10b981;" onclick="selecionarCorCategoria('#10b981',this)"></div>
+            <div class="cor-swatch" data-cor="#f59e0b" style="background:#f59e0b;" onclick="selecionarCorCategoria('#f59e0b',this)"></div>
+            <div class="cor-swatch" data-cor="#ef4444" style="background:#ef4444;" onclick="selecionarCorCategoria('#ef4444',this)"></div>
+            <div class="cor-swatch" data-cor="#6366f1" style="background:#6366f1;" onclick="selecionarCorCategoria('#6366f1',this)"></div>
+            <div class="cor-swatch" data-cor="#ec4899" style="background:#ec4899;" onclick="selecionarCorCategoria('#ec4899',this)"></div>
+            <div class="cor-swatch" data-cor="#14b8a6" style="background:#14b8a6;" onclick="selecionarCorCategoria('#14b8a6',this)"></div>
+            <div class="cor-swatch" data-cor="#f97316" style="background:#f97316;" onclick="selecionarCorCategoria('#f97316',this)"></div>
+            <div class="cor-swatch" data-cor="#94a3b8" style="background:#94a3b8;" onclick="selecionarCorCategoria('#94a3b8',this)"></div>
+          </div>
+          <input type="hidden" id="modalCategoriaCor" value="#3b82f6" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalCategoria">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarCategoria()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nova/Editar Localização -->
+  <div class="modal-backdrop" id="modalLocalizacao">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalLocalizacaoTitulo">Nova Localização</h3>
+        <button class="modal-close" data-close-modal="modalLocalizacao" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalLocalizacaoId" />
+        <div class="form-group">
+          <label class="form-label required" for="modalLocalizacaoNome">Nome</label>
+          <input type="text" id="modalLocalizacaoNome" class="form-control" placeholder="Ex: Depósito Central" maxlength="80" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="modalLocalizacaoTipo">Tipo</label>
+            <select id="modalLocalizacaoTipo" class="form-control">
+              <option value="deposito">Depósito</option>
+              <option value="sala">Sala</option>
+              <option value="armario">Armário</option>
+              <option value="externo">Externo</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modalLocalizacaoCapacidade">Capacidade (itens)</label>
+            <input type="number" id="modalLocalizacaoCapacidade" class="form-control" min="1" placeholder="—" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modalLocalizacaoDescricao">Descrição</label>
+          <input type="text" id="modalLocalizacaoDescricao" class="form-control" placeholder="Opcional" maxlength="120" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalLocalizacao">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarLocalizacao()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmação genérica -->
+  <div class="modal-backdrop" id="modalConfirmar">
+    <div class="modal modal-sm modal-confirm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalConfirmarTitulo">Confirmar</h3>
+      </div>
+      <div class="modal-body">
+        <div class="modal-confirm-icon danger">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <p class="modal-confirm-title" id="modalConfirmarMensagem">Tem certeza?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalConfirmar">Cancelar</button>
+        <button class="btn btn-danger" id="btnConfirmarSim">Confirmar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Toast -->
