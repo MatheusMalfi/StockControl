@@ -259,6 +259,31 @@
       color: var(--color-text-muted);
     }
 
+    /* CEP lookup */
+    .cep-row { display: grid; grid-template-columns: 160px 1fr; gap: var(--space-3); }
+    .cep-input-wrap { position: relative; }
+    .cep-spinner {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px;
+      border: 2px solid var(--color-border); border-top-color: var(--color-primary);
+      border-radius: 50%; animation: spin 0.6s linear infinite; display: none;
+    }
+    .cep-input-wrap.is-loading .cep-spinner { display: block; }
+    .cep-status {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      font-size: 16px; display: none; pointer-events: none;
+    }
+    .cep-input-wrap.cep-ok   .cep-status { display: block; color: #16a34a; }
+    .cep-input-wrap.cep-ok   .cep-status::before { content: "✓"; }
+    .cep-input-wrap.cep-err  .cep-status { display: block; color: #dc2626; }
+    .cep-input-wrap.cep-err  .cep-status::before { content: "✗"; }
+    .cep-input-wrap.is-loading .cep-status { display: none; }
+    .address-grid { display: grid; grid-template-columns: 1fr 100px; gap: var(--space-3); }
+    .address-grid-3 { display: grid; grid-template-columns: 1fr 1fr 60px; gap: var(--space-3); }
+    @media (max-width: 600px) {
+      .cep-row, .address-grid, .address-grid-3 { grid-template-columns: 1fr; }
+    }
+
     /* Submit + login link */
     .register-submit { width: 100%; height: 46px; font-size: 0.9375rem; margin-top: var(--space-2); }
 
@@ -463,10 +488,61 @@
           </div>
         </div>
 
+        <!-- ── Endereço via CEP ── -->
+        <div class="cep-row">
+          <div class="form-group" id="groupCep">
+            <label class="form-label" for="orgCep">CEP</label>
+            <div class="cep-input-wrap" id="cepInputWrap">
+              <input type="text" id="orgCep" name="cep" class="form-control"
+                placeholder="00000-000" maxlength="9" autocomplete="postal-code"
+                style="padding-right:34px;" />
+              <div class="cep-spinner"></div>
+              <div class="cep-status"></div>
+            </div>
+            <span class="form-error" id="errorCep" style="display:none;">CEP não encontrado.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="orgNum">Número</label>
+            <input type="text" id="orgNum" name="numero" class="form-control"
+              placeholder="Ex: 123" maxlength="10" />
+          </div>
+        </div>
+
+        <div class="address-grid">
+          <div class="form-group">
+            <label class="form-label" for="orgLogradouro">Logradouro</label>
+            <input type="text" id="orgLogradouro" name="logradouro" class="form-control"
+              placeholder="Preenchido pelo CEP" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="orgUf">UF</label>
+            <input type="text" id="orgUf" name="uf" class="form-control"
+              placeholder="—" maxlength="2" readonly />
+          </div>
+        </div>
+
+        <div class="address-grid-3">
+          <div class="form-group">
+            <label class="form-label" for="orgBairro">Bairro</label>
+            <input type="text" id="orgBairro" name="bairro" class="form-control"
+              placeholder="Preenchido pelo CEP" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="orgCidade">Cidade</label>
+            <input type="text" id="orgCidade" name="cidade" class="form-control"
+              placeholder="Preenchido pelo CEP" readonly />
+          </div>
+          <div class="form-group" style="display:none;">
+            <!-- hidden; composed into address string on submit -->
+            <input type="text" id="orgAddress" name="address" class="form-control" />
+          </div>
+        </div>
+
         <div class="form-group">
-          <label class="form-label" for="orgAddress">Endereço</label>
-          <input type="text" id="orgAddress" name="address" class="form-control"
-            placeholder="Rua, número, cidade, estado" maxlength="200" />
+          <label class="form-label" for="orgComplemento">Complemento</label>
+          <input type="text" id="orgComplemento" name="complemento" class="form-control"
+            placeholder="Apto, sala, bloco… (opcional)" maxlength="80" />
         </div>
 
         <!-- ── Administrador ── -->
@@ -601,42 +677,6 @@
       wireToggle("togglePwd",        "adminPwd");
       wireToggle("toggleConfirmPwd", "confirmPwd");
 
-      /* ── Password strength ── */
-      const pwdInput  = document.getElementById("adminPwd");
-      const strengthWrap  = document.getElementById("pwdStrengthWrap");
-      const strengthFill  = document.getElementById("pwdStrengthFill");
-      const strengthLabel = document.getElementById("pwdStrengthLabel");
-
-      const strengthLevels = [
-        { min: 0,  pct: 20,  color: "var(--color-danger)",  label: "Muito fraca" },
-        { min: 1,  pct: 40,  color: "var(--color-danger)",  label: "Fraca" },
-        { min: 2,  pct: 60,  color: "var(--color-warning)", label: "Razoável" },
-        { min: 3,  pct: 80,  color: "var(--color-primary)", label: "Boa" },
-        { min: 4,  pct: 100, color: "var(--color-success)", label: "Forte" },
-      ];
-
-      function calcStrength(pwd) {
-        let score = 0;
-        if (pwd.length >= 8)            score++;
-        if (pwd.length >= 12)           score++;
-        if (/[A-Z]/.test(pwd))          score++;
-        if (/[0-9]/.test(pwd))          score++;
-        if (/[^A-Za-z0-9]/.test(pwd))   score++;
-        return Math.min(score, 4);
-      }
-
-      pwdInput && pwdInput.addEventListener("input", () => {
-        const val = pwdInput.value;
-        if (!val) { strengthWrap.style.display = "none"; return; }
-        strengthWrap.style.display = "block";
-        const score = calcStrength(val);
-        const lvl   = strengthLevels[score];
-        strengthFill.style.width      = lvl.pct + "%";
-        strengthFill.style.background = lvl.color;
-        strengthLabel.textContent     = lvl.label;
-        strengthLabel.style.color     = lvl.color;
-      });
-
       /* ── CNPJ mask ── */
       const cnpjInput = document.getElementById("orgCnpj");
       cnpjInput && cnpjInput.addEventListener("input", () => {
@@ -656,6 +696,65 @@
         else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4,5})(\d*)$/, "($1) $2-$3");
         else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, "($1) $2");
         phoneInput.value = v;
+      });
+
+      /* ── CEP lookup (ViaCEP) ── */
+      const cepInput   = document.getElementById("orgCep");
+      const cepWrap    = document.getElementById("cepInputWrap");
+      const cepError   = document.getElementById("errorCep");
+
+      function setCepState(state) {
+        cepWrap.classList.remove("is-loading", "cep-ok", "cep-err");
+        if (state) cepWrap.classList.add(state);
+      }
+
+      function preencherEndereco(d) {
+        document.getElementById("orgLogradouro").value = d.logradouro  || "";
+        document.getElementById("orgBairro").value     = d.bairro       || "";
+        document.getElementById("orgCidade").value     = d.localidade   || "";
+        document.getElementById("orgUf").value         = d.uf           || "";
+      }
+
+      function limparEndereco() {
+        ["orgLogradouro","orgBairro","orgCidade","orgUf"].forEach(id => {
+          document.getElementById(id).value = "";
+        });
+      }
+
+      cepInput.addEventListener("input", () => {
+        let v = cepInput.value.replace(/\D/g, "").slice(0, 8);
+        if (v.length > 5) v = v.replace(/^(\d{5})(\d+)$/, "$1-$2");
+        cepInput.value = v;
+        setCepState(null);
+        cepError.style.display = "none";
+        if (v.replace(/\D/g, "").length < 8) limparEndereco();
+      });
+
+      cepInput.addEventListener("blur", async () => {
+        const digits = cepInput.value.replace(/\D/g, "");
+        if (digits.length !== 8) return;
+
+        setCepState("is-loading");
+        cepError.style.display = "none";
+
+        try {
+          const res  = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+          const data = await res.json();
+
+          if (data.erro) {
+            setCepState("cep-err");
+            cepError.style.display = "block";
+            limparEndereco();
+          } else {
+            setCepState("cep-ok");
+            preencherEndereco(data);
+            document.getElementById("orgNum").focus();
+          }
+        } catch {
+          setCepState("cep-err");
+          cepError.textContent = "Falha ao consultar o CEP. Verifique sua conexão.";
+          cepError.style.display = "block";
+        }
       });
 
       /* ── Validation helpers ── */
@@ -756,15 +855,35 @@
         errorBanner.classList.remove("is-visible");
 
         try {
+          const logradouro  = document.getElementById("orgLogradouro").value.trim();
+          const numero      = document.getElementById("orgNum").value.trim();
+          const complemento = document.getElementById("orgComplemento").value.trim();
+          const bairro      = document.getElementById("orgBairro").value.trim();
+          const cidade      = document.getElementById("orgCidade").value.trim();
+          const uf          = document.getElementById("orgUf").value.trim();
+          const cep         = document.getElementById("orgCep").value.trim();
+
+          let addressParts = [];
+          if (logradouro) {
+            let line = logradouro;
+            if (numero)      line += ", " + numero;
+            if (complemento) line += ", " + complemento;
+            addressParts.push(line);
+          }
+          if (bairro) addressParts.push(bairro);
+          if (cidade && uf) addressParts.push(cidade + " - " + uf);
+          else if (cidade)  addressParts.push(cidade);
+          if (cep) addressParts.push(cep);
+
           const res = await fetch("/api/cadastro", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               org_type:  orgType,
               org_name:  orgName,
-              cnpj:      document.getElementById("orgCnpj").value.trim()    || undefined,
-              phone:     document.getElementById("orgPhone").value.trim()   || undefined,
-              address:   document.getElementById("orgAddress").value.trim() || undefined,
+              cnpj:      document.getElementById("orgCnpj").value.trim() || undefined,
+              phone:     document.getElementById("orgPhone").value.trim() || undefined,
+              address:   addressParts.join(" - ") || undefined,
               name:      adminName,
               email:     adminEmail,
               senha:     pwd,
