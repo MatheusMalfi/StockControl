@@ -448,7 +448,7 @@
               required
             />
           </div>
-          <span class="form-error" id="emailError">Informe um e-mail válido.</span>
+          <span class="form-error" id="emailError">Use um e-mail @gmail.com válido.</span>
         </div>
 
         <!-- Password -->
@@ -481,7 +481,14 @@
               </svg>
             </button>
           </div>
-          <span class="form-error" id="passwordError">A senha deve ter pelo menos 6 caracteres.</span>
+          <span class="form-error" id="passwordError">A senha não atende aos requisitos.</span>
+          <!-- Checklist de requisitos -->
+          <ul id="pwdChecklist" style="list-style:none;padding:0;margin:6px 0 0;display:none;font-size:0.8125rem;display:flex;flex-direction:column;gap:3px;">
+            <li id="req-len"     style="color:#94a3b8;">✗ Mínimo 8 caracteres</li>
+            <li id="req-upper"   style="color:#94a3b8;">✗ Pelo menos 1 letra maiúscula</li>
+            <li id="req-number"  style="color:#94a3b8;">✗ Pelo menos 1 número</li>
+            <li id="req-special" style="color:#94a3b8;">✗ Pelo menos 1 caractere especial (!@#$…)</li>
+          </ul>
         </div>
 
         <!-- Bottom row -->
@@ -533,27 +540,59 @@
         toggleBtn.setAttribute("aria-label", visible ? "Mostrar senha" : "Ocultar senha");
       });
 
-      /* ── Inline validation helpers ── */
+      /* ── Validation helpers ── */
       function setError(groupId, errorId, show) {
         document.getElementById(groupId).classList.toggle("has-error", show);
         document.getElementById(errorId).style.display = show ? "block" : "none";
       }
 
-      function validateEmail(v) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+      function isGmail(v) {
+        return /^[a-zA-Z0-9._%+\-]+@gmail\.com$/i.test(v.trim());
       }
 
-      emailInput.addEventListener("blur", () => {
-        setError("groupEmail", "emailError", !validateEmail(emailInput.value));
+      function senhaValida(v) {
+        return v.length >= 8 && /[A-Z]/.test(v) && /[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v);
+      }
+
+      /* ── Checklist de requisitos da senha ── */
+      const reqEls = {
+        len:     document.getElementById("req-len"),
+        upper:   document.getElementById("req-upper"),
+        number:  document.getElementById("req-number"),
+        special: document.getElementById("req-special"),
+      };
+
+      function atualizarChecklist(v) {
+        const checks = {
+          len:     v.length >= 8,
+          upper:   /[A-Z]/.test(v),
+          number:  /[0-9]/.test(v),
+          special: /[^A-Za-z0-9]/.test(v),
+        };
+        Object.entries(checks).forEach(([k, ok]) => {
+          const el = reqEls[k];
+          el.textContent = (ok ? "✓ " : "✗ ") + el.textContent.slice(2);
+          el.style.color  = ok ? "#16a34a" : "#94a3b8";
+        });
+      }
+
+      passInput.addEventListener("focus", () => {
+        document.getElementById("pwdChecklist").style.display = "flex";
       });
+
+      passInput.addEventListener("input", () => {
+        atualizarChecklist(passInput.value);
+        loginError.classList.remove("is-visible");
+      });
+
+      emailInput.addEventListener("blur", () => {
+        setError("groupEmail", "emailError", !isGmail(emailInput.value));
+      });
+
+      emailInput.addEventListener("input", () => loginError.classList.remove("is-visible"));
 
       passInput.addEventListener("blur", () => {
-        setError("groupPassword", "passwordError", passInput.value.length < 6);
-      });
-
-      /* ── Clear server error on typing ── */
-      [emailInput, passInput].forEach(el => {
-        el.addEventListener("input", () => loginError.classList.remove("is-visible"));
+        setError("groupPassword", "passwordError", passInput.value.length > 0 && !senhaValida(passInput.value));
       });
 
       /* ── Submit ── */
@@ -562,18 +601,19 @@
 
         const emailVal = emailInput.value.trim();
         const passVal  = passInput.value;
-
         let valid = true;
 
-        if (!validateEmail(emailVal)) {
+        if (!isGmail(emailVal)) {
           setError("groupEmail", "emailError", true);
           valid = false;
         } else {
           setError("groupEmail", "emailError", false);
         }
 
-        if (passVal.length < 6) {
+        if (!senhaValida(passVal)) {
           setError("groupPassword", "passwordError", true);
+          document.getElementById("pwdChecklist").style.display = "flex";
+          atualizarChecklist(passVal);
           valid = false;
         } else {
           setError("groupPassword", "passwordError", false);
@@ -586,26 +626,23 @@
         loginError.classList.remove("is-visible");
 
         try {
-          const res = await fetch("/api/auth/login", {
+          const res = await fetch("/api/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: emailVal, password: passVal }),
+            body: JSON.stringify({ email: emailVal, senha: passVal }),
           });
 
           const data = await res.json().catch(() => ({}));
 
           if (res.ok && data.token) {
-            /* Save session */
             const storage = document.getElementById("rememberMe").checked
               ? localStorage
               : sessionStorage;
             storage.setItem("sc_token", data.token);
             storage.setItem("sc_user", JSON.stringify(data.user ?? {}));
-
-            /* Redirect */
             window.location.href = "index.html";
           } else {
-            const msg = data.message || data.error || "E-mail ou senha incorretos.";
+            const msg = data.mensagem || data.message || data.error || "E-mail ou senha incorretos.";
             errorMsg.textContent = msg;
             loginError.classList.add("is-visible");
             passInput.value = "";

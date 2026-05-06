@@ -493,9 +493,9 @@
               <polyline points="22,6 12,13 2,6"/>
             </svg>
             <input type="email" id="adminEmail" name="email" class="form-control"
-              placeholder="admin@organização.com" required maxlength="150" autocomplete="email" />
+              placeholder="nome@gmail.com" required maxlength="150" autocomplete="email" />
           </div>
-          <span class="form-error" id="errorAdminEmail">Informe um e-mail válido.</span>
+          <span class="form-error" id="errorAdminEmail">Use um e-mail @gmail.com válido.</span>
         </div>
 
         <div class="form-row">
@@ -519,14 +519,14 @@
                 </svg>
               </button>
             </div>
-            <!-- Password strength -->
-            <div class="pwd-strength-wrap" id="pwdStrengthWrap" style="display:none;">
-              <div class="pwd-strength-bar-track">
-                <div class="pwd-strength-bar-fill" id="pwdStrengthFill"></div>
-              </div>
-              <span class="pwd-strength-label" id="pwdStrengthLabel"></span>
-            </div>
-            <span class="form-error" id="errorAdminPwd">Mínimo 8 caracteres.</span>
+            <span class="form-error" id="errorAdminPwd">A senha não atende aos requisitos.</span>
+            <!-- Checklist de requisitos -->
+            <ul id="pwdChecklist" style="list-style:none;padding:0;margin:6px 0 0;display:none;flex-direction:column;gap:3px;font-size:0.8125rem;">
+              <li id="req-len"     style="color:#94a3b8;">✗ Mínimo 8 caracteres</li>
+              <li id="req-upper"   style="color:#94a3b8;">✗ Pelo menos 1 letra maiúscula</li>
+              <li id="req-number"  style="color:#94a3b8;">✗ Pelo menos 1 número</li>
+              <li id="req-special" style="color:#94a3b8;">✗ Pelo menos 1 caractere especial (!@#$…)</li>
+            </ul>
           </div>
 
           <div class="form-group" id="groupConfirmPwd">
@@ -665,9 +665,45 @@
         if (errEl) errEl.style.display = show ? "block" : "none";
       }
 
-      function isValidEmail(v) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+      function isGmail(v) {
+        return /^[a-zA-Z0-9._%+\-]+@gmail\.com$/i.test(v.trim());
       }
+
+      function senhaForte(v) {
+        return v.length >= 8 && /[A-Z]/.test(v) && /[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v);
+      }
+
+      /* ── Checklist de requisitos ── */
+      const checklist = document.getElementById("pwdChecklist");
+      const reqEls = {
+        len:     document.getElementById("req-len"),
+        upper:   document.getElementById("req-upper"),
+        number:  document.getElementById("req-number"),
+        special: document.getElementById("req-special"),
+      };
+
+      function atualizarChecklist(v) {
+        const checks = {
+          len:     v.length >= 8,
+          upper:   /[A-Z]/.test(v),
+          number:  /[0-9]/.test(v),
+          special: /[^A-Za-z0-9]/.test(v),
+        };
+        Object.entries(checks).forEach(([k, ok]) => {
+          const el = reqEls[k];
+          el.textContent = (ok ? "✓ " : "✗ ") + el.textContent.slice(2);
+          el.style.color  = ok ? "#16a34a" : "#94a3b8";
+        });
+      }
+
+      const pwdInput = document.getElementById("adminPwd");
+
+      pwdInput.addEventListener("focus", () => { checklist.style.display = "flex"; });
+
+      pwdInput.addEventListener("input", () => {
+        atualizarChecklist(pwdInput.value);
+        errorBanner.classList.remove("is-visible");
+      });
 
       /* Clear server error on any input */
       form.addEventListener("input", () => errorBanner.classList.remove("is-visible"));
@@ -680,32 +716,38 @@
         const orgName     = document.getElementById("orgName").value.trim();
         const adminName   = document.getElementById("adminName").value.trim();
         const adminEmail  = document.getElementById("adminEmail").value.trim();
-        const pwd         = document.getElementById("adminPwd").value;
+        const pwd         = pwdInput.value;
         const confirmPwd  = document.getElementById("confirmPwd").value;
         const terms       = document.getElementById("acceptTerms").checked;
 
         let valid = true;
 
-        if (!orgType)              { setError("groupOrgType",    "errorOrgType",    true); valid = false; }
-        else                       { setError("groupOrgType",    "errorOrgType",    false); }
+        if (!orgType)           { setError("groupOrgType",    "errorOrgType",    true); valid = false; }
+        else                    { setError("groupOrgType",    "errorOrgType",    false); }
 
-        if (!orgName)              { setError("groupOrgName",    "errorOrgName",    true); valid = false; }
-        else                       { setError("groupOrgName",    "errorOrgName",    false); }
+        if (!orgName)           { setError("groupOrgName",    "errorOrgName",    true); valid = false; }
+        else                    { setError("groupOrgName",    "errorOrgName",    false); }
 
-        if (!adminName)            { setError("groupAdminName",  "errorAdminName",  true); valid = false; }
-        else                       { setError("groupAdminName",  "errorAdminName",  false); }
+        if (!adminName)         { setError("groupAdminName",  "errorAdminName",  true); valid = false; }
+        else                    { setError("groupAdminName",  "errorAdminName",  false); }
 
-        if (!isValidEmail(adminEmail)) { setError("groupAdminEmail","errorAdminEmail", true); valid = false; }
-        else                           { setError("groupAdminEmail","errorAdminEmail", false); }
+        if (!isGmail(adminEmail)) { setError("groupAdminEmail","errorAdminEmail", true); valid = false; }
+        else                      { setError("groupAdminEmail","errorAdminEmail", false); }
 
-        if (pwd.length < 8)        { setError("groupAdminPwd",  "errorAdminPwd",   true); valid = false; }
-        else                       { setError("groupAdminPwd",  "errorAdminPwd",   false); }
+        if (!senhaForte(pwd)) {
+          setError("groupAdminPwd", "errorAdminPwd", true);
+          checklist.style.display = "flex";
+          atualizarChecklist(pwd);
+          valid = false;
+        } else {
+          setError("groupAdminPwd", "errorAdminPwd", false);
+        }
 
-        if (pwd !== confirmPwd)    { setError("groupConfirmPwd","errorConfirmPwd", true); valid = false; }
-        else                       { setError("groupConfirmPwd","errorConfirmPwd", false); }
+        if (pwd !== confirmPwd) { setError("groupConfirmPwd","errorConfirmPwd", true); valid = false; }
+        else                    { setError("groupConfirmPwd","errorConfirmPwd", false); }
 
-        if (!terms)                { setError("groupTerms",     "errorTerms",      true); valid = false; }
-        else                       { setError("groupTerms",     "errorTerms",      false); }
+        if (!terms)             { setError("groupTerms",     "errorTerms",      true); valid = false; }
+        else                    { setError("groupTerms",     "errorTerms",      false); }
 
         if (!valid) return;
 
@@ -714,7 +756,7 @@
         errorBanner.classList.remove("is-visible");
 
         try {
-          const res = await fetch("/api/auth/register", {
+          const res = await fetch("/api/cadastro", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -725,21 +767,20 @@
               address:   document.getElementById("orgAddress").value.trim() || undefined,
               name:      adminName,
               email:     adminEmail,
-              password:  pwd,
+              senha:     pwd,
             }),
           });
 
           const data = await res.json().catch(() => ({}));
 
           if (res.ok) {
-            /* Auto-login with returned token */
             if (data.token) {
               sessionStorage.setItem("sc_token", data.token);
               sessionStorage.setItem("sc_user", JSON.stringify(data.user || {}));
             }
             window.location.href = "index.html";
           } else {
-            const msg = data.message || data.error || "Erro ao criar conta. Verifique os dados e tente novamente.";
+            const msg = data.erro || data.error || data.message || "Erro ao criar conta. Verifique os dados e tente novamente.";
             errorMsg.textContent = msg;
             errorBanner.classList.add("is-visible");
           }
