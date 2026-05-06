@@ -797,10 +797,11 @@
 
       const pwdInput = document.getElementById("adminPwd");
 
-      pwdInput.addEventListener("focus", () => { checklist.style.display = "flex"; });
-
       pwdInput.addEventListener("input", () => {
-        atualizarChecklist(pwdInput.value);
+        if (checklist.style.display === "flex") {
+          atualizarChecklist(pwdInput.value);
+          if (senhaForte(pwdInput.value)) checklist.style.display = "none";
+        }
         errorBanner.classList.remove("is-visible");
       });
 
