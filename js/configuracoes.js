@@ -4,56 +4,6 @@
 const TIPO_LOCAL_LABEL = { deposito: 'Depósito', sala: 'Sala', armario: 'Armário', externo: 'Externo', outro: 'Outro' };
 const ROLE_LABEL       = { admin: 'Admin', operator: 'Operador', viewer: 'Visualizador' };
 
-// ── Dados mock ────────────────────────────────────────────────────────────────
-const MOCK = {
-  usuario: {
-    id: 'u1', nome: 'Maria Silva', email: 'maria@uscs.edu.br',
-    cargo: 'Administradora', role: 'admin', senha: 'admin123',
-    avatar: null, criadoEm: '2023-08-01',
-  },
-  usuarios: [
-    { id: 'u1', nome: 'Maria Silva',  email: 'maria@uscs.edu.br', cargo: 'Administradora', role: 'admin',    ativo: true,  criadoEm: '2023-08-01' },
-    { id: 'u2', nome: 'João Pereira', email: 'joao@uscs.edu.br',  cargo: 'Operador',       role: 'operator', ativo: true,  criadoEm: '2023-09-15' },
-    { id: 'u3', nome: 'Ana Costa',    email: 'ana@uscs.edu.br',   cargo: 'Visualizadora',  role: 'viewer',   ativo: false, criadoEm: '2024-01-10' },
-  ],
-  categorias: {
-    categorias: [
-      { id: 'cat1', nome: 'Informática',      cor: '#3b82f6', ordem: 0 },
-      { id: 'cat2', nome: 'Móveis',           cor: '#8b5cf6', ordem: 1 },
-      { id: 'cat3', nome: 'Eletrodomésticos', cor: '#10b981', ordem: 2 },
-      { id: 'cat4', nome: 'Eletrônicos',      cor: '#f59e0b', ordem: 3 },
-      { id: 'cat5', nome: 'Vestuário',        cor: '#ef4444', ordem: 4 },
-      { id: 'cat6', nome: 'Ferramentas',      cor: '#6366f1', ordem: 5 },
-    ],
-    marcas: [
-      { id: 'm1', nome: 'Dell' }, { id: 'm2', nome: 'HP' },
-      { id: 'm3', nome: 'Samsung' }, { id: 'm4', nome: 'LG' },
-      { id: 'm5', nome: 'Apple' }, { id: 'm6', nome: 'Lenovo' },
-      { id: 'm7', nome: 'Positivo' },
-    ],
-  },
-  localizacoes: [
-    { id: 'loc1', nome: 'Depósito Principal', tipo: 'deposito', descricao: 'Depósito central',       capacidade: 200, ordem: 0 },
-    { id: 'loc2', nome: 'Sala 1',             tipo: 'sala',     descricao: '',                       capacidade: null, ordem: 1 },
-    { id: 'loc3', nome: 'Sala 2',             tipo: 'sala',     descricao: '',                       capacidade: null, ordem: 2 },
-    { id: 'loc4', nome: 'Sala 3 — Armário B', tipo: 'armario',  descricao: '',                       capacidade: 50,   ordem: 3 },
-    { id: 'loc5', nome: 'Almoxarifado',       tipo: 'deposito', descricao: 'Manutenção e reposição', capacidade: 100,  ordem: 4 },
-  ],
-  organizacao: {
-    nome: 'USCS — Inovação Social', tipo: 'ONG', cnpj: '',
-    email: 'contato@uscs.edu.br', telefone: '(11) 4239-3200',
-    endereco: 'Rua Galvão Bueno, 868, São Paulo — SP',
-    logo: null,
-    meta: { quantidade: 200, inicio: '2024-01-01', fim: '2024-12-31' },
-  },
-  regrasNotif:  { estoqueBaixo: true, descarte: true, doacaoPendente: false, minimo: 5, email: false },
-  preferencias: { tema: 'claro', idioma: 'pt-BR', paginacao: 20, formatoData: 'DD/MM/AAAA' },
-  logAcessos: [
-    { id: 'la1', usuario: 'Maria Silva', email: 'maria@uscs.edu.br', ip: '192.168.1.10', dispositivo: 'Chrome / Windows 11',  inicio: '2024-05-01T08:30:00', fim: null,                  atual: true  },
-    { id: 'la2', usuario: 'Maria Silva', email: 'maria@uscs.edu.br', ip: '192.168.1.10', dispositivo: 'Chrome / Windows 11',  inicio: '2024-04-30T09:15:00', fim: '2024-04-30T17:45:00', atual: false },
-    { id: 'la3', usuario: 'Maria Silva', email: 'maria@uscs.edu.br', ip: '177.92.3.55',  dispositivo: 'Safari / iPhone',       inicio: '2024-04-28T20:05:00', fim: '2024-04-28T20:30:00', atual: false },
-  ],
-};
 
 // ── Seed / migração ───────────────────────────────────────────────────────────
 function carregarDados() {
