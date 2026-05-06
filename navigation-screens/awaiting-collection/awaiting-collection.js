@@ -303,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const resp = await fetch("/api/items/update", {
+      const resp = await fetch(`/api/items/${item_id}`, {
         method: "PUT",
         body: formData,
       });
