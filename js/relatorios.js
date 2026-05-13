@@ -55,6 +55,18 @@ document.addEventListener("sc:ready", function () {
     try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
   }
 
+  // ── API helpers ───────────────────────────────────────────────────────────
+  function _relToken() {
+    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+  }
+  function _relApi(params) {
+    const token = _relToken();
+    const qs = new URLSearchParams(params).toString();
+    return fetch(`/api/relatorios?${qs}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+  }
+
   // ── Seed data if missing ──────────────────────────────────────────────────
   function seedIfNeeded() {
     const existing = dbGet(KEYS.ITEMS);
@@ -275,14 +287,22 @@ document.addEventListener("sc:ready", function () {
     const cat     = rptCat?.value     || "";
     const movType = rptMovType?.value || "";
 
-    switch (state.reportType) {
-      case "estoque":       genEstoque(from, to, cond, cat); break;
-      case "movimentacoes": genMovimentacoes(from, to, movType); break;
-      case "condicao":      genCondicao(cat); break;
-      case "doacoes":       genDoacoes(from, to); break;
-      case "descarte":      genDescarte(from, to); break;
-      case "auditoria":     genAuditoria(from, to); break;
-    }
+    _relApi({ tipo: state.reportType, from, to, cond, cat, movType })
+      .then(data => {
+        if (data.items?.length)     dbSet(KEYS.ITEMS,     data.items);
+        if (data.movements?.length) dbSet(KEYS.MOVEMENTS, data.movements);
+      })
+      .catch(() => {})
+      .finally(() => {
+        switch (state.reportType) {
+          case "estoque":       genEstoque(from, to, cond, cat); break;
+          case "movimentacoes": genMovimentacoes(from, to, movType); break;
+          case "condicao":      genCondicao(cat); break;
+          case "doacoes":       genDoacoes(from, to); break;
+          case "descarte":      genDescarte(from, to); break;
+          case "auditoria":     genAuditoria(from, to); break;
+        }
+      });
   }
 
   // ── Report: Inventário Geral ──────────────────────────────────────────────

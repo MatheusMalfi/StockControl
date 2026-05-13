@@ -7,6 +7,16 @@ const ROLE_LABEL       = { admin: 'Admin', operator: 'Operador', viewer: 'Visual
 
 // ── Seed / migração ───────────────────────────────────────────────────────────
 function carregarDados() {
+  _cfgApi("GET", "/api/configuracoes")
+    .then(data => {
+      if (data.usuario)      localStorage.setItem('sc_usuario',     JSON.stringify(data.usuario));
+      if (data.usuarios)     localStorage.setItem('sc_usuarios',    JSON.stringify(data.usuarios));
+      if (data.organizacao)  localStorage.setItem('sc_organizacao', JSON.stringify(data.organizacao));
+      if (data.preferencias) localStorage.setItem('sc_preferencias',JSON.stringify(data.preferencias));
+      if (data.categorias)   localStorage.setItem('sc_categorias',  JSON.stringify(data.categorias));
+    })
+    .catch(() => {});
+
   const seed = (key, val) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(val)); };
   seed('sc_usuario',      MOCK.usuario);
   seed('sc_usuarios',     MOCK.usuarios);
@@ -146,6 +156,19 @@ function salvarNoLocalStorage(chave, dados) {
 function carregarDoLocalStorage(chave, padrao) {
   try { const v = localStorage.getItem(chave); return v ? JSON.parse(v) : padrao; }
   catch { return padrao; }
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+function _cfgToken() {
+  return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+}
+function _cfgApi(method, url, body) {
+  const token = _cfgToken();
+  return fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    ...(body != null ? { body: JSON.stringify(body) } : {}),
+  }).then(r => r.ok ? r.json() : Promise.reject(r.status));
 }
 
 function contarItensPorCategoria(catNome) {
@@ -320,6 +343,7 @@ function salvarPerfil() {
   u.nome  = nome;
   u.email = email;
   salvarNoLocalStorage('sc_usuario', u);
+  _cfgApi("PUT", "/api/configuracoes/perfil", { nome, email }).catch(() => {});
   registrarLog('Perfil atualizado', 'perfil', nome, '');
   atualizarAvatarHeader();
   _perfilSnapshot = { nome, email };
@@ -394,6 +418,7 @@ function salvarPreferenciasExibicao() {
     formatoData: document.getElementById('prefFormatoData')?.value || 'DD/MM/AAAA',
   };
   salvarNoLocalStorage('sc_preferencias', prefs);
+  _cfgApi("PUT", "/api/configuracoes/preferencias", prefs).catch(() => {});
   aplicarTema(prefs.tema);
   showToast('Preferências salvas!', 'success');
 }
@@ -462,6 +487,7 @@ function salvarOrganizacao() {
   org.endereco  = document.getElementById('orgAddress')?.value.trim();
   org.cnpj      = cnpjRaw;
   salvarNoLocalStorage('sc_organizacao', org);
+  _cfgApi("PUT", "/api/configuracoes/organizacao", org).catch(() => {});
   registrarLog('Organização atualizada', 'organizacao', org.nome, '');
   showToast('Dados da organização salvos!', 'success');
 }
@@ -625,8 +651,11 @@ function salvarUsuario() {
     if (idx !== -1) {
       lista[idx] = { ...lista[idx], nome, email, cargo, role, ...(senha ? { senha } : {}) };
     }
+    _cfgApi("PUT", `/api/usuarios/${id}`, { nome, email, cargo, role, ...(senha ? { senha } : {}) }).catch(() => {});
   } else {
-    lista.push({ id: gerarId(), nome, email, cargo, role, senha, ativo: true, criadoEm: new Date().toISOString().slice(0, 10) });
+    const novoId = gerarId();
+    lista.push({ id: novoId, nome, email, cargo, role, senha, ativo: true, criadoEm: new Date().toISOString().slice(0, 10) });
+    _cfgApi("POST", "/api/usuarios", { nome, email, cargo, role, senha }).catch(() => {});
   }
   salvarNoLocalStorage('sc_usuarios', lista);
   fecharModal('modalUsuario');
@@ -985,6 +1014,7 @@ function salvarPreferenciasNotificacao() {
     minimo:         parseInt(document.getElementById('lowStockThreshold')?.value) || 5,
   };
   salvarNoLocalStorage('sc_notif_rules', regras);
+  _cfgApi("PUT", "/api/configuracoes/notificacoes", regras).catch(() => {});
   showToast('Preferências salvas!', 'success');
 }
 

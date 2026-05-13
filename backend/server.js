@@ -3,13 +3,20 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 
-const authRoutes     = require("./src/routes/auth.routes");
-const itemsRoutes    = require("./src/routes/items.routes");
-const homeRoutes     = require("./src/routes/home.routes");
-const disposalRoutes = require("./src/routes/disposal.routes");
-const recyclerRoutes = require("./src/routes/recycler.routes");
-const pagesRoutes    = require("./src/routes/pages.routes");
-const pool           = require("./src/db");
+const authRoutes          = require("./src/routes/auth.routes");
+const itemsRoutes         = require("./src/routes/items.routes");
+const homeRoutes          = require("./src/routes/home.routes");
+const disposalRoutes      = require("./src/routes/disposal.routes");
+const recyclerRoutes      = require("./src/routes/recycler.routes");
+const pagesRoutes         = require("./src/routes/pages.routes");
+const movimentacoesRoutes = require("./src/routes/movimentacoes.routes");
+const solicitacoesRoutes  = require("./src/routes/solicitacoes.routes");
+const parceirosRoutes     = require("./src/routes/parceiros.routes");
+const notificacoesRoutes  = require("./src/routes/notificacoes.routes");
+const relatoriosRoutes    = require("./src/routes/relatorios.routes");
+const configuracoesRoutes = require("./src/routes/configuracoes.routes");
+const usuariosRoutes      = require("./src/routes/usuarios.routes");
+const pool                = require("./src/db");
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -22,11 +29,18 @@ app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 app.use(express.static(path.join(__dirname, "..")));
 
 // Rotas da API
-app.use("/api",          authRoutes);       // POST /api/login, POST /api/cadastro
-app.use("/api/items",    itemsRoutes);      // CRUD /api/items + POST /api/items/discard
-app.use("/api/home",     homeRoutes);       // GET /api/home
-app.use("/api",          disposalRoutes);   // POST /api/disposal/request, GET /api/collection-history
-app.use("/api/recycler", recyclerRoutes);   // Rotas do Impacto Metais
+app.use("/api",                   authRoutes);          // POST /api/login, /cadastro, /recuperar-senha, /alterar-senha
+app.use("/api/items",             itemsRoutes);         // CRUD /api/items + POST /api/items/discard
+app.use("/api/home",              homeRoutes);          // GET /api/home
+app.use("/api",                   disposalRoutes);      // POST /api/disposal/request, GET /api/collection-history
+app.use("/api/recycler",          recyclerRoutes);      // Rotas do Impacto Metais
+app.use("/api/movimentacoes",     movimentacoesRoutes); // CRUD /api/movimentacoes
+app.use("/api/solicitacoes",      solicitacoesRoutes);  // CRUD /api/solicitacoes + /revisar, /status
+app.use("/api/parceiros",         parceirosRoutes);     // CRUD /api/parceiros
+app.use("/api/notificacoes",      notificacoesRoutes);  // GET, POST /sync, PUT /rules
+app.use("/api/relatorios",        relatoriosRoutes);    // GET /api/relatorios
+app.use("/api/configuracoes",     configuracoesRoutes); // GET, PUT /perfil, /organizacao, /preferencias, /notificacoes
+app.use("/api/usuarios",          usuariosRoutes);      // POST, PUT /:id, DELETE /:id
 
 // Healthcheck
 app.get("/healthz", async (req, res) => {

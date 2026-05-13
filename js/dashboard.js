@@ -27,6 +27,16 @@
   function dbGet(key)      { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
   function dbSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
+  // ── API helpers ───────────────────────────────────────────────────────────
+  function _dashToken() {
+    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+  }
+  function _dashApi(url) {
+    const token = _dashToken();
+    return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status));
+  }
+
   /* ================================================================
      DADOS MOCK
      Schema: { id, nome, patrimonio, categoria, condicao, total,
@@ -298,6 +308,21 @@
      SEED — reaplica se localStorage vazio ou schema antigo
      ================================================================ */
   function seedIfEmpty() {
+    _dashApi("/api/home")
+      .then(data => {
+        if (data.items?.length)     dbSet(KEYS.ITEMS,     data.items);
+        if (data.movements?.length) dbSet(KEYS.MOVEMENTS, data.movements);
+        if (data.alerts?.length)    dbSet(KEYS.ALERTS,    data.alerts);
+        if (data.goal)              dbSet(KEYS.GOAL,      data.goal);
+        loadKPIs();
+        loadConditionChart();
+        loadCategoryChart();
+        loadRecentMovements();
+        loadSystemAlerts();
+        loadGoal();
+      })
+      .catch(() => {});
+
     const stored = dbGet(KEYS.ITEMS);
     const isOldSchema = stored && stored[0] && !stored[0].nome;
     if (!stored || isOldSchema) dbSet(KEYS.ITEMS, MOCK_ITEMS);

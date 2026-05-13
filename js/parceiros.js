@@ -91,6 +91,19 @@ document.addEventListener("sc:ready", function () {
 
   let pendingDeleteId = null;
 
+  // ── API helpers ───────────────────────────────────────────────────────────
+  function _parcToken() {
+    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+  }
+  function _parcApi(method, url, body) {
+    const token = _parcToken();
+    return fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body != null ? { body: JSON.stringify(body) } : {}),
+    }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+  }
+
   // ── Storage helpers ───────────────────────────────────────────────────────
   function getPartners() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
@@ -115,6 +128,12 @@ document.addEventListener("sc:ready", function () {
 
   // ── Seed ──────────────────────────────────────────────────────────────────
   function seedIfNeeded() {
+    _parcApi("GET", "/api/parceiros")
+      .then(data => {
+        const list = Array.isArray(data) ? data : data.parceiros || [];
+        if (list.length) { savePartners(list); loadAndRender(); }
+      })
+      .catch(() => {});
     if (!getPartners().length) savePartners(MOCK);
   }
 
@@ -395,6 +414,7 @@ document.addEventListener("sc:ready", function () {
           atualizadoEm:   now,
         };
         savePartners(partners);
+        _parcApi("PUT", `/api/parceiros/${id}`, partners[partners.findIndex(p => String(p.id) === String(id))]).catch(() => {});
         addAuditLog(`Parceiro atualizado: ${nome}`, "parceiro", id);
         SC.toastSuccess("Parceiro atualizado!");
       } else {
@@ -419,6 +439,7 @@ document.addEventListener("sc:ready", function () {
           ativo:           true,
         });
         savePartners(partners);
+        _parcApi("POST", "/api/parceiros", partners[partners.length - 1]).catch(() => {});
         addAuditLog(`Parceiro criado: ${nome}`, "parceiro", newId);
         SC.toastSuccess("Parceiro cadastrado!");
       }
@@ -472,6 +493,7 @@ document.addEventListener("sc:ready", function () {
 
     const updated = partners.filter(x => String(x.id) !== String(pendingDeleteId));
     savePartners(updated);
+    _parcApi("DELETE", `/api/parceiros/${pendingDeleteId}`).catch(() => {});
     addAuditLog(`Parceiro excluído: ${p.nome}`, "parceiro", pendingDeleteId);
 
     SC.closeModal("deletePartnerModal");

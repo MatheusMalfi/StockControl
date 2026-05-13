@@ -10,6 +10,19 @@ document.addEventListener("sc:ready", function () {
   }
   function dbSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
+  // ── API helpers ───────────────────────────────────────────────────────────
+  function _movToken() {
+    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+  }
+  function _movApi(method, url, body) {
+    const token = _movToken();
+    return fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body != null ? { body: JSON.stringify(body) } : {}),
+    }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+  }
+
   // ── State ─────────────────────────────────────────────────────────────────
   const state = {
     page: 1,
@@ -535,6 +548,7 @@ document.addEventListener("sc:ready", function () {
     const movs = dbGet(KEYS.MOVEMENTS);
     movs.unshift(newMov);
     dbSet(KEYS.MOVEMENTS, movs);
+    _movApi("POST", "/api/movimentacoes", newMov).catch(() => {});
 
     // Update item stock
     const items = dbGet(KEYS.ITEMS);
@@ -585,6 +599,7 @@ document.addEventListener("sc:ready", function () {
   // ── Delete movement ───────────────────────────────────────────────────────
   function deleteMovement(id) {
     if (!confirm("Excluir esta movimentação? Esta ação não pode ser desfeita.")) return;
+    _movApi("DELETE", `/api/movimentacoes/${id}`).catch(() => {});
     const movs = dbGet(KEYS.MOVEMENTS).filter(m => String(m.id) !== String(id));
     dbSet(KEYS.MOVEMENTS, movs);
     SC.toastSuccess("Movimentação removida.");
@@ -602,6 +617,12 @@ document.addEventListener("sc:ready", function () {
     wireFilters();
     wireNewMovModal();
     wireButtons();
+    _movApi("GET", "/api/movimentacoes")
+      .then(data => {
+        const movs = Array.isArray(data) ? data : data.movimentacoes || [];
+        if (movs.length) { dbSet(KEYS.MOVEMENTS, movs); render(); }
+      })
+      .catch(() => {});
     render();
   }
 

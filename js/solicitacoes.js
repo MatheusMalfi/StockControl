@@ -7,6 +7,19 @@ document.addEventListener("sc:ready", function () {
   function dbGet(k) { try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; } }
   function dbSet(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
 
+  // ── API helpers ───────────────────────────────────────────────────────────
+  function _solToken() {
+    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+  }
+  function _solApi(method, url, body) {
+    const token = _solToken();
+    return fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body != null ? { body: JSON.stringify(body) } : {}),
+    }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+  }
+
   // ── Mock data ─────────────────────────────────────────────────────────────
   function ago(days) {
     const d = new Date();
@@ -78,6 +91,12 @@ document.addEventListener("sc:ready", function () {
   ];
 
   function seedRequests() {
+    _solApi("GET", "/api/solicitacoes")
+      .then(data => {
+        const reqs = Array.isArray(data) ? data : data.solicitacoes || [];
+        if (reqs.length) { dbSet(KEYS.REQUESTS, reqs); render(); }
+      })
+      .catch(() => {});
     const ex = dbGet(KEYS.REQUESTS);
     if (!ex || !ex.length) dbSet(KEYS.REQUESTS, MOCK);
   }
@@ -639,6 +658,7 @@ document.addEventListener("sc:ready", function () {
           necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
         };
         dbSet(KEYS.REQUESTS, reqs);
+        _solApi("PUT", `/api/solicitacoes/${state.editId}`, reqs[idx]).catch(() => {});
         SC.closeModal("modalNewRequest");
         SC.toastSuccess("Solicitação atualizada.");
         render();
@@ -662,6 +682,7 @@ document.addEventListener("sc:ready", function () {
       };
       reqs.unshift(newReq);
       dbSet(KEYS.REQUESTS, reqs);
+      _solApi("POST", "/api/solicitacoes", newReq).catch(() => {});
       SC.closeModal("modalNewRequest");
       SC.toastSuccess("Solicitação enviada com sucesso!");
       render();
@@ -718,6 +739,7 @@ document.addEventListener("sc:ready", function () {
     reqs[idx].revisao = comment || null;
     reqs[idx].revisor = currentUserName();
     dbSet(KEYS.REQUESTS, reqs);
+    _solApi("PATCH", `/api/solicitacoes/${state.reviewId}/revisar`, { action, revisao: comment }).catch(() => {});
 
     SC.closeModal("modalReview");
     SC.toastSuccess(action === "approve" ? "Solicitação aprovada!" : "Solicitação recusada.");
@@ -732,6 +754,7 @@ document.addEventListener("sc:ready", function () {
     reqs[idx].status = newStatus;
     if (newStatus === "pendente") { reqs[idx].revisao = null; reqs[idx].revisor = null; }
     dbSet(KEYS.REQUESTS, reqs);
+    _solApi("PATCH", `/api/solicitacoes/${id}/status`, { status: newStatus }).catch(() => {});
     SC.toastSuccess(msg);
     render();
   }
@@ -750,6 +773,7 @@ document.addEventListener("sc:ready", function () {
   }
   function doDelete(id) {
     if (!confirm("Excluir esta solicitação permanentemente? Esta ação não pode ser desfeita.")) return;
+    _solApi("DELETE", `/api/solicitacoes/${id}`).catch(() => {});
     const reqs = dbGet(KEYS.REQUESTS).filter(r => r.id !== id);
     dbSet(KEYS.REQUESTS, reqs);
     SC.toastSuccess("Solicitação excluída.");

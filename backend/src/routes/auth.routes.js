@@ -169,4 +169,60 @@ router.post("/cadastro", async (req, res) => {
   }
 });
 
+/* ── POST /api/recuperar-senha ───────────────────────────────── */
+router.post("/recuperar-senha", async (req, res) => {
+  try {
+    const email = (req.body.email || "").trim();
+    if (!email) return res.status(400).json({ mensagem: "E-mail é obrigatório." });
+
+    const [rows] = await pool.query("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
+    // Always respond success to avoid email enumeration
+    if (!rows.length) return res.json({ sucesso: true });
+
+    const token   = jwt.sign({ id: rows[0].id, purpose: "reset" }, JWT_SECRET, { expiresIn: "1h" });
+    const resetUrl = `${process.env.APP_URL || "http://localhost:3000"}/acesso/change-password/change-password.html?token=${token}`;
+
+    // In production wire up an email sender here; for now log the URL
+    console.log(`[recuperar-senha] Reset link for ${email}: ${resetUrl}`);
+    res.json({ sucesso: true, resetUrl });
+  } catch (err) {
+    console.error("Erro no /api/recuperar-senha:", err);
+    res.status(500).json({ mensagem: "Erro interno no servidor." });
+  }
+});
+
+/* ── POST /api/alterar-senha ─────────────────────────────────── */
+router.post("/alterar-senha", async (req, res) => {
+  try {
+    const { token, novaSenha } = req.body;
+    if (!token || !novaSenha) {
+      return res.status(400).json({ mensagem: "Token e nova senha são obrigatórios." });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(400).json({ mensagem: "Token inválido ou expirado." });
+    }
+
+    if (payload.purpose !== "reset") {
+      return res.status(400).json({ mensagem: "Token inválido." });
+    }
+
+    if (!senhaForte(novaSenha)) {
+      return res.status(400).json({
+        mensagem: "A senha deve ter mínimo 8 caracteres, letra maiúscula, número e caractere especial.",
+      });
+    }
+
+    const hash = await bcrypt.hash(novaSenha, parseInt(process.env.BCRYPT_ROUNDS) || 10);
+    await pool.execute("UPDATE users SET password_hash = ? WHERE id = ?", [hash, payload.id]);
+    res.json({ sucesso: true });
+  } catch (err) {
+    console.error("Erro no /api/alterar-senha:", err);
+    res.status(500).json({ mensagem: "Erro interno no servidor." });
+  }
+});
+
 module.exports = router;
