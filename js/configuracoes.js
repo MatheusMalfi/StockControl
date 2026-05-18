@@ -4,6 +4,17 @@
 const TIPO_LOCAL_LABEL = { deposito: 'Depósito', sala: 'Sala', armario: 'Armário', externo: 'Externo', outro: 'Outro' };
 const ROLE_LABEL       = { admin: 'Admin', operator: 'Operador', viewer: 'Visualizador' };
 
+const MOCK = {
+  usuario:      { id: '', nome: '', email: '', cargo: '', avatar: null },
+  usuarios:     [],
+  organizacao:  { nome: '', email: '', telefone: '', endereco: '', cnpj: '', logo: null, meta: null },
+  regrasNotif:  { estoqueBaixo: true, descarte: true, doacaoPendente: true, email: false, minimo: 5 },
+  preferencias: { tema: 'claro', idioma: 'pt-BR', paginacao: 20, formatoData: 'DD/MM/AAAA' },
+  categorias:   { categorias: [], marcas: [] },
+  localizacoes: [],
+  logAcessos:   [],
+};
+
 
 // ── Seed / migração ───────────────────────────────────────────────────────────
 function carregarDados() {
@@ -317,18 +328,23 @@ function navegarSecao(secao) {
 let _perfilSnapshot = {};
 
 function carregarPerfil() {
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  // Real session (set by login) lives in sc_user with field "name"; sc_usuario is local profile data
+  const session = _getOrgData();
+  const u       = carregarDoLocalStorage('sc_usuario', {});
+  const nome    = session.name  || u.nome  || '';
+  const email   = session.email || u.email || '';
+
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
-  set('profileName',  u.nome);
-  set('profileEmail', u.email);
-  set('profileRole',  u.cargo);
+  set('profileName',  nome);
+  set('profileEmail', email);
+  set('profileRole',  u.cargo || '');
 
   const initialsEl = document.getElementById('profileAvatarInitials');
   const imgEl      = document.getElementById('profileAvatarImg');
-  if (initialsEl) initialsEl.textContent = gerarIniciais(u.nome);
+  if (initialsEl) initialsEl.textContent = gerarIniciais(nome);
   if (u.avatar && imgEl) { imgEl.src = u.avatar; imgEl.classList.add('is-visible'); if (initialsEl) initialsEl.style.display = 'none'; }
 
-  _perfilSnapshot = { nome: u.nome || '', email: u.email || '' };
+  _perfilSnapshot = { nome, email };
   detectarMudancasPerfil();
 
   // Load display prefs
@@ -352,6 +368,15 @@ function salvarPerfil() {
   u.nome  = nome;
   u.email = email;
   salvarNoLocalStorage('sc_usuario', u);
+
+  // Keep sc_user (real session) in sync so the header name updates immediately
+  ['localStorage', 'sessionStorage'].forEach(store => {
+    try {
+      const raw = window[store].getItem('sc_user');
+      if (raw) { const s = JSON.parse(raw); s.name = nome; window[store].setItem('sc_user', JSON.stringify(s)); }
+    } catch {}
+  });
+
   const { id: _uid, organization_id: _poid } = _getOrgData();
   _cfgApi("PUT", "/api/configuracoes/perfil", { nome, email, user_id: _uid, organization_id: _poid }).catch(() => {});
   registrarLog('Perfil atualizado', 'perfil', nome, '');
