@@ -1,6 +1,10 @@
 "use strict";
 
-document.addEventListener("sc:ready", function () {
+(function bootstrap() {
+  if (!window.SC || !window.SC.ready) {
+    document.addEventListener("sc:ready", bootstrap, { once: true });
+    return;
+  }
   const STORAGE_KEY = "sc_parceiros";
   const AUDIT_KEY   = "sc_audit_log";
   const MOVS_KEY    = "sc_movements";
@@ -703,4 +707,4 @@ document.addEventListener("sc:ready", function () {
   }
 
   init();
-});
+})();
