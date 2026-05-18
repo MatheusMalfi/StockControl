@@ -64,8 +64,8 @@ router.get("/", async (req, res) => {
     }
     if (cat) {
       const [catRow] = await pool.query(
-        "SELECT id FROM categories WHERE name = ? AND organization_id = ? LIMIT 1",
-        [cat, orgId],
+        "SELECT id FROM categories WHERE name = ? LIMIT 1",
+        [cat],
       );
       if (catRow.length) { conditions.push("i.category_id = ?"); params.push(catRow[0].id); }
     }

@@ -4,6 +4,7 @@ const path = require("path");
 const cors = require("cors");
 
 const authRoutes          = require("./src/routes/auth.routes");
+const categoriesRoutes    = require("./src/routes/categories.routes");
 const itemsRoutes         = require("./src/routes/items.routes");
 const homeRoutes          = require("./src/routes/home.routes");
 const disposalRoutes      = require("./src/routes/disposal.routes");
@@ -29,7 +30,8 @@ app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 app.use(express.static(path.join(__dirname, "..")));
 
 // Rotas da API
-app.use("/api",                   authRoutes);          // POST /api/login, /cadastro, /recuperar-senha, /alterar-senha
+app.use("/api",                   authRoutes);          // POST /api/login, /cadastro, /recuperar-senha, /alterar-senha, GET /users/me
+app.use("/api",                   categoriesRoutes);    // GET /api/categories
 app.use("/api/items",             itemsRoutes);         // CRUD /api/items + POST /api/items/discard
 app.use("/api/home",              homeRoutes);          // GET /api/home
 app.use("/api",                   disposalRoutes);      // POST /api/disposal/request, GET /api/collection-history

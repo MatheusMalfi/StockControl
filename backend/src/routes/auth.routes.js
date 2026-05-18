@@ -225,4 +225,63 @@ router.post("/alterar-senha", async (req, res) => {
   }
 });
 
+/* ── GET /api/users/me ───────────────────────────────────────── */
+router.get("/users/me", async (req, res) => {
+  try {
+    const token = (req.headers.authorization || "").replace("Bearer ", "").trim();
+    if (!token) return res.status(401).json({ mensagem: "Token ausente." });
+    let payload;
+    try { payload = jwt.verify(token, JWT_SECRET); }
+    catch { return res.status(401).json({ mensagem: "Token inválido." }); }
+    const [rows] = await pool.query(
+      `SELECT u.id, u.email, u.name, u.role, u.organization_id, o.org_type
+       FROM users u JOIN organizations o ON o.id = u.organization_id
+       WHERE u.id = ? AND u.is_active = 1 LIMIT 1`,
+      [payload.id],
+    );
+    if (!rows.length) return res.status(404).json({ mensagem: "Usuário não encontrado." });
+    res.json({ user: rows[0] });
+  } catch (err) {
+    console.error("GET /api/users/me:", err);
+    res.status(500).json({ mensagem: "Erro interno." });
+  }
+});
+
+/* ── POST /api/change-password ───────────────────────────────── */
+router.post("/change-password", async (req, res) => {
+  try {
+    const token = (req.headers.authorization || "").replace("Bearer ", "").trim();
+    if (!token) return res.status(401).json({ mensagem: "Token ausente." });
+    let payload;
+    try { payload = jwt.verify(token, JWT_SECRET); }
+    catch { return res.status(401).json({ mensagem: "Token inválido." }); }
+
+    const { senhaAtual, novaSenha } = req.body;
+    if (!senhaAtual || !novaSenha) {
+      return res.status(400).json({ mensagem: "Campos obrigatórios ausentes." });
+    }
+    if (!senhaForte(novaSenha)) {
+      return res.status(400).json({
+        mensagem: "A nova senha deve ter mínimo 8 caracteres, letra maiúscula, número e caractere especial.",
+      });
+    }
+
+    const [rows] = await pool.query(
+      "SELECT password_hash FROM users WHERE id = ? LIMIT 1",
+      [payload.id],
+    );
+    if (!rows.length) return res.status(404).json({ mensagem: "Usuário não encontrado." });
+
+    const ok = await bcrypt.compare(senhaAtual, rows[0].password_hash);
+    if (!ok) return res.status(400).json({ mensagem: "Senha atual incorreta." });
+
+    const hash = await bcrypt.hash(novaSenha, parseInt(process.env.BCRYPT_ROUNDS) || 10);
+    await pool.execute("UPDATE users SET password_hash = ? WHERE id = ?", [hash, payload.id]);
+    res.json({ sucesso: true });
+  } catch (err) {
+    console.error("POST /api/change-password:", err);
+    res.status(500).json({ mensagem: "Erro interno." });
+  }
+});
+
 module.exports = router;

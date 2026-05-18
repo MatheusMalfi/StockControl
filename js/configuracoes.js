@@ -7,7 +7,8 @@ const ROLE_LABEL       = { admin: 'Admin', operator: 'Operador', viewer: 'Visual
 
 // ── Seed / migração ───────────────────────────────────────────────────────────
 function carregarDados() {
-  _cfgApi("GET", "/api/configuracoes")
+  const { organization_id: _oid } = _getOrgData();
+  _cfgApi("GET", `/api/configuracoes${_oid ? "?organization_id=" + _oid : ""}`)
     .then(data => {
       if (data.usuario)      localStorage.setItem('sc_usuario',     JSON.stringify(data.usuario));
       if (data.usuarios)     localStorage.setItem('sc_usuarios',    JSON.stringify(data.usuarios));
@@ -161,6 +162,14 @@ function carregarDoLocalStorage(chave, padrao) {
 // ── API helpers ───────────────────────────────────────────────────────────────
 function _cfgToken() {
   return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+}
+
+function _getOrgData() {
+  try {
+    return JSON.parse(
+      localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}"
+    ) || {};
+  } catch { return {}; }
 }
 function _cfgApi(method, url, body) {
   const token = _cfgToken();
@@ -343,7 +352,8 @@ function salvarPerfil() {
   u.nome  = nome;
   u.email = email;
   salvarNoLocalStorage('sc_usuario', u);
-  _cfgApi("PUT", "/api/configuracoes/perfil", { nome, email }).catch(() => {});
+  const { id: _uid, organization_id: _poid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/perfil", { nome, email, user_id: _uid, organization_id: _poid }).catch(() => {});
   registrarLog('Perfil atualizado', 'perfil', nome, '');
   atualizarAvatarHeader();
   _perfilSnapshot = { nome, email };
@@ -418,7 +428,8 @@ function salvarPreferenciasExibicao() {
     formatoData: document.getElementById('prefFormatoData')?.value || 'DD/MM/AAAA',
   };
   salvarNoLocalStorage('sc_preferencias', prefs);
-  _cfgApi("PUT", "/api/configuracoes/preferencias", prefs).catch(() => {});
+  const { organization_id: _preoid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/preferencias", { ...prefs, organization_id: _preoid }).catch(() => {});
   aplicarTema(prefs.tema);
   showToast('Preferências salvas!', 'success');
 }
@@ -487,7 +498,8 @@ function salvarOrganizacao() {
   org.endereco  = document.getElementById('orgAddress')?.value.trim();
   org.cnpj      = cnpjRaw;
   salvarNoLocalStorage('sc_organizacao', org);
-  _cfgApi("PUT", "/api/configuracoes/organizacao", org).catch(() => {});
+  const { organization_id: _ooid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/organizacao", { ...org, organization_id: _ooid }).catch(() => {});
   registrarLog('Organização atualizada', 'organizacao', org.nome, '');
   showToast('Dados da organização salvos!', 'success');
 }
@@ -655,7 +667,8 @@ function salvarUsuario() {
   } else {
     const novoId = gerarId();
     lista.push({ id: novoId, nome, email, cargo, role, senha, ativo: true, criadoEm: new Date().toISOString().slice(0, 10) });
-    _cfgApi("POST", "/api/usuarios", { nome, email, cargo, role, senha }).catch(() => {});
+    const { organization_id: _uoid } = _getOrgData();
+    _cfgApi("POST", "/api/usuarios", { nome, email, cargo, role, senha, organization_id: _uoid }).catch(() => {});
   }
   salvarNoLocalStorage('sc_usuarios', lista);
   fecharModal('modalUsuario');
@@ -1014,7 +1027,8 @@ function salvarPreferenciasNotificacao() {
     minimo:         parseInt(document.getElementById('lowStockThreshold')?.value) || 5,
   };
   salvarNoLocalStorage('sc_notif_rules', regras);
-  _cfgApi("PUT", "/api/configuracoes/notificacoes", regras).catch(() => {});
+  const { organization_id: _noid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/notificacoes", { ...regras, organization_id: _noid }).catch(() => {});
   showToast('Preferências salvas!', 'success');
 }
 
@@ -1046,33 +1060,36 @@ function alterarSenha() {
   const atualEl    = document.getElementById('currentPwd');
   const novaEl     = document.getElementById('newPwd');
   const confirmaEl = document.getElementById('confirmPwd');
-  const atual      = atualEl?.value  || '';
-  const nova       = novaEl?.value   || '';
+  const atual      = atualEl?.value    || '';
+  const nova       = novaEl?.value     || '';
   const confirma   = confirmaEl?.value || '';
 
   const hideErr = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
   const showErr = id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
   hideErr('errorCurrentPwd'); hideErr('errorNewPwd'); hideErr('errorConfirmPwd');
 
-  const usuario = carregarDoLocalStorage('sc_usuario', {});
-  let ok = true;
-  if (!usuario || atual !== usuario.senha) { showErr('errorCurrentPwd'); ok = false; }
-  if (nova.length < 8)                     { showErr('errorNewPwd');     ok = false; }
-  if (nova !== confirma)                   { showErr('errorConfirmPwd'); ok = false; }
-  if (!ok) return;
+  if (!atual)           { showErr('errorCurrentPwd'); return; }
+  if (nova.length < 8)  { showErr('errorNewPwd');     return; }
+  if (nova !== confirma) { showErr('errorConfirmPwd'); return; }
 
-  usuario.senha = nova;
-  salvarNoLocalStorage('sc_usuario', usuario);
-  registrarLog('Senha alterada', 'seguranca', usuario.nome, '');
-  if (atualEl)    atualEl.value    = '';
-  if (novaEl)     novaEl.value     = '';
-  if (confirmaEl) confirmaEl.value = '';
-  const barEl   = document.getElementById('pwdStrengthBar');
-  const labelEl = document.getElementById('pwdStrengthLabel');
-  if (barEl)   { barEl.style.width = '0%'; barEl.style.background = ''; }
-  if (labelEl) { labelEl.textContent = '—'; labelEl.style.color = ''; }
-  renderChecklistSenha('');
-  showToast('Senha alterada com sucesso!', 'success');
+  _cfgApi("POST", "/api/change-password", { senhaAtual: atual, novaSenha: nova })
+    .then(() => {
+      const usuario = carregarDoLocalStorage('sc_usuario', {});
+      registrarLog('Senha alterada', 'seguranca', usuario.nome || '', '');
+      if (atualEl)    atualEl.value    = '';
+      if (novaEl)     novaEl.value     = '';
+      if (confirmaEl) confirmaEl.value = '';
+      const barEl   = document.getElementById('pwdStrengthBar');
+      const labelEl = document.getElementById('pwdStrengthLabel');
+      if (barEl)   { barEl.style.width = '0%'; barEl.style.background = ''; }
+      if (labelEl) { labelEl.textContent = '—'; labelEl.style.color = ''; }
+      renderChecklistSenha('');
+      showToast('Senha alterada com sucesso!', 'success');
+    })
+    .catch(code => {
+      if (code === 400) showErr('errorCurrentPwd');
+      else showToast('Erro ao alterar senha. Tente novamente.', 'error');
+    });
 }
 
 function renderChecklistSenha(senha) {

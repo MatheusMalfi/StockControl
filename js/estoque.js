@@ -40,10 +40,21 @@
     discardItemId: null,
   };
 
+  /* Current session user — populated in init() */
+  let _sessionUser = {};
+  let _orgId       = "";
+
   /* ============================================================
      INIT
      ============================================================ */
   async function init() {
+    /* Resolve org context from session */
+    try {
+      _sessionUser = SC.currentUser ||
+        JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "null") || {};
+    } catch { _sessionUser = {}; }
+    _orgId = _sessionUser.organization_id || "";
+
     readURLParams();
     await loadCategories();
     wireFilters();
@@ -104,6 +115,7 @@
     showSkeleton();
 
     const params = new URLSearchParams({
+      organization_id: _orgId,
       page:    state.page,
       limit:   state.perPage,
       sort:    `${state.sortBy}:${state.sortDir}`,
@@ -631,9 +643,15 @@
       confirmBtn.disabled = true;
 
       try {
-        await SC.api(`/items/${state.discardItemId}/discard`, {
+        await SC.api("/items/discard", {
           method: "POST",
-          body: JSON.stringify({ reason, notes }),
+          body: JSON.stringify({
+            item_id:         state.discardItemId,
+            organization_id: _orgId,
+            created_by:      _sessionUser.id || null,
+            reason,
+            notes,
+          }),
         });
 
         SC.closeModal("discardModal");

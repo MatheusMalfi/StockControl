@@ -295,8 +295,10 @@
     const listDrop = document.getElementById("notifListDrop");
 
     try {
-      const data  = await SC.api("/notifications?limit=8&unread=true");
-      const notifs = Array.isArray(data) ? data : (data.notifications || []);
+      const _u2   = SC.currentUser || getUser();
+      const _qs   = _u2?.organization_id ? `?organization_id=${_u2.organization_id}` : "";
+      const data  = await SC.api(`/notificacoes${_qs}`);
+      const notifs = Array.isArray(data) ? data : (data.notificacoes || data.notifications || []);
 
       if (badge) {
         if (notifs.length > 0) {
@@ -311,7 +313,7 @@
         listDrop.innerHTML = notifs.map(n => `
           <div class="dropdown-item" style="white-space:normal; cursor:default; padding:var(--space-3);">
             <div style="font-size:0.875rem; font-weight:500; color:var(--color-text-primary); margin-bottom:2px;">
-              ${escHtml(n.title || n.message || "Notificação")}
+              ${escHtml(n.titulo || n.title || n.mensagem || n.message || "Notificação")}
             </div>
             <div style="font-size:0.8125rem; color:var(--color-text-muted);">
               ${n.created_at ? formatRelTime(n.created_at) : ""}
@@ -330,8 +332,7 @@
      ============================================================ */
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      try { await SC.api("/auth/logout", { method: "POST" }); } catch { /* ignore */ }
+    logoutBtn.addEventListener("click", () => {
       clearSession();
       window.location.replace("login.html");
     });

@@ -5,31 +5,61 @@ const pool = require("../db");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// GET /api/items?organization_id=X
+// GET /api/items?organization_id=X&search=&condition=&category=&sort=product_name:asc&page=1&limit=20
 router.get("/", async (req, res) => {
   try {
-    const { organization_id } = req.query;
+    const { organization_id, search, condition, category, sort, page, limit } = req.query;
     if (!organization_id) {
       return res.status(400).json({ message: "organization_id é obrigatório." });
     }
+
+    const conditions = ["i.organization_id = ?", "i.is_active = 1"];
+    const params     = [organization_id];
+
+    if (search)    { conditions.push("i.product_name LIKE ?"); params.push(`%${search}%`); }
+    if (condition) { conditions.push("c.code = ?");            params.push(condition); }
+    if (category)  { conditions.push("cat.id = ?");            params.push(category); }
+
+    const SORT_COLS = {
+      product_name:    "i.product_name",
+      created_at:      "i.created_at",
+      quantity:        "i.quantity",
+      estimated_value: "i.estimated_value",
+    };
+    const [sortCol, sortDir] = (sort || "product_name:asc").split(":");
+    const orderBy = `${SORT_COLS[sortCol] || "i.product_name"} ${sortDir === "desc" ? "DESC" : "ASC"}`;
+
+    const pageNum  = Math.max(1, parseInt(page)  || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit) || 20));
+    const offset   = (pageNum - 1) * pageSize;
+
+    const whereClause = conditions.join(" AND ");
+
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM items i
+       LEFT JOIN conditions c  ON c.id  = i.condition_id
+       LEFT JOIN categories cat ON cat.id = i.category_id
+       WHERE ${whereClause}`,
+      params,
+    );
 
     const [items] = await pool.query(
       `SELECT i.id, i.product_name, i.product_brand, i.product_model,
               i.serial_number, i.description, i.quantity, i.quantity_available,
               i.weight_kg, i.estimated_value, i.is_active, i.created_at,
-              COALESCE(i.product_brand, b.name) AS brand,
-              COALESCE(i.product_model, m.name) AS model,
-              c.label_pt AS condition_label, c.code AS condition_code
+              c.label_pt AS condition_label, c.code AS condition_code,
+              cat.name AS category_name
        FROM items i
-       LEFT JOIN brands b ON b.id = i.brand_id
-       LEFT JOIN models m ON m.id = i.model_id
-       JOIN conditions c ON c.id = i.condition_id
-       WHERE i.organization_id = ? AND i.is_active = 1
-       ORDER BY i.created_at DESC`,
-      [organization_id],
+       LEFT JOIN conditions c  ON c.id  = i.condition_id
+       LEFT JOIN categories cat ON cat.id = i.category_id
+       WHERE ${whereClause}
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`,
+      [...params, pageSize, offset],
     );
 
-    res.json({ success: true, items });
+    res.json({ success: true, items, total, page: pageNum, limit: pageSize });
   } catch (err) {
     console.error("Erro em GET /api/items:", err);
     res.status(500).json({ message: "Erro ao buscar itens." });
