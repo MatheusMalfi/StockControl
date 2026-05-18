@@ -1,6 +1,10 @@
 "use strict";
 
-document.addEventListener("sc:ready", function () {
+(function bootstrap() {
+  if (!window.SC || !window.SC.ready) {
+    document.addEventListener("sc:ready", bootstrap, { once: true });
+    return;
+  }
   const params  = SC.urlParams();
   const ITEM_ID = params.id || null;
   const IS_EDIT = Boolean(ITEM_ID);
@@ -165,20 +169,35 @@ document.addEventListener("sc:ready", function () {
         }),
       }).catch(() => {});
     } else if (!isEdit) {
+      const fd = new FormData();
+      fd.append("organization_id", user.organization_id);
+      fd.append("product_name",    item.nome);
+      if (item.marca)      fd.append("product_brand",    item.marca);
+      if (item.modelo)     fd.append("product_model",    item.modelo);
+      if (item.patrimonio) fd.append("serial_number",    item.patrimonio);
+      if (item.descricao)  fd.append("description",      item.descricao);
+      fd.append("condition_code",  COND_CODE[item.condicao] || "OTIMO");
+      if (item.categoria)  fd.append("category_name",    item.categoria);
+      fd.append("quantity",        item.total ?? 1);
+      if (item.valor)      fd.append("estimated_value",  item.valor);
+      const uid = user.user_id || user.id;
+      if (uid)             fd.append("created_by",       uid);
+
+      if (item.foto && item.foto.startsWith("data:")) {
+        try {
+          const [header, b64] = item.foto.split(",");
+          const mime  = header.match(/:(.*?);/)[1];
+          const bin   = atob(b64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          fd.append("photo", new Blob([bytes], { type: mime }), "photo.jpg");
+        } catch (_) {}
+      }
+
       fetch("/api/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          organization_id: user.organization_id,
-          product_name:    item.nome,
-          product_brand:   item.marca      || null,
-          product_model:   item.modelo     || null,
-          serial_number:   item.patrimonio || null,
-          description:     item.descricao  || null,
-          condition_code:  COND_CODE[item.condicao] || "OTIMO",
-          category_name:   item.categoria  || null,
-          created_by:      user.id         || null,
-        }),
+        method:  "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body:    fd,
       })
         .then(r => r.json())
         .then(data => {
@@ -648,4 +667,4 @@ document.addEventListener("sc:ready", function () {
   }
 
   init();
-});
+})();

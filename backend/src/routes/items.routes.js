@@ -83,8 +83,11 @@ router.post("/", upload.single("photo"), async (req, res) => {
       description,
       condition_id,
       weight_kg,
+      estimated_value,
       created_by,
     } = req.body;
+
+    const quantity = parseInt(req.body.quantity || req.body.quantidade) || 1;
 
     let resolvedConditionId = condition_id;
     if (!resolvedConditionId && req.body.condition_code) {
@@ -112,8 +115,8 @@ router.post("/", upload.single("photo"), async (req, res) => {
       `INSERT INTO items
         (organization_id, category_id, brand_id, model_id, product_name, product_brand,
          product_model, serial_number, description, condition_id, weight_kg, is_active,
-         photo_blob, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+         quantity, quantity_available, estimated_value, photo_blob, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
       [
         organization_id,
         resolvedCategoryId || null,
@@ -126,6 +129,9 @@ router.post("/", upload.single("photo"), async (req, res) => {
         description || null,
         resolvedConditionId,
         weight_kg || null,
+        quantity,
+        quantity,
+        estimated_value || null,
         photo_blob,
         created_by || null,
       ],
