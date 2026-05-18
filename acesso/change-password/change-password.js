@@ -30,7 +30,7 @@
       const res = await fetch("/api/alterar-senha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, senha }),
+        body: JSON.stringify({ token, novaSenha: senha }),
       });
 
       const data = await res.json().catch(() => ({}));

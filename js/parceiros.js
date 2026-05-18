@@ -128,7 +128,8 @@ document.addEventListener("sc:ready", function () {
 
   // ── Seed ──────────────────────────────────────────────────────────────────
   function seedIfNeeded() {
-    _parcApi("GET", "/api/parceiros")
+    const _pu = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    _parcApi("GET", `/api/parceiros${_pu.organization_id ? `?organization_id=${_pu.organization_id}` : ""}`)
       .then(data => {
         const list = Array.isArray(data) ? data : data.parceiros || [];
         if (list.length) { savePartners(list); loadAndRender(); }

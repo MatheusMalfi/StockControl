@@ -617,7 +617,8 @@ document.addEventListener("sc:ready", function () {
     wireFilters();
     wireNewMovModal();
     wireButtons();
-    _movApi("GET", "/api/movimentacoes")
+    const _mou = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    _movApi("GET", `/api/movimentacoes${_mou.organization_id ? `?organization_id=${_mou.organization_id}` : ""}`)
       .then(data => {
         const movs = Array.isArray(data) ? data : data.movimentacoes || [];
         if (movs.length) { dbSet(KEYS.MOVEMENTS, movs); render(); }

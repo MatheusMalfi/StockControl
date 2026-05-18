@@ -12,15 +12,18 @@ router.get("/", async (req, res) => {
     }
 
     const [itens] = await pool.query(
-      `SELECT i.id, i.product_name,
+      `SELECT i.id, i.product_name, i.serial_number,
+              i.quantity, i.quantity_available, i.estimated_value,
               COALESCE(i.product_brand, b.name) AS brand,
               COALESCE(i.product_model, m.name) AS model,
               c.label_pt AS condition_label, c.code AS condition_code,
+              cat.name AS category_name,
               i.description, i.created_at
        FROM items i
        LEFT JOIN brands b ON b.id = i.brand_id
        LEFT JOIN models m ON m.id = i.model_id
        JOIN conditions c ON c.id = i.condition_id
+       LEFT JOIN categories cat ON cat.id = i.category_id
        WHERE i.organization_id = ? AND i.is_active = 1
        ORDER BY i.created_at DESC`,
       [organization_id],

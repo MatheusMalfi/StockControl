@@ -87,7 +87,8 @@ document.addEventListener("sc:ready", function () {
 
   // ── Seed mock notifications ───────────────────────────────────────────────
   function seedIfNeeded() {
-    _notifApi("GET", "/api/notificacoes")
+    const _nu = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    _notifApi("GET", `/api/notificacoes${_nu.organization_id ? `?organization_id=${_nu.organization_id}` : ""}`)
       .then(data => {
         const notifs = Array.isArray(data) ? data : data.notificacoes || [];
         if (notifs.length) { dbSet(KEYS.NOTIFS, notifs); renderList(); }

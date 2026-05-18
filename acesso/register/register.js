@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .querySelectorAll(".notification-loading")
         .forEach((n) => n.remove());
 
-      if (res.ok && json.ok) {
+      if (res.ok && json.token) {
         notify.success("Cadastro realizado com sucesso!");
 
         setTimeout(() => {

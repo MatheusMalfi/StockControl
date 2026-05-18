@@ -308,12 +308,43 @@
      SEED — reaplica se localStorage vazio ou schema antigo
      ================================================================ */
   function seedIfEmpty() {
-    _dashApi("/api/home")
+    const _u = JSON.parse(
+      localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}"
+    ) || {};
+    const orgId = _u.organization_id || "";
+    const qs = orgId ? `?organization_id=${orgId}` : "";
+
+    _dashApi(`/api/home${qs}`)
       .then(data => {
-        if (data.items?.length)     dbSet(KEYS.ITEMS,     data.items);
-        if (data.movements?.length) dbSet(KEYS.MOVEMENTS, data.movements);
-        if (data.alerts?.length)    dbSet(KEYS.ALERTS,    data.alerts);
-        if (data.goal)              dbSet(KEYS.GOAL,      data.goal);
+        const COND = { OTIMO: "otimo", REPARO: "reparo", DESCARTAR: "inativo" };
+        if (Array.isArray(data.itens) && data.itens.length) {
+          const mapped = data.itens.map(i => ({
+            id:           i.id,
+            nome:         i.product_name || "—",
+            patrimonio:   i.serial_number || "",
+            categoria:    i.category_name || "Outros",
+            condicao:     COND[i.condition_code] || "otimo",
+            total:        i.quantity       ?? 1,
+            disponivel:   i.quantity_available ?? 1,
+            localizacao:  "",
+            responsavel:  "",
+            valor:        i.estimated_value || 0,
+            dataAquisicao: i.created_at ? i.created_at.slice(0, 10) : "",
+          }));
+          dbSet(KEYS.ITEMS, mapped);
+        }
+        if (Array.isArray(data.historico) && data.historico.length) {
+          const movs = data.historico.map(h => ({
+            id:          h.id,
+            nome:        h.product_name || "—",
+            patrimonio:  "",
+            tipo:        "DESCARTE",
+            quantidade:  1,
+            responsavel: "—",
+            created_at:  h.created_at,
+          }));
+          dbSet(KEYS.MOVEMENTS, movs);
+        }
         loadKPIs();
         loadConditionChart();
         loadCategoryChart();

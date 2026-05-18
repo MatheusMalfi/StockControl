@@ -91,7 +91,8 @@ document.addEventListener("sc:ready", function () {
   ];
 
   function seedRequests() {
-    _solApi("GET", "/api/solicitacoes")
+    const _sou = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    _solApi("GET", `/api/solicitacoes${_sou.organization_id ? `?organization_id=${_sou.organization_id}` : ""}`)
       .then(data => {
         const reqs = Array.isArray(data) ? data : data.solicitacoes || [];
         if (reqs.length) { dbSet(KEYS.REQUESTS, reqs); render(); }

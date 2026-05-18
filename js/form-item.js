@@ -144,6 +144,54 @@ document.addEventListener("sc:ready", function () {
   }
   function saveItems(items) { localStorage.setItem("sc_items", JSON.stringify(items)); }
 
+  function _syncToBackend(item, isEdit) {
+    const token = localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+    const user  = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    if (!token || !user.organization_id) return;
+
+    const COND_CODE = { otimo:"OTIMO", bom:"OTIMO", reparo:"REPARO", ruim:"REPARO", inativo:"DESCARTAR" };
+
+    if (isEdit && item._backend_id) {
+      fetch(`/api/items/${item._backend_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          organization_id: user.organization_id,
+          produto:   item.nome,
+          marca:     item.marca     || null,
+          modelo:    item.modelo    || null,
+          descricao: item.descricao || null,
+          status:    COND_CODE[item.condicao] || "OTIMO",
+        }),
+      }).catch(() => {});
+    } else if (!isEdit) {
+      fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          organization_id: user.organization_id,
+          product_name:    item.nome,
+          product_brand:   item.marca      || null,
+          product_model:   item.modelo     || null,
+          serial_number:   item.patrimonio || null,
+          description:     item.descricao  || null,
+          condition_code:  COND_CODE[item.condicao] || "OTIMO",
+          category_name:   item.categoria  || null,
+          created_by:      user.id         || null,
+        }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.item_id) {
+            const all = getItems();
+            const idx = all.findIndex(i => i.id === item.id);
+            if (idx !== -1) { all[idx]._backend_id = data.item_id; saveItems(all); }
+          }
+        })
+        .catch(() => {});
+    }
+  }
+
   // ── Auto-patrimônio ───────────────────────────────────────────────────────
   function genPatrimonio() {
     const year   = new Date().getFullYear();
@@ -353,6 +401,7 @@ document.addEventListener("sc:ready", function () {
           updated_at:  now,
         };
         saveItems(items);
+        _syncToBackend(items[idx], true);
         isDirty = false;
         SC.toastSuccess("Item atualizado com sucesso!");
       } else {
@@ -378,6 +427,7 @@ document.addEventListener("sc:ready", function () {
           updated_at:  now,
         });
         saveItems(items);
+        _syncToBackend(items[items.length - 1], false);
         isDirty = false;
         SC.toastSuccess("Item cadastrado com sucesso!");
       }

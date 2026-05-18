@@ -1,7 +1,8 @@
-const express = require("express");
-const bcrypt  = require("bcrypt");
-const jwt     = require("jsonwebtoken");
-const pool    = require("../db");
+const express    = require("express");
+const bcrypt     = require("bcrypt");
+const jwt        = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+const pool       = require("../db");
 
 const router      = express.Router();
 const JWT_SECRET  = process.env.JWT_SECRET  || "stockcontrol_secret";
@@ -182,9 +183,23 @@ router.post("/recuperar-senha", async (req, res) => {
     const token   = jwt.sign({ id: rows[0].id, purpose: "reset" }, JWT_SECRET, { expiresIn: "1h" });
     const resetUrl = `${process.env.APP_URL || "http://localhost:3000"}/acesso/change-password/change-password.html?token=${token}`;
 
-    // In production wire up an email sender here; for now log the URL
-    console.log(`[recuperar-senha] Reset link for ${email}: ${resetUrl}`);
-    res.json({ sucesso: true, resetUrl });
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const transporter = nodemailer.createTransport({
+        host:   process.env.SMTP_HOST || "smtp.gmail.com",
+        port:   parseInt(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await transporter.sendMail({
+        from:    process.env.SMTP_FROM || process.env.SMTP_USER,
+        to:      email,
+        subject: "Recuperação de senha — StockControl",
+        html:    `<p>Clique no link abaixo para redefinir sua senha (válido por 1 hora):</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+      });
+    } else {
+      console.log(`[recuperar-senha] Reset link for ${email}: ${resetUrl}`);
+    }
+    res.json({ sucesso: true });
   } catch (err) {
     console.error("Erro no /api/recuperar-senha:", err);
     res.status(500).json({ mensagem: "Erro interno no servidor." });

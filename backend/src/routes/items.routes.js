@@ -86,7 +86,25 @@ router.post("/", upload.single("photo"), async (req, res) => {
       created_by,
     } = req.body;
 
-    if (!organization_id || !product_name || !condition_id) {
+    let resolvedConditionId = condition_id;
+    if (!resolvedConditionId && req.body.condition_code) {
+      const [cond] = await pool.query(
+        "SELECT id FROM conditions WHERE code = ? LIMIT 1",
+        [req.body.condition_code],
+      );
+      if (cond.length) resolvedConditionId = cond[0].id;
+    }
+
+    let resolvedCategoryId = category_id;
+    if (!resolvedCategoryId && req.body.category_name) {
+      const [cat] = await pool.query(
+        "SELECT id FROM categories WHERE name = ? LIMIT 1",
+        [req.body.category_name],
+      );
+      if (cat.length) resolvedCategoryId = cat[0].id;
+    }
+
+    if (!organization_id || !product_name || !resolvedConditionId) {
       return res.status(400).json({ message: "Campos obrigatórios ausentes." });
     }
 
@@ -98,7 +116,7 @@ router.post("/", upload.single("photo"), async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
       [
         organization_id,
-        category_id || null,
+        resolvedCategoryId || null,
         brand_id || null,
         model_id || null,
         product_name,
@@ -106,7 +124,7 @@ router.post("/", upload.single("photo"), async (req, res) => {
         product_model || null,
         serial_number || null,
         description || null,
-        condition_id,
+        resolvedConditionId,
         weight_kg || null,
         photo_blob,
         created_by || null,

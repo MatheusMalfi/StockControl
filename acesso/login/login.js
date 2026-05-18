@@ -70,29 +70,31 @@ document.addEventListener("DOMContentLoaded", () => {
         .querySelectorAll(".notification-loading")
         .forEach((n) => n.remove());
 
-      if (!response.ok || !result.success) {
+      if (!response.ok || !result.token) {
         notify.error(result.mensagem || "Falha no login.");
         return;
       }
 
       notify.success("Login realizado com sucesso!");
 
+      localStorage.setItem("sc_token", result.token);
       const userPayload = {
-        email: data.email,
-        user_id: result.user_id,
-        org_type: result.org_type,
-        organization_id: result.organization_id,
-        role: result.role,
-        logged_at: new Date().toISOString(),
+        id:              result.user.id,
+        email:           result.user.email,
+        name:            result.user.name,
+        role:            result.user.role,
+        org_type:        result.user.org_type,
+        organization_id: result.user.organization_id,
+        logged_at:       new Date().toISOString(),
       };
       localStorage.setItem("sc_user", JSON.stringify(userPayload));
 
       let redirectUrl = "/navigation-screens/home/home.html";
 
       // ADMIN pode escolher interface, mas por padrão vai para ONG
-      if (result.role === "ADMIN") {
+      if (result.user.role === "ADMIN") {
         redirectUrl = "/dev-dashboard.html";
-      } else if (result.org_type === "RECYCLER") {
+      } else if (result.user.org_type === "RECYCLER") {
         redirectUrl =
           "/navigation-screens/impact-metais/home-impact-metais/home.html";
       }
