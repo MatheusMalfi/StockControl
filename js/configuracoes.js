@@ -21,11 +21,36 @@ function carregarDados() {
   const { organization_id: _oid } = _getOrgData();
   _cfgApi("GET", `/api/configuracoes${_oid ? "?organization_id=" + _oid : ""}`)
     .then(data => {
-      if (data.usuario)      localStorage.setItem('sc_usuario',     JSON.stringify(data.usuario));
-      if (data.usuarios)     localStorage.setItem('sc_usuarios',    JSON.stringify(data.usuarios));
-      if (data.organizacao)  localStorage.setItem('sc_organizacao', JSON.stringify(data.organizacao));
-      if (data.preferencias) localStorage.setItem('sc_preferencias',JSON.stringify(data.preferencias));
-      if (data.categorias)   localStorage.setItem('sc_categorias',  JSON.stringify(data.categorias));
+      if (data.usuario) localStorage.setItem('sc_usuario', JSON.stringify(data.usuario));
+
+      if (data.usuarios) {
+        localStorage.setItem('sc_usuarios', JSON.stringify(data.usuarios));
+        carregarUsuarios();
+      }
+
+      if (data.organizacao) {
+        // Preserve locally-stored logo and meta — API doesn't return them
+        const prev = carregarDoLocalStorage('sc_organizacao', {});
+        localStorage.setItem('sc_organizacao', JSON.stringify({
+          ...data.organizacao,
+          logo: prev.logo || null,
+          meta: prev.meta || null,
+        }));
+        carregarOrganizacao();
+      }
+
+      if (data.preferencias) {
+        localStorage.setItem('sc_preferencias', JSON.stringify(data.preferencias));
+        const p = data.preferencias;
+        const setS = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+        setS('prefTema',        p.tema        || 'claro');
+        setS('prefIdioma',      p.idioma      || 'pt-BR');
+        setS('prefPaginacao',   p.paginacao   || 20);
+        setS('prefFormatoData', p.formatoData || 'DD/MM/AAAA');
+        aplicarTema(p.tema || 'claro');
+      }
+
+      if (data.categorias) localStorage.setItem('sc_categorias', JSON.stringify(data.categorias));
     })
     .catch(() => {});
 
