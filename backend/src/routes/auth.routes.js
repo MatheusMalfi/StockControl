@@ -144,7 +144,7 @@ router.post("/cadastro", async (req, res) => {
     }
 
     const hash     = await bcrypt.hash(senha, parseInt(process.env.BCRYPT_ROUNDS) || 10);
-    const userRole = orgType === "ADMIN" ? "ADMIN" : "OPERATOR";
+    const userRole = "ADMIN";
 
     const [insUser] = await pool.execute(
       `INSERT INTO users (organization_id, email, password_hash, name, role, is_active)
