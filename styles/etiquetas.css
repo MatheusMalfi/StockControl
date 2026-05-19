@@ -504,3 +504,8 @@ body { margin: 0; font-family: Inter, -apple-system, sans-serif;
   .etiqueta-print.grande .print-pat  { font-size: 9pt; }
   .etiqueta-print.grande .print-info { font-size: 8pt; }
 }
+
+[data-theme="dark"] .item-nome,
+.dark .item-nome {
+  color: #ffffff !important;
+}
