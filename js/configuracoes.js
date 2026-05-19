@@ -978,9 +978,25 @@ function adicionarMarca() {
 }
 
 // ── Localizações ──────────────────────────────────────────────────────────────
+function _syncLocToApi(lista) {
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('PUT', '/api/configuracoes/localizacoes', { organization_id, localizacoes: lista })
+    .catch(() => {});
+}
+
 function carregarLocalizacoes() {
   const lista = carregarDoLocalStorage('sc_localizacoes', MOCK.localizacoes);
   renderListaLocalizacoes(lista);
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/localizacoes?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success) return;
+      salvarNoLocalStorage('sc_localizacoes', res.localizacoes);
+      renderListaLocalizacoes(res.localizacoes);
+    })
+    .catch(() => {});
 }
 
 function renderListaLocalizacoes(locs) {
@@ -1070,6 +1086,7 @@ function salvarLocalizacao() {
     lista.push({ id: gerarId(), nome, tipo, capacidade: cap, descricao: desc, ordem: lista.length });
   }
   salvarNoLocalStorage('sc_localizacoes', lista);
+  _syncLocToApi(lista);
   fecharModal('modalLocalizacao');
   renderListaLocalizacoes(lista);
   registrarLog(id ? 'Localização editada' : 'Localização criada', 'localizacoes', nome, '');
@@ -1084,6 +1101,7 @@ function excluirLocalizacao(id) {
   confirmarAcao('Excluir localização', `Excluir "${loc.nome}"?${warn}`, () => {
     const lista = carregarDoLocalStorage('sc_localizacoes', []).filter(l => l.id !== id);
     salvarNoLocalStorage('sc_localizacoes', lista);
+    _syncLocToApi(lista);
     renderListaLocalizacoes(lista);
     registrarLog('Localização excluída', 'localizacoes', loc.nome, '');
     showToast('Localização excluída.', 'success');

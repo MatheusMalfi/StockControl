@@ -118,6 +118,71 @@ router.put("/preferencias", async (req, res) => {
   }
 });
 
+const CREATE_ORG_LOCS = `
+  CREATE TABLE IF NOT EXISTS org_locations (
+    id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id INT          NOT NULL,
+    loc_key         VARCHAR(64)  NOT NULL,
+    nome            VARCHAR(100) NOT NULL,
+    tipo            VARCHAR(30)  NOT NULL DEFAULT 'outro',
+    descricao       TEXT,
+    capacidade      INT,
+    ordem           INT          NOT NULL DEFAULT 0,
+    INDEX (organization_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`;
+
+async function ensureLocTable() {
+  await pool.query(CREATE_ORG_LOCS);
+}
+
+/* GET /api/configuracoes/localizacoes?organization_id=X */
+router.get("/localizacoes", async (req, res) => {
+  try {
+    await ensureLocTable();
+    const orgId = getOrgId(req);
+    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    const [rows] = await pool.query(
+      "SELECT loc_key AS id, nome, tipo, descricao, capacidade, ordem FROM org_locations WHERE organization_id = ? ORDER BY ordem ASC",
+      [orgId],
+    );
+    res.json({ success: true, localizacoes: rows });
+  } catch (err) {
+    console.error("GET /api/configuracoes/localizacoes:", err);
+    res.status(500).json({ message: "Erro ao buscar localizações." });
+  }
+});
+
+/* PUT /api/configuracoes/localizacoes */
+router.put("/localizacoes", async (req, res) => {
+  try {
+    await ensureLocTable();
+    const orgId = getOrgId(req);
+    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    const { localizacoes = [] } = req.body;
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute("DELETE FROM org_locations WHERE organization_id = ?", [orgId]);
+      for (const l of localizacoes) {
+        await conn.execute(
+          "INSERT INTO org_locations (organization_id, loc_key, nome, tipo, descricao, capacidade, ordem) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [orgId, l.id || l.loc_key || "", l.nome, l.tipo || "outro", l.descricao || null, l.capacidade || null, l.ordem || 0],
+        );
+      }
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("PUT /api/configuracoes/localizacoes:", err);
+    res.status(500).json({ message: "Erro ao salvar localizações." });
+  }
+});
+
 const CREATE_ORG_CATS = `
   CREATE TABLE IF NOT EXISTS org_categories (
     id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
