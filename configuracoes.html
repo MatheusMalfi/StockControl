@@ -656,7 +656,7 @@
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                     <input type="password" id="currentPwd" class="form-control" placeholder="••••••••" style="padding-right:44px;" />
-                    <button type="button" class="password-toggle" data-target="currentPwd" aria-label="Mostrar senha">
+                    <button type="button" class="password-toggle" data-target="currentPwd" aria-label="Mostrar senha" onclick="togglePwdVisibility(event,this)">
                       <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                       </svg>
@@ -669,7 +669,7 @@
                     <label class="form-label required" for="newPwd">Nova senha</label>
                     <div style="position:relative;">
                       <input type="password" id="newPwd" class="form-control" placeholder="Mínimo 8 caracteres" style="padding-right:44px;" />
-                      <button type="button" class="password-toggle" data-target="newPwd" aria-label="Mostrar senha">
+                      <button type="button" class="password-toggle" data-target="newPwd" aria-label="Mostrar senha" onclick="togglePwdVisibility(event,this)">
                         <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                         </svg>
@@ -681,7 +681,7 @@
                     <label class="form-label required" for="confirmPwd">Confirmar nova senha</label>
                     <div style="position:relative;">
                       <input type="password" id="confirmPwd" class="form-control" placeholder="Repita a senha" style="padding-right:44px;" />
-                      <button type="button" class="password-toggle" data-target="confirmPwd" aria-label="Mostrar senha">
+                      <button type="button" class="password-toggle" data-target="confirmPwd" aria-label="Mostrar senha" onclick="togglePwdVisibility(event,this)">
                         <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                         </svg>
@@ -710,7 +710,7 @@
                 </ul>
 
                 <div style="margin-top:var(--space-5); display:flex; justify-content:flex-end;">
-                  <button class="btn btn-primary" id="changePasswordBtn">Alterar Senha</button>
+                  <button class="btn btn-primary" id="changePasswordBtn" onclick="alterarSenha()">Alterar Senha</button>
                 </div>
               </div>
             </div>
