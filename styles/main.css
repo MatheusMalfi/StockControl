@@ -1515,3 +1515,68 @@ html[data-theme="dark"] {
   --color-text-primary: #f1f5f9;
   --color-surface-alt: #334155;
 }
+
+/* ── Dark theme component overrides (covers pages that use hard-coded colors) ── */
+html[data-theme="dark"] body,
+html[data-theme="dark"] .main-wrapper,
+html[data-theme="dark"] .conteudo,
+html[data-theme="dark"] .page-header,
+html[data-theme="dark"] .page-header h1,
+html[data-theme="dark"] .page-header p,
+html[data-theme="dark"] .header,
+html[data-theme="dark"] .header-search input,
+html[data-theme="dark"] .header-actions,
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .sidebar-nav-link,
+html[data-theme="dark"] .sidebar-user-avatar,
+html[data-theme="dark"] .user-chip,
+html[data-theme="dark"] .user-chip-avatar,
+html[data-theme="dark"] .user-chip-name,
+html[data-theme="dark"] .btn-logout,
+html[data-theme="dark"] .painel-lista,
+html[data-theme="dark"] .painel-config,
+html[data-theme="dark"] .rodape-lista,
+html[data-theme="dark"] .item-linha,
+html[data-theme="dark"] .item-linha:hover,
+html[data-theme="dark"] .item-linha.selecionado,
+html[data-theme="dark"] .item-icone,
+html[data-theme="dark"] .notif-drop,
+html[data-theme="dark"] .toast {
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+html[data-theme="dark"] body {
+  background-color: var(--color-bg) !important;
+  color: var(--color-text) !important;
+}
+
+html[data-theme="dark"] .header {
+  border-bottom-color: var(--color-border) !important;
+}
+
+html[data-theme="dark"] .sidebar {
+  background: var(--sidebar-bg) !important;
+}
+
+html[data-theme="dark"] .sidebar-nav-link {
+  color: var(--sidebar-text) !important;
+}
+
+html[data-theme="dark"] .sidebar-nav-link.ativo {
+  background: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-text-active) !important;
+}
+
+html[data-theme="dark"] .header-search input {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+html[data-theme="dark"] .btn-logout {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
