@@ -53,13 +53,16 @@ function initEtiquetas() {
   }, 600);
 }
 
+function _etiqToken() {
+  return localStorage.getItem('sc_token') || sessionStorage.getItem('sc_token');
+}
+
 function carregarItens() {
   const salvo = localStorage.getItem('estoque_itens');
   Estado.itens = salvo ? JSON.parse(salvo) : MOCK_ITENS;
   if (!salvo) localStorage.setItem('estoque_itens', JSON.stringify(MOCK_ITENS));
   Estado.itensFiltrados = [...Estado.itens];
 
-  // Pegar nome da org do usuário logado se disponível
   const user = window.SC?.currentUser;
   if (user) {
     Estado.orgName =
@@ -67,6 +70,30 @@ function carregarItens() {
       user.organization?.name ||
       Estado.orgName;
   }
+
+  const token = _etiqToken();
+  fetch('/api/items', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      const itens = (Array.isArray(data) ? data : data.items || []).map(it => ({
+        id: String(it.id),
+        nome: it.nome,
+        patrimonio: it.patrimonio || '',
+        condicao: it.condicao || 'otimo',
+        qtdTotal: it.total || 0,
+        qtdDisponivel: it.disponivel || 0,
+        categoria: it.categoria || '',
+        numeroSerie: it.numero_serie || it.numeroSerie || '',
+      }));
+      if (itens.length) {
+        localStorage.setItem('estoque_itens', JSON.stringify(itens));
+        Estado.itens = itens;
+        Estado.itensFiltrados = [...itens];
+        renderListaItens(Estado.itens);
+        atualizarBotaoImprimir();
+      }
+    })
+    .catch(() => {});
 }
 
 function carregarPreferencias() {

@@ -4,61 +4,58 @@
 const TIPO_LOCAL_LABEL = { deposito: 'Depósito', sala: 'Sala', armario: 'Armário', externo: 'Externo', outro: 'Outro' };
 const ROLE_LABEL       = { admin: 'Admin', operator: 'Operador', viewer: 'Visualizador' };
 
-// ── Dados mock ────────────────────────────────────────────────────────────────
 const MOCK = {
-  usuario: {
-    id: 'u1', nome: 'Maria Silva', email: 'maria@uscs.edu.br',
-    cargo: 'Administradora', role: 'admin', senha: 'admin123',
-    avatar: null, criadoEm: '2023-08-01',
-  },
-  usuarios: [
-    { id: 'u1', nome: 'Maria Silva',  email: 'maria@uscs.edu.br', cargo: 'Administradora', role: 'admin',    ativo: true,  criadoEm: '2023-08-01' },
-    { id: 'u2', nome: 'João Pereira', email: 'joao@uscs.edu.br',  cargo: 'Operador',       role: 'operator', ativo: true,  criadoEm: '2023-09-15' },
-    { id: 'u3', nome: 'Ana Costa',    email: 'ana@uscs.edu.br',   cargo: 'Visualizadora',  role: 'viewer',   ativo: false, criadoEm: '2024-01-10' },
-  ],
-  categorias: {
-    categorias: [
-      { id: 'cat1', nome: 'Informática',      cor: '#3b82f6', ordem: 0 },
-      { id: 'cat2', nome: 'Móveis',           cor: '#8b5cf6', ordem: 1 },
-      { id: 'cat3', nome: 'Eletrodomésticos', cor: '#10b981', ordem: 2 },
-      { id: 'cat4', nome: 'Eletrônicos',      cor: '#f59e0b', ordem: 3 },
-      { id: 'cat5', nome: 'Vestuário',        cor: '#ef4444', ordem: 4 },
-      { id: 'cat6', nome: 'Ferramentas',      cor: '#6366f1', ordem: 5 },
-    ],
-    marcas: [
-      { id: 'm1', nome: 'Dell' }, { id: 'm2', nome: 'HP' },
-      { id: 'm3', nome: 'Samsung' }, { id: 'm4', nome: 'LG' },
-      { id: 'm5', nome: 'Apple' }, { id: 'm6', nome: 'Lenovo' },
-      { id: 'm7', nome: 'Positivo' },
-    ],
-  },
-  localizacoes: [
-    { id: 'loc1', nome: 'Depósito Principal', tipo: 'deposito', descricao: 'Depósito central',       capacidade: 200, ordem: 0 },
-    { id: 'loc2', nome: 'Sala 1',             tipo: 'sala',     descricao: '',                       capacidade: null, ordem: 1 },
-    { id: 'loc3', nome: 'Sala 2',             tipo: 'sala',     descricao: '',                       capacidade: null, ordem: 2 },
-    { id: 'loc4', nome: 'Sala 3 — Armário B', tipo: 'armario',  descricao: '',                       capacidade: 50,   ordem: 3 },
-    { id: 'loc5', nome: 'Almoxarifado',       tipo: 'deposito', descricao: 'Manutenção e reposição', capacidade: 100,  ordem: 4 },
-  ],
-  organizacao: {
-    nome: 'USCS — Inovação Social', tipo: 'ONG', cnpj: '',
-    email: 'contato@uscs.edu.br', telefone: '(11) 4239-3200',
-    endereco: 'Rua Galvão Bueno, 868, São Paulo — SP',
-    logo: null,
-    meta: { quantidade: 200, inicio: '2024-01-01', fim: '2024-12-31' },
-  },
-  regrasNotif:  { estoqueBaixo: true, descarte: true, doacaoPendente: false, minimo: 5, email: false },
+  usuario:      { id: '', nome: '', email: '', cargo: '', avatar: null },
+  usuarios:     [],
+  organizacao:  { nome: '', email: '', telefone: '', endereco: '', cnpj: '', logo: null, meta: null },
+  regrasNotif:  { estoqueBaixo: true, descarte: true, doacaoPendente: true, email: false, minimo: 5 },
   preferencias: { tema: 'claro', idioma: 'pt-BR', paginacao: 20, formatoData: 'DD/MM/AAAA' },
-  logAcessos: [
-    { id: 'la1', usuario: 'Maria Silva', email: 'maria@uscs.edu.br', ip: '192.168.1.10', dispositivo: 'Chrome / Windows 11',  inicio: '2024-05-01T08:30:00', fim: null,                  atual: true  },
-    { id: 'la2', usuario: 'Maria Silva', email: 'maria@uscs.edu.br', ip: '192.168.1.10', dispositivo: 'Chrome / Windows 11',  inicio: '2024-04-30T09:15:00', fim: '2024-04-30T17:45:00', atual: false },
-    { id: 'la3', usuario: 'Maria Silva', email: 'maria@uscs.edu.br', ip: '177.92.3.55',  dispositivo: 'Safari / iPhone',       inicio: '2024-04-28T20:05:00', fim: '2024-04-28T20:30:00', atual: false },
-  ],
+  categorias:   { categorias: [], marcas: [] },
+  localizacoes: [],
+  logAcessos:   [],
 };
+
 
 // ── Seed / migração ───────────────────────────────────────────────────────────
 function carregarDados() {
+  const { organization_id: _oid } = _getOrgData();
+  _cfgApi("GET", `/api/configuracoes${_oid ? "?organization_id=" + _oid : ""}`)
+    .then(data => {
+      if (data.usuario) localStorage.setItem(getCurrentUserStorageKey(), JSON.stringify(data.usuario));
+
+      if (data.usuarios) {
+        localStorage.setItem('sc_usuarios', JSON.stringify(data.usuarios));
+        carregarUsuarios();
+      }
+
+      if (data.organizacao) {
+        // Preserve locally-stored logo and meta — API doesn't return them
+        const prev = carregarDoLocalStorage('sc_organizacao', {});
+        localStorage.setItem('sc_organizacao', JSON.stringify({
+          ...data.organizacao,
+          logo: prev.logo || null,
+          meta: prev.meta || null,
+        }));
+        carregarOrganizacao();
+      }
+
+      if (data.preferencias) {
+        localStorage.setItem('sc_preferencias', JSON.stringify(data.preferencias));
+        const p = data.preferencias;
+        const setS = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+        setS('prefTema',        p.tema        || 'claro');
+        setS('prefIdioma',      p.idioma      || 'pt-BR');
+        setS('prefPaginacao',   p.paginacao   || 20);
+        setS('prefFormatoData', p.formatoData || 'DD/MM/AAAA');
+        aplicarTema(p.tema || 'claro');
+      }
+
+      if (data.categorias) localStorage.setItem('sc_categorias', JSON.stringify(data.categorias));
+    })
+    .catch(() => {});
+
   const seed = (key, val) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(val)); };
-  seed('sc_usuario',      MOCK.usuario);
+  seed(getCurrentUserStorageKey(), MOCK.usuario);
   seed('sc_usuarios',     MOCK.usuarios);
   seed('sc_organizacao',  MOCK.organizacao);
   seed('sc_notif_rules',  MOCK.regrasNotif);
@@ -198,6 +195,52 @@ function carregarDoLocalStorage(chave, padrao) {
   catch { return padrao; }
 }
 
+function getCurrentUserStorageKey() {
+  const user = _getOrgData();
+  const id = user?.id || user?.user_id || user?.userId || '';
+  return id ? `sc_usuario_${id}` : 'sc_usuario';
+}
+
+function salvarUsuarioLocal(dados) {
+  salvarNoLocalStorage(getCurrentUserStorageKey(), dados);
+}
+
+function carregarUsuarioLocal(padrao) {
+  return carregarDoLocalStorage(getCurrentUserStorageKey(), padrao);
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+function _cfgToken() {
+  return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+}
+
+function _getOrgData() {
+  try {
+    const sessionRaw = sessionStorage.getItem("sc_user");
+    if (sessionRaw) return JSON.parse(sessionRaw) || {};
+    const localRaw = localStorage.getItem("sc_user");
+    return localRaw ? JSON.parse(localRaw) : {};
+  } catch { return {}; }
+}
+function _cfgApi(method, url, body) {
+  const token = _cfgToken();
+  return fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    ...(body != null ? { body: JSON.stringify(body) } : {}),
+  }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+}
+
+function _syncCatMarcasToApi(data) {
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('PUT', '/api/configuracoes/categorias', {
+    organization_id,
+    categorias: data.categorias || [],
+    marcas:     data.marcas     || [],
+  }).catch(() => {});
+}
+
 function contarItensPorCategoria(catNome) {
   const itens = carregarDoLocalStorage('estoque_itens', []);
   return itens.filter(i => i.categoria === catNome).length;
@@ -209,9 +252,10 @@ function contarItensPorLocalizacao(locNome) {
 }
 
 function registrarLog(acao, modulo, item, detalhes) {
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  const currentUser = _getOrgData();
+  const usuario = currentUser.name || currentUser.nome || '?';
   const log = carregarDoLocalStorage('sc_audit_log', []);
-  log.unshift({ acao, modulo, item, detalhes, usuario: u.nome || '?', ts: new Date().toISOString() });
+  log.unshift({ acao, modulo, item, detalhes, usuario, ts: new Date().toISOString() });
   salvarNoLocalStorage('sc_audit_log', log.slice(0, 200));
 }
 
@@ -274,26 +318,6 @@ function initConfiguracoes() {
   const hash = location.hash.slice(1);
   activar(hash || 'perfil', false);
 
-  // Wire generic confirm btn
-  document.getElementById('btnConfirmarSim')?.addEventListener('click', () => {
-    fecharModal('modalConfirmar');
-    if (_confirmarCallback) { _confirmarCallback(); _confirmarCallback = null; }
-  });
-
-  // Wire password toggles (all pages, including modal)
-  document.querySelectorAll('.password-toggle[data-target]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const inp = document.getElementById(btn.dataset.target);
-      if (!inp) return;
-      const hidden = inp.type === 'password';
-      inp.type = hidden ? 'text' : 'password';
-      const svg = btn.querySelector('svg');
-      if (svg) svg.innerHTML = hidden
-        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
-        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-    });
-  });
-
   // Wire modal senha strength
   document.getElementById('modalUsuarioSenha')?.addEventListener('input', function () {
     const { nivel, pct, cor } = calcularForcaSenha(this.value);
@@ -333,21 +357,43 @@ function navegarSecao(secao) {
 
 // ── Perfil ────────────────────────────────────────────────────────────────────
 let _perfilSnapshot = {};
+let _pendingAvatarFile = null;
+let _pendingAvatarDataUrl = null;
+let _pendingAvatarRemoved = false;
 
 function carregarPerfil() {
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  // Real session (set by login) lives in sc_user with field "name"; sc_usuario is user-specific local profile data
+  const session = _getOrgData();
+  const u       = carregarUsuarioLocal({});
+  const nome    = session.name  || u.nome  || '';
+  const email   = session.email || u.email || '';
+
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
-  set('profileName',  u.nome);
-  set('profileEmail', u.email);
-  set('profileRole',  u.cargo);
+  set('profileName',  nome);
+  set('profileEmail', email);
+  set('profileRole',  u.cargo || '');
 
   const initialsEl = document.getElementById('profileAvatarInitials');
   const imgEl      = document.getElementById('profileAvatarImg');
-  if (initialsEl) initialsEl.textContent = gerarIniciais(u.nome);
-  if (u.avatar && imgEl) { imgEl.src = u.avatar; imgEl.classList.add('is-visible'); if (initialsEl) initialsEl.style.display = 'none'; }
+  if (initialsEl) initialsEl.textContent = gerarIniciais(nome);
+  if (u.avatar && imgEl) {
+    imgEl.src = u.avatar;
+    imgEl.classList.add('is-visible');
+    if (initialsEl) initialsEl.style.display = 'none';
+  } else {
+    if (imgEl) {
+      imgEl.src = '';
+      imgEl.classList.remove('is-visible');
+    }
+    if (initialsEl) initialsEl.style.display = '';
+  }
 
-  _perfilSnapshot = { nome: u.nome || '', email: u.email || '' };
+  _perfilSnapshot = { nome, email, avatar: u.avatar || null };
+  _pendingAvatarFile = null;
+  _pendingAvatarDataUrl = null;
+  _pendingAvatarRemoved = false;
   detectarMudancasPerfil();
+  atualizarAvatarHeader();
 
   // Load display prefs
   const prefs = carregarDoLocalStorage('sc_preferencias', MOCK.preferencias);
@@ -358,7 +404,7 @@ function carregarPerfil() {
   setS('prefFormatoData', prefs.formatoData || 'DD/MM/AAAA');
 }
 
-function salvarPerfil() {
+async function salvarPerfil() {
   const nomeEl  = document.getElementById('profileName');
   const emailEl = document.getElementById('profileEmail');
   const nome    = nomeEl?.value.trim();
@@ -366,34 +412,67 @@ function salvarPerfil() {
   if (!nome)            { showToast('Nome é obrigatório.', 'error'); return; }
   if (!validarEmail(email || '')) { showToast('E-mail inválido.', 'error'); return; }
 
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  const u = carregarUsuarioLocal({});
   u.nome  = nome;
   u.email = email;
-  salvarNoLocalStorage('sc_usuario', u);
+
+  if (_pendingAvatarRemoved) {
+    u.avatar = null;
+  } else if (_pendingAvatarDataUrl) {
+    u.avatar = _pendingAvatarDataUrl;
+  }
+
+  salvarUsuarioLocal(u);
+  _pendingAvatarFile = null;
+  _pendingAvatarDataUrl = null;
+  _pendingAvatarRemoved = false;
+
+  // Keep sc_user (real session) in sync so the header name updates immediately
+  ['localStorage', 'sessionStorage'].forEach(store => {
+    try {
+      const raw = window[store].getItem('sc_user');
+      if (raw) { const s = JSON.parse(raw); s.name = nome; window[store].setItem('sc_user', JSON.stringify(s)); }
+    } catch {}
+  });
+
+  const { id: _uid, organization_id: _poid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/perfil", { nome, email, user_id: _uid, organization_id: _poid }).catch(() => {});
   registrarLog('Perfil atualizado', 'perfil', nome, '');
   atualizarAvatarHeader();
-  _perfilSnapshot = { nome, email };
+  _perfilSnapshot = { nome, email, avatar: u.avatar || null };
   detectarMudancasPerfil();
   showToast('Perfil atualizado!', 'success');
 }
 
 function uploadFotoPerfil(file) {
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('Selecione uma imagem.', 'error'); return; }
-  if (file.size > 2 * 1024 * 1024)    { showToast('Imagem deve ter menos de 2 MB.', 'error'); return; }
-  const reader = new FileReader();
-  reader.onload = e => {
-    const imgEl      = document.getElementById('profileAvatarImg');
-    const initialsEl = document.getElementById('profileAvatarInitials');
-    if (imgEl) { imgEl.src = e.target.result; imgEl.classList.add('is-visible'); }
-    if (initialsEl) initialsEl.style.display = 'none';
-    const u = carregarDoLocalStorage('sc_usuario', {});
-    u.avatar = e.target.result;
-    salvarNoLocalStorage('sc_usuario', u);
-    atualizarAvatarHeader();
-    showToast('Foto atualizada!', 'success');
-  };
-  reader.readAsDataURL(file);
+  if (!file) return Promise.resolve();
+  if (!file.type.startsWith('image/')) { showToast('Selecione uma imagem.', 'error'); return Promise.reject(); }
+  if (file.size > 2 * 1024 * 1024)    { showToast('Imagem deve ter menos de 2 MB.', 'error'); return Promise.reject(); }
+  _pendingAvatarFile = file;
+  _pendingAvatarRemoved = false;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const imgEl      = document.getElementById('profileAvatarImg');
+      const initialsEl = document.getElementById('profileAvatarInitials');
+      const dataUrl = e.target.result;
+      _pendingAvatarDataUrl = dataUrl;
+      if (imgEl) {
+        imgEl.src = dataUrl;
+        imgEl.classList.add('is-visible');
+      }
+      if (initialsEl) initialsEl.style.display = 'none';
+      atualizarAvatarHeader();
+      detectarMudancasPerfil();
+      showToast('Foto carregada para salvar.', 'success');
+      resolve();
+    };
+    reader.onerror = () => {
+      showToast('Erro ao carregar a imagem.', 'error');
+      reject();
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function removerFotoPerfil() {
@@ -404,21 +483,70 @@ function removerFotoPerfil() {
     if (imgEl)      { imgEl.src = ''; imgEl.classList.remove('is-visible'); }
     if (initialsEl) initialsEl.style.display = '';
     if (inp)        inp.value = '';
-    const u = carregarDoLocalStorage('sc_usuario', {});
-    u.avatar = null;
-    salvarNoLocalStorage('sc_usuario', u);
+    _pendingAvatarFile = null;
+    _pendingAvatarDataUrl = null;
+    _pendingAvatarRemoved = true;
+    detectarMudancasPerfil();
     atualizarAvatarHeader();
-    showToast('Foto removida.', 'info');
+    showToast('Foto removida. Clique em salvar para confirmar.', 'info');
   });
 }
 
 function atualizarAvatarHeader() {
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  const u = carregarUsuarioLocal({});
   const iniciais = gerarIniciais(u.nome);
+  
+  // Update sidebar avatar
   const siEl = document.getElementById('sidebarInitials');
+  const sidebarAvatar = siEl?.parentElement;
+  if (sidebarAvatar) {
+    if (u.avatar) {
+      // Remove text, add/update image
+      siEl.style.display = 'none';
+      let img = sidebarAvatar.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = 'inherit';
+        sidebarAvatar.appendChild(img);
+      }
+      img.src = u.avatar;
+    } else {
+      // Show initials, remove image
+      if (siEl) {
+        siEl.textContent = iniciais;
+        siEl.style.display = '';
+      }
+      const img = sidebarAvatar.querySelector('img');
+      if (img) img.remove();
+    }
+  }
+  
+  // Update header avatar
   const haEl = document.getElementById('headerAvatar');
-  if (siEl) siEl.textContent = iniciais;
-  if (haEl) haEl.textContent = iniciais;
+  if (haEl) {
+    if (u.avatar) {
+      // Remove text, add/update image
+      haEl.textContent = '';
+      let img = haEl.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = 'inherit';
+        haEl.appendChild(img);
+      }
+      img.src = u.avatar;
+    } else {
+      // Show initials, remove image
+      haEl.textContent = iniciais;
+      const img = haEl.querySelector('img');
+      if (img) img.remove();
+    }
+  }
 }
 
 function detectarMudancasPerfil() {
@@ -426,26 +554,17 @@ function detectarMudancasPerfil() {
   const emailEl = document.getElementById('profileEmail');
   const btn     = document.getElementById('saveProfileBtn');
   if (!btn) return;
-  const mudou = (nomeEl?.value.trim() !== _perfilSnapshot.nome) ||
-                (emailEl?.value.trim() !== _perfilSnapshot.email);
+  const nomeMudou  = nomeEl?.value.trim() !== _perfilSnapshot.nome;
+  const emailMudou = emailEl?.value.trim() !== _perfilSnapshot.email;
+  const currentAvatar = _pendingAvatarRemoved ? null : (_pendingAvatarDataUrl || carregarUsuarioLocal({}).avatar || null);
+  const avatarMudou = currentAvatar !== _perfilSnapshot.avatar;
+  const mudou = nomeMudou || emailMudou || avatarMudou;
   btn.disabled = !mudou;
-  if (!nomeEl._profileWired) {
-    nomeEl._profileWired  = true;
-    nomeEl.addEventListener('input',  detectarMudancasPerfil);
-    emailEl.addEventListener('input', detectarMudancasPerfil);
+  if (nomeEl && !nomeEl._profileWired) {
+    nomeEl._profileWired = true;
+    nomeEl.addEventListener('input', detectarMudancasPerfil);
+    emailEl?.addEventListener('input', detectarMudancasPerfil);
   }
-}
-
-function salvarPreferenciasExibicao() {
-  const prefs = {
-    tema:        document.getElementById('prefTema')?.value        || 'claro',
-    idioma:      document.getElementById('prefIdioma')?.value      || 'pt-BR',
-    paginacao:   parseInt(document.getElementById('prefPaginacao')?.value) || 20,
-    formatoData: document.getElementById('prefFormatoData')?.value || 'DD/MM/AAAA',
-  };
-  salvarNoLocalStorage('sc_preferencias', prefs);
-  aplicarTema(prefs.tema);
-  showToast('Preferências salvas!', 'success');
 }
 
 function aplicarTema(tema) {
@@ -457,6 +576,25 @@ function aplicarTema(tema) {
   } else {
     html.setAttribute('data-theme', 'light');
   }
+}
+
+function salvarPreferenciasExibicao() {
+  const prefs = {
+    tema:        document.getElementById('prefTema')?.value        || 'claro',
+    idioma:      document.getElementById('prefIdioma')?.value      || 'pt-BR',
+    paginacao:   parseInt(document.getElementById('prefPaginacao')?.value) || 20,
+    formatoData: document.getElementById('prefFormatoData')?.value || 'DD/MM/AAAA',
+  };
+  salvarNoLocalStorage('sc_preferencias', prefs);
+  const { organization_id: _preoid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/preferencias", { ...prefs, organization_id: _preoid }).catch(() => {});
+  
+  if (typeof SC !== 'undefined' && SC.aplicarTema) {
+    SC.aplicarTema(prefs.tema);
+  } else {
+    aplicarTema(prefs.tema);
+  }
+  showToast('Preferências salvas!', 'success');
 }
 
 // ── Organização ───────────────────────────────────────────────────────────────
@@ -512,6 +650,8 @@ function salvarOrganizacao() {
   org.endereco  = document.getElementById('orgAddress')?.value.trim();
   org.cnpj      = cnpjRaw;
   salvarNoLocalStorage('sc_organizacao', org);
+  const { organization_id: _ooid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/organizacao", { ...org, organization_id: _ooid }).catch(() => {});
   registrarLog('Organização atualizada', 'organizacao', org.nome, '');
   showToast('Dados da organização salvos!', 'success');
 }
@@ -553,14 +693,25 @@ function removerLogoOrganizacao() {
 
 // ── Usuários ──────────────────────────────────────────────────────────────────
 function carregarUsuarios() {
-  const lista = carregarDoLocalStorage('sc_usuarios', []);
-  renderTabelaUsuarios(lista);
+  // Render cached immediately so the "Carregando…" placeholder is always replaced
+  renderTabelaUsuarios(carregarDoLocalStorage('sc_usuarios', []));
+
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi("GET", `/api/usuarios?organization_id=${organization_id}`)
+    .then(data => {
+      if (Array.isArray(data.usuarios)) {
+        salvarNoLocalStorage('sc_usuarios', data.usuarios);
+        renderTabelaUsuarios(data.usuarios);
+      }
+    })
+    .catch(() => {});
 }
 
 function renderTabelaUsuarios(lista) {
   const tbody = document.getElementById('usersBody');
   if (!tbody) return;
-  if (!lista.length) {
+  if (!lista || !lista.length) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:var(--space-6);color:var(--color-text-muted);">Nenhum usuário cadastrado.</td></tr>`;
     return;
   }
@@ -675,8 +826,12 @@ function salvarUsuario() {
     if (idx !== -1) {
       lista[idx] = { ...lista[idx], nome, email, cargo, role, ...(senha ? { senha } : {}) };
     }
+    _cfgApi("PUT", `/api/usuarios/${id}`, { nome, email, cargo, role, ...(senha ? { senha } : {}) }).catch(() => {});
   } else {
-    lista.push({ id: gerarId(), nome, email, cargo, role, senha, ativo: true, criadoEm: new Date().toISOString().slice(0, 10) });
+    const novoId = gerarId();
+    lista.push({ id: novoId, nome, email, cargo, role, senha, ativo: true, criadoEm: new Date().toISOString().slice(0, 10) });
+    const { organization_id: _uoid } = _getOrgData();
+    _cfgApi("POST", "/api/usuarios", { nome, email, cargo, role, senha, organization_id: _uoid }).catch(() => {});
   }
   salvarNoLocalStorage('sc_usuarios', lista);
   fecharModal('modalUsuario');
@@ -696,7 +851,7 @@ function toggleStatusUsuario(id) {
 }
 
 function excluirUsuario(id) {
-  const atual = carregarDoLocalStorage('sc_usuario', {});
+  const atual = carregarUsuarioLocal({});
   if (id === atual.id) { showToast('Você não pode excluir sua própria conta aqui.', 'error'); return; }
   const u = carregarDoLocalStorage('sc_usuarios', []).find(x => x.id === id);
   confirmarAcao('Excluir usuário', `Excluir ${u?.nome || 'este usuário'}? Esta ação não pode ser desfeita.`, () => {
@@ -722,6 +877,18 @@ function gerarESenha() {
 function carregarCategorias() {
   const data = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
   renderListaCategorias(data.categorias || []);
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/categorias?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success) return;
+      const stored = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
+      stored.categorias = res.categorias;
+      stored.marcas     = res.marcas;
+      salvarNoLocalStorage('sc_categorias', stored);
+      renderListaCategorias(res.categorias);
+    })
+    .catch(() => {});
 }
 
 function renderListaCategorias(cats) {
@@ -797,6 +964,7 @@ function salvarCategoria() {
   }
   data.categorias = cats;
   salvarNoLocalStorage('sc_categorias', data);
+  _syncCatMarcasToApi(data);
   fecharModal('modalCategoria');
   renderListaCategorias(cats);
   registrarLog(id ? 'Categoria editada' : 'Categoria criada', 'categorias', nome, '');
@@ -812,6 +980,7 @@ function excluirCategoria(id) {
   confirmarAcao('Excluir categoria', `Excluir "${cat.nome}"?${warn}`, () => {
     data.categorias = (data.categorias || []).filter(c => c.id !== id).map((c, i) => ({ ...c, ordem: i }));
     salvarNoLocalStorage('sc_categorias', data);
+    _syncCatMarcasToApi(data);
     renderListaCategorias(data.categorias);
     registrarLog('Categoria excluída', 'categorias', cat.nome, '');
     showToast('Categoria excluída.', 'success');
@@ -856,14 +1025,26 @@ function initDragDropCategorias() {
       return cat ? { ...cat, ordem: i } : null;
     }).filter(Boolean);
     salvarNoLocalStorage('sc_categorias', data);
+    _syncCatMarcasToApi(data);
   });
 }
 
 // ── Marcas ────────────────────────────────────────────────────────────────────
 function carregarMarcas() {
   const data   = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
-  const marcas = data.marcas || [];
-  renderListaMarcas(marcas);
+  renderListaMarcas(data.marcas || []);
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/categorias?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success) return;
+      const stored = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
+      stored.categorias = res.categorias;
+      stored.marcas     = res.marcas;
+      salvarNoLocalStorage('sc_categorias', stored);
+      renderListaMarcas(res.marcas);
+    })
+    .catch(() => {});
 }
 
 function renderListaMarcas(marcas) {
@@ -882,6 +1063,7 @@ function renderListaMarcas(marcas) {
       const d = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
       d.marcas.splice(parseInt(btn.dataset.marcaIdx), 1);
       salvarNoLocalStorage('sc_categorias', d);
+      _syncCatMarcasToApi(d);
       renderListaMarcas(d.marcas);
     });
   });
@@ -896,14 +1078,31 @@ function adicionarMarca() {
   if (data.marcas.some(m => (m.nome || m) === val)) { showToast('Marca já existe.', 'warning'); return; }
   data.marcas.push({ id: gerarId(), nome: val });
   salvarNoLocalStorage('sc_categorias', data);
+  _syncCatMarcasToApi(data);
   if (inp) inp.value = '';
   renderListaMarcas(data.marcas);
 }
 
 // ── Localizações ──────────────────────────────────────────────────────────────
+function _syncLocToApi(lista) {
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('PUT', '/api/configuracoes/localizacoes', { organization_id, localizacoes: lista })
+    .catch(() => {});
+}
+
 function carregarLocalizacoes() {
   const lista = carregarDoLocalStorage('sc_localizacoes', MOCK.localizacoes);
   renderListaLocalizacoes(lista);
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/localizacoes?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success) return;
+      salvarNoLocalStorage('sc_localizacoes', res.localizacoes);
+      renderListaLocalizacoes(res.localizacoes);
+    })
+    .catch(() => {});
 }
 
 function renderListaLocalizacoes(locs) {
@@ -993,6 +1192,7 @@ function salvarLocalizacao() {
     lista.push({ id: gerarId(), nome, tipo, capacidade: cap, descricao: desc, ordem: lista.length });
   }
   salvarNoLocalStorage('sc_localizacoes', lista);
+  _syncLocToApi(lista);
   fecharModal('modalLocalizacao');
   renderListaLocalizacoes(lista);
   registrarLog(id ? 'Localização editada' : 'Localização criada', 'localizacoes', nome, '');
@@ -1007,6 +1207,7 @@ function excluirLocalizacao(id) {
   confirmarAcao('Excluir localização', `Excluir "${loc.nome}"?${warn}`, () => {
     const lista = carregarDoLocalStorage('sc_localizacoes', []).filter(l => l.id !== id);
     salvarNoLocalStorage('sc_localizacoes', lista);
+    _syncLocToApi(lista);
     renderListaLocalizacoes(lista);
     registrarLog('Localização excluída', 'localizacoes', loc.nome, '');
     showToast('Localização excluída.', 'success');
@@ -1014,8 +1215,7 @@ function excluirLocalizacao(id) {
 }
 
 // ── Notificações ──────────────────────────────────────────────────────────────
-function carregarPreferenciasNotificacao() {
-  const r = carregarDoLocalStorage('sc_notif_rules', MOCK.regrasNotif);
+function _aplicarRegrasNotif(r) {
   const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = Boolean(val); };
   setChk('notifLowStock',  r.estoqueBaixo);
   setChk('notifDiscard',   r.descarte);
@@ -1024,6 +1224,19 @@ function carregarPreferenciasNotificacao() {
   const thEl = document.getElementById('lowStockThreshold');
   if (thEl) thEl.value = r.minimo ?? 5;
   toggleRegra('estoqueBaixo', r.estoqueBaixo);
+}
+
+function carregarPreferenciasNotificacao() {
+  _aplicarRegrasNotif(carregarDoLocalStorage('sc_notif_rules', MOCK.regrasNotif));
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/notificacoes?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success || !res.regras) return;
+      salvarNoLocalStorage('sc_notif_rules', res.regras);
+      _aplicarRegrasNotif(res.regras);
+    })
+    .catch(() => {});
 }
 
 function salvarPreferenciasNotificacao() {
@@ -1035,6 +1248,8 @@ function salvarPreferenciasNotificacao() {
     minimo:         parseInt(document.getElementById('lowStockThreshold')?.value) || 5,
   };
   salvarNoLocalStorage('sc_notif_rules', regras);
+  const { organization_id: _noid } = _getOrgData();
+  _cfgApi("PUT", "/api/configuracoes/notificacoes", { ...regras, organization_id: _noid }).catch(() => {});
   showToast('Preferências salvas!', 'success');
 }
 
@@ -1066,44 +1281,84 @@ function alterarSenha() {
   const atualEl    = document.getElementById('currentPwd');
   const novaEl     = document.getElementById('newPwd');
   const confirmaEl = document.getElementById('confirmPwd');
-  const atual      = atualEl?.value  || '';
-  const nova       = novaEl?.value   || '';
+  const atual      = atualEl?.value    || '';
+  const nova       = novaEl?.value     || '';
   const confirma   = confirmaEl?.value || '';
 
   const hideErr = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
-  const showErr = id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
+  const showErr = (id, msg) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (msg) el.textContent = msg;
+    el.style.display = 'block';
+  };
   hideErr('errorCurrentPwd'); hideErr('errorNewPwd'); hideErr('errorConfirmPwd');
 
-  const usuario = carregarDoLocalStorage('sc_usuario', {});
-  let ok = true;
-  if (!usuario || atual !== usuario.senha) { showErr('errorCurrentPwd'); ok = false; }
-  if (nova.length < 8)                     { showErr('errorNewPwd');     ok = false; }
-  if (nova !== confirma)                   { showErr('errorConfirmPwd'); ok = false; }
-  if (!ok) return;
+  if (!atual) { showErr('errorCurrentPwd', 'Senha atual é obrigatória.'); return; }
 
-  usuario.senha = nova;
-  salvarNoLocalStorage('sc_usuario', usuario);
-  registrarLog('Senha alterada', 'seguranca', usuario.nome, '');
-  if (atualEl)    atualEl.value    = '';
-  if (novaEl)     novaEl.value     = '';
-  if (confirmaEl) confirmaEl.value = '';
-  const barEl   = document.getElementById('pwdStrengthBar');
-  const labelEl = document.getElementById('pwdStrengthLabel');
-  if (barEl)   { barEl.style.width = '0%'; barEl.style.background = ''; }
-  if (labelEl) { labelEl.textContent = '—'; labelEl.style.color = ''; }
-  renderChecklistSenha('');
-  showToast('Senha alterada com sucesso!', 'success');
+  const v = validarSenha(nova);
+  if (!v.len || !v.upper || !v.number || !v.special) {
+    showErr('errorNewPwd', 'A senha deve ter 8+ caracteres, letra maiúscula, número e caractere especial.');
+    return;
+  }
+  if (nova !== confirma) { showErr('errorConfirmPwd', 'As senhas não coincidem.'); return; }
+
+  const token = _cfgToken();
+  fetch('/api/change-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ senhaAtual: atual, novaSenha: nova }),
+  })
+    .then(async r => { const d = await r.json(); if (!r.ok) throw d; return d; })
+    .then(() => {
+      registrarLog('Senha alterada', 'seguranca', carregarUsuarioLocal({}).nome || '', '');
+      if (atualEl)    atualEl.value    = '';
+      if (novaEl)     novaEl.value     = '';
+      if (confirmaEl) confirmaEl.value = '';
+      const barEl   = document.getElementById('pwdStrengthBar');
+      const labelEl = document.getElementById('pwdStrengthLabel');
+      if (barEl)   { barEl.style.width = '0%'; barEl.style.background = ''; }
+      if (labelEl) { labelEl.textContent = '—'; labelEl.style.color = ''; }
+      renderChecklistSenha('');
+      showToast('Senha alterada com sucesso!', 'success');
+    })
+    .catch(err => {
+      const msg = (err?.mensagem || '').toLowerCase();
+      if (msg.includes('atual') || msg.includes('incorreta')) {
+        showErr('errorCurrentPwd', 'Senha atual incorreta.');
+      } else if (msg) {
+        showToast(err.mensagem, 'error');
+      } else {
+        showToast('Erro ao alterar senha. Tente novamente.', 'error');
+      }
+    });
 }
 
 function renderChecklistSenha(senha) {
   const reqs = document.getElementById('pwdRequirements');
   if (!reqs) return;
   const checks = validarSenha(senha);
+  const typing = senha.length > 0;
   reqs.querySelectorAll('li[data-req]').forEach(li => {
     const ok = checks[li.dataset.req] || false;
-    li.style.color  = ok ? '#22c55e' : 'var(--color-text-muted)';
-    li.textContent  = (ok ? '✓ ' : '✗ ') + li.dataset.text;
+    li.style.color = ok ? '#22c55e' : (typing ? '#ef4444' : 'var(--color-text-muted)');
+    li.textContent = (ok ? '✓ ' : '✗ ') + li.dataset.text;
   });
+}
+
+function togglePwdVisibility(e, btn) {
+  e.stopPropagation();
+  const inp = document.getElementById(btn.dataset.target);
+  if (!inp) return;
+  const hidden = inp.type === 'password';
+  inp.type = hidden ? 'text' : 'password';
+  const svg = btn.querySelector('svg');
+  if (svg) svg.innerHTML = hidden
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 }
 
 function renderBarraForca(senha) {
@@ -1126,7 +1381,8 @@ function carregarLogAcessos() {
 function renderLogAcessos(limite) {
   const cont = document.getElementById('logAcessosLista');
   if (!cont) return;
-  const lista = carregarDoLocalStorage('log_acessos', []);
+  const raw   = carregarDoLocalStorage('log_acessos', []);
+  const lista = Array.isArray(raw) ? raw : [];
   const itens = lista.slice(0, limite);
   if (!itens.length) { cont.innerHTML = '<p style="color:var(--color-text-muted);font-size:0.875rem;">Nenhum acesso registrado.</p>'; return; }
   const fmt = iso => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
@@ -1166,6 +1422,23 @@ function exportarTodosDados() {
   showToast('Backup exportado com sucesso!', 'success');
 }
 
+function confirmarSimClick() {
+  fecharModal('modalConfirmar');
+  if (_confirmarCallback) { _confirmarCallback(); _confirmarCallback = null; }
+}
+
+function encerrarTodasSessoes() {
+  confirmarAcao('Encerrar sessões', 'Isso encerrará todas as sessões ativas. Continuar?', () => {
+    const raw = carregarDoLocalStorage('log_acessos', []);
+    const log = Array.isArray(raw) ? raw : [];
+    log.forEach(e => { if (e.atual) { e.atual = false; e.fim = new Date().toISOString(); } });
+    salvarNoLocalStorage('log_acessos', log);
+    registrarLog('Sessões encerradas', 'seguranca', '', '');
+    showToast('Todas as sessões foram encerradas.', 'success');
+    setTimeout(() => { window.location.href = '/acesso/login/login.html'; }, 1300);
+  });
+}
+
 function limparTodosDados() {
   confirmarAcao('Limpar todos os dados',
     'Esta ação remove TODOS os dados do sistema e não pode ser desfeita. Continuar?',
@@ -1174,35 +1447,31 @@ function limparTodosDados() {
       if (digitado !== 'CONFIRMAR') { showToast('Operação cancelada.', 'info'); return; }
       localStorage.clear();
       showToast('Dados removidos. Redirecionando…', 'success');
-      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+      setTimeout(() => { window.location.href = '/acesso/login/login.html'; }, 1500);
     });
 }
 
+function confirmarExcluirConta() {
+  const pw = document.getElementById('deleteConfirmPwd')?.value || '';
+  if (!pw) { showToast('Digite sua senha para confirmar.', 'error'); return; }
+  const { email } = _getOrgData();
+  if (!email) { showToast('Sessão inválida. Faça login novamente.', 'error'); return; }
+  fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, senha: pw }),
+  })
+    .then(r => { if (!r.ok) throw new Error('wrong'); return r.json(); })
+    .then(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/acesso/login/login.html';
+    })
+    .catch(() => showToast('Senha incorreta.', 'error'));
+}
+
 function initDangerZone() {
-  document.getElementById('logoutAllBtn')?.addEventListener('click', () => {
-    confirmarAcao('Encerrar sessões', 'Isso encerrará todas as sessões ativas. Continuar?', () => {
-      const log = carregarDoLocalStorage('log_acessos', []);
-      log.forEach(e => { if (e.atual) { e.atual = false; e.fim = new Date().toISOString(); } });
-      salvarNoLocalStorage('log_acessos', log);
-      registrarLog('Sessões encerradas', 'seguranca', '', '');
-      showToast('Todas as sessões foram encerradas.', 'success');
-      setTimeout(() => { window.location.href = 'login.html'; }, 1300);
-    });
-  });
-
   document.getElementById('btnExportarDados')?.addEventListener('click', exportarTodosDados);
-  document.getElementById('btnLimparDados')?.addEventListener('click', limparTodosDados);
-
-  document.getElementById('deleteAccountBtn')?.addEventListener('click', () => abrirModal('deleteAccountModal'));
-
-  document.getElementById('confirmDeleteAccountBtn')?.addEventListener('click', () => {
-    const pw      = document.getElementById('deleteConfirmPwd')?.value || '';
-    const usuario = carregarDoLocalStorage('sc_usuario', {});
-    if (!pw || pw !== usuario.senha) { showToast('Senha incorreta.', 'error'); return; }
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.href = 'login.html';
-  });
 }
 
 // ── Event wiring helpers ──────────────────────────────────────────────────────
@@ -1249,6 +1518,20 @@ function wireCategoriasEvents() {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Password toggle — event delegation so it works regardless of init order
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.password-toggle[data-target]');
+    if (!btn) return;
+    const inp = document.getElementById(btn.dataset.target);
+    if (!inp) return;
+    const hidden = inp.type === 'password';
+    inp.type = hidden ? 'text' : 'password';
+    const svg = btn.querySelector('svg');
+    if (svg) svg.innerHTML = hidden
+      ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  });
+
   carregarDados();
   wireProfileEvents();
   wireOrgEvents();

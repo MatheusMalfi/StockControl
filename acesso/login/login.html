@@ -1,49 +1,291 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login</title>
-    <link rel="stylesheet" href="login.css" />
-    <link rel="stylesheet" href="/styles.css" />
+    <title>StockControl — Entrar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+    <link rel="stylesheet" href="/acesso/login/login.css" />
   </head>
   <body>
-    <h1 class="logo">StockControl</h1>
-    <h5 class="subtitulo">CONTROLE DE ESTOQUE</h5>
-    <div class="login-box">
-      <h3>Login</h3>
-      <form id="login-form" method="POST" action="/api/login">
-        <input
-          type="email"
-          name="email"
-          placeholder="E-MAIL"
-          required
-          autocomplete="username"
-        />
-        <input
-          type="password"
-          name="senha"
-          placeholder="SENHA"
-          required
-          autocomplete="current-password"
-        />
-        <button type="submit" class="btn-confirmation">ACESSAR</button>
-      </form>
-      <a
-        href="../recover-password/recover-password.html"
-        class="recover-password"
-      >
-        ESQUECI MINHA SENHA
-      </a>
-    </div>
+    <!-- Left decorative panel -->
+    <aside class="login-panel" aria-hidden="true">
+      <div class="login-panel-bg"></div>
+      <div class="login-panel-grid"></div>
 
-    <div class="noRegister-box">
-      <h3>Ainda não é cadastrado?</h3>
-      <a href="../register/register.html" class="btn-click-here">
-        CLIQUE AQUI
-      </a>
-    </div>
+      <div class="login-panel-brand">
+        <div class="login-panel-logo">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        </div>
+        <div>
+          <div class="login-panel-brand-name">StockControl</div>
+          <div class="login-panel-brand-sub">USCS — Gestão de Estoque</div>
+        </div>
+      </div>
 
-    <script src="login.js"></script>
+      <div class="login-panel-content">
+        <h2 class="login-panel-headline">
+          Gestão de patrimônio<br />
+          <span>inteligente e eficiente</span>
+        </h2>
+        <p class="login-panel-desc">
+          Controle de itens, doações, reciclagem e movimentações em uma única
+          plataforma pensada para ONGs e centros universitários.
+        </p>
+      </div>
+
+      <div class="login-panel-stats">
+        <div class="login-stat">
+          <span class="login-stat-value">100%</span>
+          <span class="login-stat-label">Rastreabilidade</span>
+        </div>
+        <div class="login-stat">
+          <span class="login-stat-value">24x7</span>
+          <span class="login-stat-label">Disponibilidade</span>
+        </div>
+        <div class="login-stat">
+          <span class="login-stat-value">QR CODE</span>
+          <span class="login-stat-label">Identificação</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right form panel -->
+    <main class="login-form-side">
+      <div class="login-form-inner">
+        <!-- Mobile brand -->
+        <div class="login-mobile-brand">
+          <div class="login-mobile-logo">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#fff"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </div>
+          <div>
+            <div class="login-mobile-brand-name">StockControl</div>
+            <div class="login-mobile-brand-sub">USCS — Gestão de Estoque</div>
+          </div>
+        </div>
+
+        <!-- Heading -->
+        <div class="login-heading">
+          <h1>Bem-vindo de volta</h1>
+          <p>Entre com suas credenciais para continuar.</p>
+        </div>
+
+        <!-- Error banner -->
+        <div class="login-error" id="loginError" role="alert">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span id="loginErrorMsg">E-mail ou senha incorretos.</span>
+        </div>
+
+        <!-- Form -->
+        <form class="login-form" id="loginForm" novalidate>
+          <!-- Email -->
+          <div class="form-group" id="groupEmail">
+            <label class="form-label required" for="email">E-mail</label>
+            <div class="input-group">
+              <svg
+                class="input-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                class="form-control"
+                placeholder="seu@email.com"
+                autocomplete="email"
+                autofocus
+                required
+              />
+            </div>
+            <span class="form-error" id="emailError"
+              >Use um e-mail válido.</span
+            >
+          </div>
+
+          <!-- Password -->
+          <div class="form-group" id="groupPassword">
+            <label class="form-label required" for="password">Senha</label>
+            <div class="input-group" style="position: relative">
+              <svg
+                class="input-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                class="form-control"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                style="padding-right: 44px"
+                required
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                id="togglePassword"
+                aria-label="Mostrar senha"
+              >
+                <svg
+                  class="icon-eye"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <svg
+                  class="icon-eye-off"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                  />
+                  <path
+                    d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                  />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              </button>
+            </div>
+            <span class="form-error" id="passwordError"
+              >A senha não atende aos requisitos.</span
+            >
+            <!-- Checklist de requisitos -->
+            <ul
+              id="pwdChecklist"
+              style="
+                list-style: none;
+                padding: 0;
+                margin: 6px 0 0;
+                display: none;
+                font-size: 0.8125rem;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+              "
+            >
+              <li id="req-len" style="color: red">✗ Mínimo 8 caracteres</li>
+              <li id="req-upper" style="color: red">
+                ✗ Pelo menos 1 letra maiúscula
+              </li>
+              <li id="req-number" style="color: red">✗ Pelo menos 1 número</li>
+              <li id="req-special" style="color: red">
+                ✗ Pelo menos 1 caractere especial (!@#$…)
+              </li>
+            </ul>
+          </div>
+
+          <!-- Bottom row -->
+          <div class="login-bottom-row">
+            <label class="form-check">
+              <input type="checkbox" id="rememberMe" name="remember" />
+              <span class="form-check-label">Lembrar de mim</span>
+            </label>
+            <a href="#" class="login-forgot">Esqueci a senha</a>
+          </div>
+
+          <!-- Submit -->
+          <button
+            type="submit"
+            class="btn btn-primary btn-lg login-submit"
+            id="loginBtn"
+          >
+            Entrar
+          </button>
+        </form>
+
+        <!-- Footer -->
+        <div
+          class="login-footer"
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            text-align: center;
+          "
+        >
+          <div>
+            Não tem uma conta?
+            <a href="/cadastro.html">Criar conta</a>
+          </div>
+          <div>
+            Problemas para acessar?
+            <a href="mailto:suporte@uscs.edu.br">Contate o suporte</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="/acesso/login/login.js"></script>
   </body>
 </html>

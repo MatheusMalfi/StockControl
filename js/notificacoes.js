@@ -38,6 +38,19 @@ document.addEventListener("sc:ready", function () {
   function dbSet(key, val) {
     try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
   }
+
+  // ── API helpers ───────────────────────────────────────────────────────────
+  function _notifToken() {
+    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+  }
+  function _notifApi(method, url, body) {
+    const token = _notifToken();
+    return fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body != null ? { body: JSON.stringify(body) } : {}),
+    }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+  }
   function uid() {
     return "notif_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
@@ -50,10 +63,16 @@ document.addEventListener("sc:ready", function () {
 
   // ── Notification helpers ──────────────────────────────────────────────────
   function allNotifs()      { return dbGet(KEYS.NOTIFS); }
-  function saveNotifs(arr)  { dbSet(KEYS.NOTIFS, arr); }
+  function saveNotifs(arr)  {
+    dbSet(KEYS.NOTIFS, arr);
+    _notifApi("POST", "/api/notificacoes/sync", arr).catch(() => {});
+  }
 
   function getRules() { return { ...DEFAULT_RULES, ...dbGetObj(KEYS.RULES, {}) }; }
-  function saveRulesData(r) { dbSet(KEYS.RULES, r); }
+  function saveRulesData(r) {
+    dbSet(KEYS.RULES, r);
+    _notifApi("PUT", "/api/notificacoes/rules", r).catch(() => {});
+  }
 
   function getFiltered() {
     const notifs = allNotifs().filter(n => !n.arquivada);
@@ -68,6 +87,13 @@ document.addEventListener("sc:ready", function () {
 
   // ── Seed mock notifications ───────────────────────────────────────────────
   function seedIfNeeded() {
+    const _nu = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    _notifApi("GET", `/api/notificacoes${_nu.organization_id ? `?organization_id=${_nu.organization_id}` : ""}`)
+      .then(data => {
+        const notifs = Array.isArray(data) ? data : data.notificacoes || [];
+        if (notifs.length) { dbSet(KEYS.NOTIFS, notifs); renderList(); }
+      })
+      .catch(() => {});
     const existing = allNotifs();
     if (existing.length) return;
 
