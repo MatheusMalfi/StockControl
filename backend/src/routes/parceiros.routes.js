@@ -1,6 +1,6 @@
 "use strict";
 const express = require("express");
-const pool    = require("../db");
+const pool = require("../db");
 
 const router = express.Router();
 
@@ -35,7 +35,10 @@ router.get("/", async (req, res) => {
   try {
     await ensureTable();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const [rows] = await pool.query(
       "SELECT * FROM parceiros WHERE organization_id = ? ORDER BY nome ASC",
       [orgId],
@@ -52,15 +55,30 @@ router.post("/", async (req, res) => {
   try {
     await ensureTable();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
-    const { id, nome, tipo, email, telefone, endereco, cnpj, ativo, obs } = req.body;
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    const { id, nome, tipo, email, telefone, endereco, cnpj, ativo, obs } =
+      req.body;
     if (!nome) return res.status(400).json({ message: "nome é obrigatório." });
-    const newId = id || `par_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const newId =
+      id || `par_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     await pool.execute(
       `INSERT INTO parceiros (id, organization_id, nome, tipo, email, telefone, endereco, cnpj, ativo, obs)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [newId, orgId, nome, tipo || null, email || null, telefone || null,
-       endereco || null, cnpj || null, ativo !== false ? 1 : 0, obs || null],
+      [
+        newId,
+        orgId,
+        nome,
+        tipo || null,
+        email || null,
+        telefone || null,
+        endereco || null,
+        cnpj || null,
+        ativo !== false ? 1 : 0,
+        obs || null,
+      ],
     );
     res.status(201).json({ success: true, id: newId });
   } catch (err) {
@@ -73,13 +91,23 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     await ensureTable();
-    const { nome, tipo, email, telefone, endereco, cnpj, ativo, obs } = req.body;
+    const { nome, tipo, email, telefone, endereco, cnpj, ativo, obs } =
+      req.body;
     await pool.execute(
       `UPDATE parceiros SET nome = ?, tipo = ?, email = ?, telefone = ?, endereco = ?,
               cnpj = ?, ativo = ?, obs = ?
        WHERE id = ?`,
-      [nome || null, tipo || null, email || null, telefone || null,
-       endereco || null, cnpj || null, ativo !== false ? 1 : 0, obs || null, req.params.id],
+      [
+        nome || null,
+        tipo || null,
+        email || null,
+        telefone || null,
+        endereco || null,
+        cnpj || null,
+        ativo !== false ? 1 : 0,
+        obs || null,
+        req.params.id,
+      ],
     );
     res.json({ success: true });
   } catch (err) {
@@ -92,7 +120,17 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     await ensureTable();
-    await pool.execute("DELETE FROM parceiros WHERE id = ?", [req.params.id]);
+    const orgId = getOrgId(req);
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    const [result] = await pool.execute(
+      "DELETE FROM parceiros WHERE id = ? AND organization_id = ?",
+      [req.params.id, orgId],
+    );
+    if (!result.affectedRows)
+      return res.status(404).json({ message: "Parceiro não encontrado." });
     res.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/parceiros/:id:", err);

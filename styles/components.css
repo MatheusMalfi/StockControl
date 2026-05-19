@@ -24,9 +24,12 @@
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
-  transition: background var(--transition-fast), color var(--transition-fast),
-              border-color var(--transition-fast), box-shadow var(--transition-fast),
-              opacity var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast);
   user-select: none;
 }
 
@@ -131,19 +134,21 @@
   position: absolute;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255,255,255,0.4);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
 .btn-secondary.is-loading::after,
 .btn-ghost.is-loading::after {
-  border-color: rgba(0,0,0,0.15);
+  border-color: rgba(0, 0, 0, 0.15);
   border-top-color: var(--color-primary);
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ============================================================
@@ -195,7 +200,9 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   appearance: none;
   -webkit-appearance: none;
 }
@@ -307,7 +314,9 @@ select.form-control {
   border: 2px dashed var(--color-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
   text-align: center;
 }
 
@@ -728,7 +737,9 @@ select.form-control {
   padding: var(--space-4);
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--transition-base), visibility var(--transition-base);
+  transition:
+    opacity var(--transition-base),
+    visibility var(--transition-base);
 }
 
 .modal-backdrop.is-open {
@@ -792,7 +803,9 @@ select.form-control {
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .modal-close:hover {
@@ -841,6 +854,21 @@ select.form-control {
 .modal-confirm-icon.warning {
   background: var(--color-warning-light);
   color: var(--color-warning);
+}
+
+.modal-confirm-icon.success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.btn-success {
+  background: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+}
+.btn-success:hover {
+  background: var(--color-success-dark);
+  border-color: var(--color-success-dark);
 }
 
 .modal-confirm-title {
@@ -892,7 +920,9 @@ select.form-control {
   margin-bottom: -2px;
   cursor: pointer;
   white-space: nowrap;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .tab-btn:hover {
@@ -1023,7 +1053,9 @@ select.form-control {
   font-size: 0.875rem;
   background: var(--color-surface);
   color: var(--color-text-primary);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .search-input-wrap input:focus {
@@ -1059,8 +1091,10 @@ select.form-control {
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
-  transition: opacity var(--transition-fast), transform var(--transition-fast),
-              visibility var(--transition-fast);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast),
+    visibility var(--transition-fast);
 }
 
 .dropdown-menu.is-open {
@@ -1224,9 +1258,15 @@ select.form-control {
   transition: width 0.6s ease;
 }
 
-.progress-bar.success { background: var(--color-success); }
-.progress-bar.warning { background: var(--color-warning); }
-.progress-bar.danger  { background: var(--color-danger); }
+.progress-bar.success {
+  background: var(--color-success);
+}
+.progress-bar.warning {
+  background: var(--color-warning);
+}
+.progress-bar.danger {
+  background: var(--color-danger);
+}
 
 /* ============================================================
    TIMELINE (for movement / history)
@@ -1276,10 +1316,18 @@ select.form-control {
   color: var(--color-text-muted);
 }
 
-.timeline-dot.primary  { border-color: var(--color-primary); }
-.timeline-dot.success  { border-color: var(--color-success); }
-.timeline-dot.warning  { border-color: var(--color-warning); }
-.timeline-dot.danger   { border-color: var(--color-danger); }
+.timeline-dot.primary {
+  border-color: var(--color-primary);
+}
+.timeline-dot.success {
+  border-color: var(--color-success);
+}
+.timeline-dot.warning {
+  border-color: var(--color-warning);
+}
+.timeline-dot.danger {
+  border-color: var(--color-danger);
+}
 
 .timeline-content {
   flex: 1;
@@ -1332,9 +1380,21 @@ select.form-control {
   overflow: hidden;
 }
 
-.avatar-sm { width: 28px; height: 28px; font-size: 0.75rem; }
-.avatar-lg { width: 48px; height: 48px; font-size: 1rem; }
-.avatar-xl { width: 64px; height: 64px; font-size: 1.25rem; }
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+}
+.avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 1rem;
+}
+.avatar-xl {
+  width: 64px;
+  height: 64px;
+  font-size: 1.25rem;
+}
 
 /* ============================================================
    DIVIDER

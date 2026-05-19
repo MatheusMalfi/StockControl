@@ -8,30 +8,47 @@ const upload = multer({ storage: multer.memoryStorage() });
 // GET /api/items?organization_id=X&search=&condition=&category=&sort=product_name:asc&page=1&limit=20
 router.get("/", async (req, res) => {
   try {
-    const { organization_id, search, condition, category, sort, page, limit } = req.query;
+    const { organization_id, search, condition, category, sort, page, limit } =
+      req.query;
     if (!organization_id) {
-      return res.status(400).json({ message: "organization_id é obrigatório." });
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     }
 
     const conditions = ["i.organization_id = ?", "i.is_active = 1"];
-    const params     = [organization_id];
+    const params = [organization_id];
 
-    if (search)    { conditions.push("i.product_name LIKE ?"); params.push(`%${search}%`); }
-    if (condition) { conditions.push("c.code = ?");            params.push(condition); }
-    if (category)  { conditions.push("cat.id = ?");            params.push(category); }
+    // Por padrão exclui itens com condição DESCARTAR do estoque ativo.
+    // Quando o chip "Descartar" é clicado, condition=DESCARTAR é enviado explicitamente.
+    if (condition) {
+      conditions.push("c.code = ?");
+      params.push(condition);
+    } else {
+      conditions.push("c.code != 'DESCARTAR'");
+    }
+
+    if (search) {
+      conditions.push("i.product_name LIKE ?");
+      params.push(`%${search}%`);
+    }
+    if (category) {
+      conditions.push("cat.id = ?");
+      params.push(category);
+    }
 
     const SORT_COLS = {
-      product_name:    "i.product_name",
-      created_at:      "i.created_at",
-      quantity:        "i.quantity",
+      product_name: "i.product_name",
+      created_at: "i.created_at",
+      quantity: "i.quantity",
       estimated_value: "i.estimated_value",
     };
     const [sortCol, sortDir] = (sort || "product_name:asc").split(":");
     const orderBy = `${SORT_COLS[sortCol] || "i.product_name"} ${sortDir === "desc" ? "DESC" : "ASC"}`;
 
-    const pageNum  = Math.max(1, parseInt(page)  || 1);
+    const pageNum = Math.max(1, parseInt(page) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(limit) || 20));
-    const offset   = (pageNum - 1) * pageSize;
+    const offset = (pageNum - 1) * pageSize;
 
     const whereClause = conditions.join(" AND ");
 
@@ -100,6 +117,10 @@ router.post("/", upload.single("photo"), async (req, res) => {
 
     let resolvedCategoryId = category_id;
     if (!resolvedCategoryId && req.body.category_name) {
+      await pool.execute(
+        "INSERT IGNORE INTO categories (name) VALUES (?)",
+        [req.body.category_name],
+      );
       const [cat] = await pool.query(
         "SELECT id FROM categories WHERE name = ? LIMIT 1",
         [req.body.category_name],
@@ -147,7 +168,9 @@ router.post("/", upload.single("photo"), async (req, res) => {
 // POST /api/items/discard
 router.post("/discard", async (req, res) => {
   try {
-    const { organization_id, created_by, item_ids, item_id } = req.body;
+    const { organization_id, created_by, item_ids, item_id, reason, notes } =
+      req.body;
+    const notesValue = [reason, notes].filter(Boolean).join(" — ") || null;
 
     let idsRaw = [];
     if (Array.isArray(item_ids)) {
@@ -169,16 +192,40 @@ router.post("/discard", async (req, res) => {
       );
       const prevConditionId = prevRows.length ? prevRows[0].condition_id : null;
 
+      // Busca o ID da condição DESCARTAR
+      const [discardCond] = await pool.query(
+        "SELECT id FROM conditions WHERE code = 'DESCARTAR' LIMIT 1",
+      );
+      const discardCondId = discardCond.length
+        ? discardCond[0].id
+        : prevConditionId;
+
+      // Atualiza a condição do item para DESCARTAR
+      await pool.execute(
+        "UPDATE items SET condition_id = ?, updated_at = NOW() WHERE id = ? AND organization_id = ?",
+        [discardCondId, id, organization_id],
+      );
+
       await pool.execute(
         `INSERT INTO disposal_history
           (item_id, organization_id, destination_type, prev_condition_id,
-           new_condition_id, action, quantity, created_by)
-         VALUES (?, ?, 'INTERNAL', ?, ?, 'MARKED_FOR_DISPOSAL', 1, ?)`,
-        [id, organization_id, prevConditionId, prevConditionId, created_by || null],
+           new_condition_id, action, quantity, notes, created_by)
+         VALUES (?, ?, 'INTERNAL', ?, ?, 'MARKED_FOR_DISPOSAL', 1, ?, ?)`,
+        [
+          id,
+          organization_id,
+          prevConditionId,
+          discardCondId,
+          notesValue,
+          created_by || null,
+        ],
       );
     }
 
-    res.json({ success: true, message: "Itens descartados e registrados com sucesso." });
+    res.json({
+      success: true,
+      message: "Itens descartados e registrados com sucesso.",
+    });
   } catch (err) {
     console.error("Erro em POST /api/items/discard:", err);
     res.status(500).json({ message: "Erro ao descartar itens." });
@@ -240,21 +287,82 @@ router.get("/:id/photo", async (req, res) => {
 router.put("/:id", upload.single("photo"), async (req, res) => {
   try {
     const { id } = req.params;
-    const { organization_id, produto, marca, modelo, descricao, status } = req.body;
+    const {
+      organization_id,
+      produto,
+      serial_number,
+      categoria,
+      marca,
+      modelo,
+      descricao,
+      status,
+      quantidade,
+      valor,
+      localizacao,
+      notas,
+    } = req.body;
 
     if (!organization_id) {
-      return res.status(400).json({ message: "organization_id é obrigatório." });
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     }
 
     const photo_blob = req.file ? req.file.buffer : undefined;
-
     const updates = [];
     const params = [];
 
-    if (produto    !== undefined) { updates.push("product_name = ?");  params.push(produto); }
-    if (marca      !== undefined) { updates.push("product_brand = ?"); params.push(marca); }
-    if (modelo     !== undefined) { updates.push("product_model = ?"); params.push(modelo); }
-    if (descricao  !== undefined) { updates.push("description = ?");   params.push(descricao); }
+    if (produto !== undefined) {
+      updates.push("product_name = ?");
+      params.push(produto);
+    }
+    if (serial_number !== undefined) {
+      updates.push("serial_number = ?");
+      params.push(serial_number);
+    }
+    if (marca !== undefined) {
+      updates.push("product_brand = ?");
+      params.push(marca);
+    }
+    if (modelo !== undefined) {
+      updates.push("product_model = ?");
+      params.push(modelo);
+    }
+    if (descricao !== undefined) {
+      updates.push("description = ?");
+      params.push(descricao);
+    }
+    if (quantidade !== undefined) {
+      updates.push("quantity = ?");
+      params.push(parseInt(quantidade) || 1);
+    }
+    if (valor !== undefined) {
+      updates.push("estimated_value = ?");
+      params.push(parseFloat(valor) || null);
+    }
+    if (localizacao !== undefined) {
+      updates.push("location_label = ?");
+      params.push(localizacao);
+    }
+    if (notas !== undefined) {
+      updates.push("notes = ?");
+      params.push(notas);
+    }
+
+    if (categoria !== undefined) {
+      await pool.execute(
+        "INSERT IGNORE INTO categories (name) VALUES (?)",
+        [categoria],
+      );
+      const [catRow] = await pool.query(
+        "SELECT id FROM categories WHERE name = ? LIMIT 1",
+        [categoria],
+      );
+      if (catRow.length) {
+        updates.push("category_id = ?");
+        params.push(catRow[0].id);
+      }
+    }
 
     if (status !== undefined) {
       const [cond] = await pool.query(
@@ -294,7 +402,19 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
 // DELETE /api/items/:id
 router.delete("/:id", async (req, res) => {
   try {
-    await pool.execute("DELETE FROM items WHERE id = ?", [req.params.id]);
+    const org_id = req.query.organization_id || req.body?.organization_id;
+    if (!org_id) {
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    }
+    const [result] = await pool.execute(
+      "DELETE FROM items WHERE id = ? AND organization_id = ?",
+      [req.params.id, org_id],
+    );
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Item não encontrado." });
+    }
     res.json({ success: true, message: "Item excluído." });
   } catch (err) {
     console.error("Erro em DELETE /api/items/:id:", err);

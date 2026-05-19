@@ -1,6 +1,6 @@
 "use strict";
 const express = require("express");
-const pool    = require("../db");
+const pool = require("../db");
 
 const router = express.Router();
 
@@ -34,7 +34,10 @@ router.get("/", async (req, res) => {
   try {
     await ensureTable();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const [rows] = await pool.query(
       "SELECT * FROM movimentacoes WHERE organization_id = ? ORDER BY created_at DESC",
       [orgId],
@@ -51,14 +54,38 @@ router.post("/", async (req, res) => {
   try {
     await ensureTable();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
-    const { id, tipo, produto, quantidade, responsavel, destino, origem, data, obs } = req.body;
-    const newId = id || `mov_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    const {
+      id,
+      tipo,
+      produto,
+      quantidade,
+      responsavel,
+      destino,
+      origem,
+      data,
+      obs,
+    } = req.body;
+    const newId =
+      id || `mov_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     await pool.execute(
       `INSERT INTO movimentacoes (id, organization_id, tipo, produto, quantidade, responsavel, destino, origem, data, obs)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [newId, orgId, tipo || "entrada", produto || null, quantidade || 1,
-       responsavel || null, destino || null, origem || null, data || null, obs || null],
+      [
+        newId,
+        orgId,
+        tipo || "entrada",
+        produto || null,
+        quantidade || 1,
+        responsavel || null,
+        destino || null,
+        origem || null,
+        data || null,
+        obs || null,
+      ],
     );
     res.status(201).json({ success: true, id: newId });
   } catch (err) {
@@ -71,7 +98,17 @@ router.post("/", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     await ensureTable();
-    await pool.execute("DELETE FROM movimentacoes WHERE id = ?", [req.params.id]);
+    const orgId = getOrgId(req);
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    const [result] = await pool.execute(
+      "DELETE FROM movimentacoes WHERE id = ? AND organization_id = ?",
+      [req.params.id, orgId],
+    );
+    if (!result.affectedRows)
+      return res.status(404).json({ message: "Movimentação não encontrada." });
     res.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/movimentacoes/:id:", err);
