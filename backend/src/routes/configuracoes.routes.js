@@ -118,6 +118,90 @@ router.put("/preferencias", async (req, res) => {
   }
 });
 
+const CREATE_ORG_CATS = `
+  CREATE TABLE IF NOT EXISTS org_categories (
+    id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id INT          NOT NULL,
+    cat_key         VARCHAR(64)  NOT NULL,
+    nome            VARCHAR(100) NOT NULL,
+    cor             VARCHAR(20)  NOT NULL DEFAULT '#3b82f6',
+    ordem           INT          NOT NULL DEFAULT 0,
+    INDEX (organization_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`;
+
+const CREATE_ORG_BRANDS = `
+  CREATE TABLE IF NOT EXISTS org_brands (
+    id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id INT          NOT NULL,
+    brand_key       VARCHAR(64)  NOT NULL,
+    nome            VARCHAR(100) NOT NULL,
+    INDEX (organization_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`;
+
+async function ensureCatTables() {
+  await pool.query(CREATE_ORG_CATS);
+  await pool.query(CREATE_ORG_BRANDS);
+}
+
+/* GET /api/configuracoes/categorias?organization_id=X */
+router.get("/categorias", async (req, res) => {
+  try {
+    await ensureCatTables();
+    const orgId = getOrgId(req);
+    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    const [cats]   = await pool.query(
+      "SELECT cat_key AS id, nome, cor, ordem FROM org_categories WHERE organization_id = ? ORDER BY ordem ASC",
+      [orgId],
+    );
+    const [brands] = await pool.query(
+      "SELECT brand_key AS id, nome FROM org_brands WHERE organization_id = ? ORDER BY id ASC",
+      [orgId],
+    );
+    res.json({ success: true, categorias: cats, marcas: brands });
+  } catch (err) {
+    console.error("GET /api/configuracoes/categorias:", err);
+    res.status(500).json({ message: "Erro ao buscar categorias." });
+  }
+});
+
+/* PUT /api/configuracoes/categorias */
+router.put("/categorias", async (req, res) => {
+  try {
+    await ensureCatTables();
+    const orgId = getOrgId(req);
+    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    const { categorias = [], marcas = [] } = req.body;
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute("DELETE FROM org_categories WHERE organization_id = ?", [orgId]);
+      for (const c of categorias) {
+        await conn.execute(
+          "INSERT INTO org_categories (organization_id, cat_key, nome, cor, ordem) VALUES (?, ?, ?, ?, ?)",
+          [orgId, c.id || c.cat_key || "", c.nome, c.cor || "#3b82f6", c.ordem || 0],
+        );
+      }
+      await conn.execute("DELETE FROM org_brands WHERE organization_id = ?", [orgId]);
+      for (const b of marcas) {
+        await conn.execute(
+          "INSERT INTO org_brands (organization_id, brand_key, nome) VALUES (?, ?, ?)",
+          [orgId, b.id || b.brand_key || "", b.nome],
+        );
+      }
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("PUT /api/configuracoes/categorias:", err);
+    res.status(500).json({ message: "Erro ao salvar categorias." });
+  }
+});
+
 /* PUT /api/configuracoes/notificacoes — delegates to notif_rules via same table */
 router.put("/notificacoes", async (req, res) => {
   try {

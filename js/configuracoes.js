@@ -216,6 +216,16 @@ function _cfgApi(method, url, body) {
   }).then(r => r.ok ? r.json() : Promise.reject(r.status));
 }
 
+function _syncCatMarcasToApi(data) {
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('PUT', '/api/configuracoes/categorias', {
+    organization_id,
+    categorias: data.categorias || [],
+    marcas:     data.marcas     || [],
+  }).catch(() => {});
+}
+
 function contarItensPorCategoria(catNome) {
   const itens = carregarDoLocalStorage('estoque_itens', []);
   return itens.filter(i => i.categoria === catNome).length;
@@ -761,6 +771,18 @@ function gerarESenha() {
 function carregarCategorias() {
   const data = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
   renderListaCategorias(data.categorias || []);
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/categorias?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success) return;
+      const stored = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
+      stored.categorias = res.categorias;
+      stored.marcas     = res.marcas;
+      salvarNoLocalStorage('sc_categorias', stored);
+      renderListaCategorias(res.categorias);
+    })
+    .catch(() => {});
 }
 
 function renderListaCategorias(cats) {
@@ -836,6 +858,7 @@ function salvarCategoria() {
   }
   data.categorias = cats;
   salvarNoLocalStorage('sc_categorias', data);
+  _syncCatMarcasToApi(data);
   fecharModal('modalCategoria');
   renderListaCategorias(cats);
   registrarLog(id ? 'Categoria editada' : 'Categoria criada', 'categorias', nome, '');
@@ -851,6 +874,7 @@ function excluirCategoria(id) {
   confirmarAcao('Excluir categoria', `Excluir "${cat.nome}"?${warn}`, () => {
     data.categorias = (data.categorias || []).filter(c => c.id !== id).map((c, i) => ({ ...c, ordem: i }));
     salvarNoLocalStorage('sc_categorias', data);
+    _syncCatMarcasToApi(data);
     renderListaCategorias(data.categorias);
     registrarLog('Categoria excluída', 'categorias', cat.nome, '');
     showToast('Categoria excluída.', 'success');
@@ -895,14 +919,26 @@ function initDragDropCategorias() {
       return cat ? { ...cat, ordem: i } : null;
     }).filter(Boolean);
     salvarNoLocalStorage('sc_categorias', data);
+    _syncCatMarcasToApi(data);
   });
 }
 
 // ── Marcas ────────────────────────────────────────────────────────────────────
 function carregarMarcas() {
   const data   = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
-  const marcas = data.marcas || [];
-  renderListaMarcas(marcas);
+  renderListaMarcas(data.marcas || []);
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/categorias?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success) return;
+      const stored = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
+      stored.categorias = res.categorias;
+      stored.marcas     = res.marcas;
+      salvarNoLocalStorage('sc_categorias', stored);
+      renderListaMarcas(res.marcas);
+    })
+    .catch(() => {});
 }
 
 function renderListaMarcas(marcas) {
@@ -921,6 +957,7 @@ function renderListaMarcas(marcas) {
       const d = carregarDoLocalStorage('sc_categorias', MOCK.categorias);
       d.marcas.splice(parseInt(btn.dataset.marcaIdx), 1);
       salvarNoLocalStorage('sc_categorias', d);
+      _syncCatMarcasToApi(d);
       renderListaMarcas(d.marcas);
     });
   });
@@ -935,6 +972,7 @@ function adicionarMarca() {
   if (data.marcas.some(m => (m.nome || m) === val)) { showToast('Marca já existe.', 'warning'); return; }
   data.marcas.push({ id: gerarId(), nome: val });
   salvarNoLocalStorage('sc_categorias', data);
+  _syncCatMarcasToApi(data);
   if (inp) inp.value = '';
   renderListaMarcas(data.marcas);
 }
