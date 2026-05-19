@@ -393,6 +393,7 @@ function carregarPerfil() {
   _pendingAvatarDataUrl = null;
   _pendingAvatarRemoved = false;
   detectarMudancasPerfil();
+  atualizarAvatarHeader();
 
   // Load display prefs
   const prefs = carregarDoLocalStorage('sc_preferencias', MOCK.preferencias);
@@ -494,10 +495,58 @@ function removerFotoPerfil() {
 function atualizarAvatarHeader() {
   const u = carregarUsuarioLocal({});
   const iniciais = gerarIniciais(u.nome);
+  
+  // Update sidebar avatar
   const siEl = document.getElementById('sidebarInitials');
+  const sidebarAvatar = siEl?.parentElement;
+  if (sidebarAvatar) {
+    if (u.avatar) {
+      // Remove text, add/update image
+      siEl.style.display = 'none';
+      let img = sidebarAvatar.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = 'inherit';
+        sidebarAvatar.appendChild(img);
+      }
+      img.src = u.avatar;
+    } else {
+      // Show initials, remove image
+      if (siEl) {
+        siEl.textContent = iniciais;
+        siEl.style.display = '';
+      }
+      const img = sidebarAvatar.querySelector('img');
+      if (img) img.remove();
+    }
+  }
+  
+  // Update header avatar
   const haEl = document.getElementById('headerAvatar');
-  if (siEl) siEl.textContent = iniciais;
-  if (haEl) haEl.textContent = iniciais;
+  if (haEl) {
+    if (u.avatar) {
+      // Remove text, add/update image
+      haEl.textContent = '';
+      let img = haEl.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = 'inherit';
+        haEl.appendChild(img);
+      }
+      img.src = u.avatar;
+    } else {
+      // Show initials, remove image
+      haEl.textContent = iniciais;
+      const img = haEl.querySelector('img');
+      if (img) img.remove();
+    }
+  }
 }
 
 function detectarMudancasPerfil() {
