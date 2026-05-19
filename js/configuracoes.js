@@ -1180,17 +1180,35 @@ function alterarSenha() {
   const confirma   = confirmaEl?.value || '';
 
   const hideErr = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
-  const showErr = id => { const el = document.getElementById(id); if (el) el.style.display = 'block'; };
+  const showErr = (id, msg) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (msg) el.textContent = msg;
+    el.style.display = 'block';
+  };
   hideErr('errorCurrentPwd'); hideErr('errorNewPwd'); hideErr('errorConfirmPwd');
 
-  if (!atual)           { showErr('errorCurrentPwd'); return; }
-  if (nova.length < 8)  { showErr('errorNewPwd');     return; }
-  if (nova !== confirma) { showErr('errorConfirmPwd'); return; }
+  if (!atual) { showErr('errorCurrentPwd', 'Senha atual é obrigatória.'); return; }
 
-  _cfgApi("POST", "/api/change-password", { senhaAtual: atual, novaSenha: nova })
+  const v = validarSenha(nova);
+  if (!v.len || !v.upper || !v.number || !v.special) {
+    showErr('errorNewPwd', 'A senha deve ter 8+ caracteres, letra maiúscula, número e caractere especial.');
+    return;
+  }
+  if (nova !== confirma) { showErr('errorConfirmPwd', 'As senhas não coincidem.'); return; }
+
+  const token = _cfgToken();
+  fetch('/api/change-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ senhaAtual: atual, novaSenha: nova }),
+  })
+    .then(async r => { const d = await r.json(); if (!r.ok) throw d; return d; })
     .then(() => {
-      const usuario = carregarDoLocalStorage('sc_usuario', {});
-      registrarLog('Senha alterada', 'seguranca', usuario.nome || '', '');
+      registrarLog('Senha alterada', 'seguranca', carregarDoLocalStorage('sc_usuario', {}).nome || '', '');
       if (atualEl)    atualEl.value    = '';
       if (novaEl)     novaEl.value     = '';
       if (confirmaEl) confirmaEl.value = '';
@@ -1201,9 +1219,15 @@ function alterarSenha() {
       renderChecklistSenha('');
       showToast('Senha alterada com sucesso!', 'success');
     })
-    .catch(code => {
-      if (code === 400) showErr('errorCurrentPwd');
-      else showToast('Erro ao alterar senha. Tente novamente.', 'error');
+    .catch(err => {
+      const msg = (err?.mensagem || '').toLowerCase();
+      if (msg.includes('atual') || msg.includes('incorreta')) {
+        showErr('errorCurrentPwd', 'Senha atual incorreta.');
+      } else if (msg) {
+        showToast(err.mensagem, 'error');
+      } else {
+        showToast('Erro ao alterar senha. Tente novamente.', 'error');
+      }
     });
 }
 
