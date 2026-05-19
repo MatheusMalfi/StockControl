@@ -760,21 +760,21 @@
                     <div class="danger-action-label">Encerrar todas as sessões</div>
                     <div class="danger-action-desc">Desconecta todos os dispositivos onde esta conta está ativa.</div>
                   </div>
-                  <button class="btn btn-secondary btn-sm" id="logoutAllBtn">Encerrar Sessões</button>
+                  <button class="btn btn-secondary btn-sm" id="logoutAllBtn" onclick="encerrarTodasSessoes()">Encerrar Sessões</button>
                 </div>
                 <div class="danger-action">
                   <div>
                     <div class="danger-action-label">Limpar todos os dados</div>
                     <div class="danger-action-desc">Remove permanentemente todos os dados do sistema. Esta ação não pode ser desfeita.</div>
                   </div>
-                  <button class="btn btn-danger btn-sm" id="btnLimparDados">Limpar Dados</button>
+                  <button class="btn btn-danger btn-sm" id="btnLimparDados" onclick="limparTodosDados()">Limpar Dados</button>
                 </div>
                 <div class="danger-action">
                   <div>
                     <div class="danger-action-label">Excluir minha conta</div>
                     <div class="danger-action-desc">Remove permanentemente sua conta. Esta ação não pode ser desfeita.</div>
                   </div>
-                  <button class="btn btn-danger btn-sm" id="deleteAccountBtn">Excluir Conta</button>
+                  <button class="btn btn-danger btn-sm" id="deleteAccountBtn" onclick="abrirModal('deleteAccountModal')">Excluir Conta</button>
                 </div>
               </div>
             </div>
@@ -951,7 +951,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-close-modal="modalConfirmar">Cancelar</button>
-        <button class="btn btn-danger" id="btnConfirmarSim">Confirmar</button>
+        <button class="btn btn-danger" id="btnConfirmarSim" onclick="confirmarSimClick()">Confirmar</button>
       </div>
     </div>
   </div>
@@ -987,7 +987,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-close-modal="deleteAccountModal">Cancelar</button>
-        <button class="btn btn-danger" id="confirmDeleteAccountBtn">Excluir Permanentemente</button>
+        <button class="btn btn-danger" id="confirmDeleteAccountBtn" onclick="confirmarExcluirConta()">Excluir Permanentemente</button>
       </div>
     </div>
   </div>

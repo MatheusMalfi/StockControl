@@ -302,12 +302,6 @@ function initConfiguracoes() {
   const hash = location.hash.slice(1);
   activar(hash || 'perfil', false);
 
-  // Wire generic confirm btn
-  document.getElementById('btnConfirmarSim')?.addEventListener('click', () => {
-    fecharModal('modalConfirmar');
-    if (_confirmarCallback) { _confirmarCallback(); _confirmarCallback = null; }
-  });
-
   // Wire modal senha strength
   document.getElementById('modalUsuarioSenha')?.addEventListener('input', function () {
     const { nivel, pct, cor } = calcularForcaSenha(this.value);
@@ -1316,6 +1310,23 @@ function exportarTodosDados() {
   showToast('Backup exportado com sucesso!', 'success');
 }
 
+function confirmarSimClick() {
+  fecharModal('modalConfirmar');
+  if (_confirmarCallback) { _confirmarCallback(); _confirmarCallback = null; }
+}
+
+function encerrarTodasSessoes() {
+  confirmarAcao('Encerrar sessões', 'Isso encerrará todas as sessões ativas. Continuar?', () => {
+    const raw = carregarDoLocalStorage('log_acessos', []);
+    const log = Array.isArray(raw) ? raw : [];
+    log.forEach(e => { if (e.atual) { e.atual = false; e.fim = new Date().toISOString(); } });
+    salvarNoLocalStorage('log_acessos', log);
+    registrarLog('Sessões encerradas', 'seguranca', '', '');
+    showToast('Todas as sessões foram encerradas.', 'success');
+    setTimeout(() => { window.location.href = '/acesso/login/login.html'; }, 1300);
+  });
+}
+
 function limparTodosDados() {
   confirmarAcao('Limpar todos os dados',
     'Esta ação remove TODOS os dados do sistema e não pode ser desfeita. Continuar?',
@@ -1328,31 +1339,27 @@ function limparTodosDados() {
     });
 }
 
+function confirmarExcluirConta() {
+  const pw = document.getElementById('deleteConfirmPwd')?.value || '';
+  if (!pw) { showToast('Digite sua senha para confirmar.', 'error'); return; }
+  const { email } = _getOrgData();
+  if (!email) { showToast('Sessão inválida. Faça login novamente.', 'error'); return; }
+  fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, senha: pw }),
+  })
+    .then(r => { if (!r.ok) throw new Error('wrong'); return r.json(); })
+    .then(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/acesso/login/login.html';
+    })
+    .catch(() => showToast('Senha incorreta.', 'error'));
+}
+
 function initDangerZone() {
-  document.getElementById('logoutAllBtn')?.addEventListener('click', () => {
-    confirmarAcao('Encerrar sessões', 'Isso encerrará todas as sessões ativas. Continuar?', () => {
-      const log = carregarDoLocalStorage('log_acessos', []);
-      log.forEach(e => { if (e.atual) { e.atual = false; e.fim = new Date().toISOString(); } });
-      salvarNoLocalStorage('log_acessos', log);
-      registrarLog('Sessões encerradas', 'seguranca', '', '');
-      showToast('Todas as sessões foram encerradas.', 'success');
-      setTimeout(() => { window.location.href = '/acesso/login/login.html'; }, 1300);
-    });
-  });
-
   document.getElementById('btnExportarDados')?.addEventListener('click', exportarTodosDados);
-  document.getElementById('btnLimparDados')?.addEventListener('click', limparTodosDados);
-
-  document.getElementById('deleteAccountBtn')?.addEventListener('click', () => abrirModal('deleteAccountModal'));
-
-  document.getElementById('confirmDeleteAccountBtn')?.addEventListener('click', () => {
-    const pw      = document.getElementById('deleteConfirmPwd')?.value || '';
-    const usuario = carregarDoLocalStorage('sc_usuario', {});
-    if (!pw || pw !== usuario.senha) { showToast('Senha incorreta.', 'error'); return; }
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.href = '/acesso/login/login.html';
-  });
 }
 
 // ── Event wiring helpers ──────────────────────────────────────────────────────
