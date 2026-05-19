@@ -1275,7 +1275,8 @@ function carregarLogAcessos() {
 function renderLogAcessos(limite) {
   const cont = document.getElementById('logAcessosLista');
   if (!cont) return;
-  const lista = carregarDoLocalStorage('log_acessos', []);
+  const raw   = carregarDoLocalStorage('log_acessos', []);
+  const lista = Array.isArray(raw) ? raw : [];
   const itens = lista.slice(0, limite);
   if (!itens.length) { cont.innerHTML = '<p style="color:var(--color-text-muted);font-size:0.875rem;">Nenhum acesso registrado.</p>'; return; }
   const fmt = iso => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };

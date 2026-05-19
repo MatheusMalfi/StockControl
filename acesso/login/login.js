@@ -111,6 +111,23 @@
           : sessionStorage;
         storage.setItem("sc_token", data.token);
         storage.setItem("sc_user", JSON.stringify(data.user ?? {}));
+
+        // Record login session in access log (always in localStorage)
+        try {
+          const ua = navigator.userAgent;
+          let dispositivo = "Navegador Web";
+          if (/android/i.test(ua))          dispositivo = "Android";
+          else if (/iphone|ipad/i.test(ua)) dispositivo = "iPhone/iPad";
+          else if (/windows/i.test(ua))     dispositivo = "Windows";
+          else if (/macintosh/i.test(ua))   dispositivo = "Mac";
+          else if (/linux/i.test(ua))       dispositivo = "Linux";
+          const prev = JSON.parse(localStorage.getItem("log_acessos") || "[]");
+          const log  = Array.isArray(prev) ? prev : [];
+          log.forEach(e => { if (e.atual) { e.atual = false; e.fim = new Date().toISOString(); } });
+          log.unshift({ dispositivo, ip: "—", atual: true, inicio: new Date().toISOString(), fim: null });
+          localStorage.setItem("log_acessos", JSON.stringify(log.slice(0, 20)));
+        } catch {}
+
         window.location.href = "/index.html";      } else {
         const msg = data.mensagem || data.message || data.error || "E-mail ou senha incorretos.";
         errorMsg.textContent = msg;
