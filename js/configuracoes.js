@@ -21,7 +21,7 @@ function carregarDados() {
   const { organization_id: _oid } = _getOrgData();
   _cfgApi("GET", `/api/configuracoes${_oid ? "?organization_id=" + _oid : ""}`)
     .then(data => {
-      if (data.usuario) localStorage.setItem('sc_usuario', JSON.stringify(data.usuario));
+      if (data.usuario) localStorage.setItem(getCurrentUserStorageKey(), JSON.stringify(data.usuario));
 
       if (data.usuarios) {
         localStorage.setItem('sc_usuarios', JSON.stringify(data.usuarios));
@@ -55,7 +55,7 @@ function carregarDados() {
     .catch(() => {});
 
   const seed = (key, val) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(val)); };
-  seed('sc_usuario',      MOCK.usuario);
+  seed(getCurrentUserStorageKey(), MOCK.usuario);
   seed('sc_usuarios',     MOCK.usuarios);
   seed('sc_organizacao',  MOCK.organizacao);
   seed('sc_notif_rules',  MOCK.regrasNotif);
@@ -195,6 +195,20 @@ function carregarDoLocalStorage(chave, padrao) {
   catch { return padrao; }
 }
 
+function getCurrentUserStorageKey() {
+  const user = _getOrgData();
+  const id = user?.id || user?.user_id || user?.userId || '';
+  return id ? `sc_usuario_${id}` : 'sc_usuario';
+}
+
+function salvarUsuarioLocal(dados) {
+  salvarNoLocalStorage(getCurrentUserStorageKey(), dados);
+}
+
+function carregarUsuarioLocal(padrao) {
+  return carregarDoLocalStorage(getCurrentUserStorageKey(), padrao);
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 function _cfgToken() {
   return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
@@ -202,9 +216,10 @@ function _cfgToken() {
 
 function _getOrgData() {
   try {
-    return JSON.parse(
-      localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}"
-    ) || {};
+    const sessionRaw = sessionStorage.getItem("sc_user");
+    if (sessionRaw) return JSON.parse(sessionRaw) || {};
+    const localRaw = localStorage.getItem("sc_user");
+    return localRaw ? JSON.parse(localRaw) : {};
   } catch { return {}; }
 }
 function _cfgApi(method, url, body) {
@@ -237,9 +252,10 @@ function contarItensPorLocalizacao(locNome) {
 }
 
 function registrarLog(acao, modulo, item, detalhes) {
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  const currentUser = _getOrgData();
+  const usuario = currentUser.name || currentUser.nome || '?';
   const log = carregarDoLocalStorage('sc_audit_log', []);
-  log.unshift({ acao, modulo, item, detalhes, usuario: u.nome || '?', ts: new Date().toISOString() });
+  log.unshift({ acao, modulo, item, detalhes, usuario, ts: new Date().toISOString() });
   salvarNoLocalStorage('sc_audit_log', log.slice(0, 200));
 }
 
@@ -341,11 +357,14 @@ function navegarSecao(secao) {
 
 // ── Perfil ────────────────────────────────────────────────────────────────────
 let _perfilSnapshot = {};
+let _pendingAvatarFile = null;
+let _pendingAvatarDataUrl = null;
+let _pendingAvatarRemoved = false;
 
 function carregarPerfil() {
-  // Real session (set by login) lives in sc_user with field "name"; sc_usuario is local profile data
+  // Real session (set by login) lives in sc_user with field "name"; sc_usuario is user-specific local profile data
   const session = _getOrgData();
-  const u       = carregarDoLocalStorage('sc_usuario', {});
+  const u       = carregarUsuarioLocal({});
   const nome    = session.name  || u.nome  || '';
   const email   = session.email || u.email || '';
 
@@ -357,9 +376,22 @@ function carregarPerfil() {
   const initialsEl = document.getElementById('profileAvatarInitials');
   const imgEl      = document.getElementById('profileAvatarImg');
   if (initialsEl) initialsEl.textContent = gerarIniciais(nome);
-  if (u.avatar && imgEl) { imgEl.src = u.avatar; imgEl.classList.add('is-visible'); if (initialsEl) initialsEl.style.display = 'none'; }
+  if (u.avatar && imgEl) {
+    imgEl.src = u.avatar;
+    imgEl.classList.add('is-visible');
+    if (initialsEl) initialsEl.style.display = 'none';
+  } else {
+    if (imgEl) {
+      imgEl.src = '';
+      imgEl.classList.remove('is-visible');
+    }
+    if (initialsEl) initialsEl.style.display = '';
+  }
 
-  _perfilSnapshot = { nome, email };
+  _perfilSnapshot = { nome, email, avatar: u.avatar || null };
+  _pendingAvatarFile = null;
+  _pendingAvatarDataUrl = null;
+  _pendingAvatarRemoved = false;
   detectarMudancasPerfil();
 
   // Load display prefs
@@ -371,7 +403,7 @@ function carregarPerfil() {
   setS('prefFormatoData', prefs.formatoData || 'DD/MM/AAAA');
 }
 
-function salvarPerfil() {
+async function salvarPerfil() {
   const nomeEl  = document.getElementById('profileName');
   const emailEl = document.getElementById('profileEmail');
   const nome    = nomeEl?.value.trim();
@@ -379,10 +411,20 @@ function salvarPerfil() {
   if (!nome)            { showToast('Nome é obrigatório.', 'error'); return; }
   if (!validarEmail(email || '')) { showToast('E-mail inválido.', 'error'); return; }
 
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  const u = carregarUsuarioLocal({});
   u.nome  = nome;
   u.email = email;
-  salvarNoLocalStorage('sc_usuario', u);
+
+  if (_pendingAvatarRemoved) {
+    u.avatar = null;
+  } else if (_pendingAvatarDataUrl) {
+    u.avatar = _pendingAvatarDataUrl;
+  }
+
+  salvarUsuarioLocal(u);
+  _pendingAvatarFile = null;
+  _pendingAvatarDataUrl = null;
+  _pendingAvatarRemoved = false;
 
   // Keep sc_user (real session) in sync so the header name updates immediately
   ['localStorage', 'sessionStorage'].forEach(store => {
@@ -396,28 +438,40 @@ function salvarPerfil() {
   _cfgApi("PUT", "/api/configuracoes/perfil", { nome, email, user_id: _uid, organization_id: _poid }).catch(() => {});
   registrarLog('Perfil atualizado', 'perfil', nome, '');
   atualizarAvatarHeader();
-  _perfilSnapshot = { nome, email };
+  _perfilSnapshot = { nome, email, avatar: u.avatar || null };
   detectarMudancasPerfil();
   showToast('Perfil atualizado!', 'success');
 }
 
 function uploadFotoPerfil(file) {
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('Selecione uma imagem.', 'error'); return; }
-  if (file.size > 2 * 1024 * 1024)    { showToast('Imagem deve ter menos de 2 MB.', 'error'); return; }
-  const reader = new FileReader();
-  reader.onload = e => {
-    const imgEl      = document.getElementById('profileAvatarImg');
-    const initialsEl = document.getElementById('profileAvatarInitials');
-    if (imgEl) { imgEl.src = e.target.result; imgEl.classList.add('is-visible'); }
-    if (initialsEl) initialsEl.style.display = 'none';
-    const u = carregarDoLocalStorage('sc_usuario', {});
-    u.avatar = e.target.result;
-    salvarNoLocalStorage('sc_usuario', u);
-    atualizarAvatarHeader();
-    showToast('Foto atualizada!', 'success');
-  };
-  reader.readAsDataURL(file);
+  if (!file) return Promise.resolve();
+  if (!file.type.startsWith('image/')) { showToast('Selecione uma imagem.', 'error'); return Promise.reject(); }
+  if (file.size > 2 * 1024 * 1024)    { showToast('Imagem deve ter menos de 2 MB.', 'error'); return Promise.reject(); }
+  _pendingAvatarFile = file;
+  _pendingAvatarRemoved = false;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const imgEl      = document.getElementById('profileAvatarImg');
+      const initialsEl = document.getElementById('profileAvatarInitials');
+      const dataUrl = e.target.result;
+      _pendingAvatarDataUrl = dataUrl;
+      if (imgEl) {
+        imgEl.src = dataUrl;
+        imgEl.classList.add('is-visible');
+      }
+      if (initialsEl) initialsEl.style.display = 'none';
+      atualizarAvatarHeader();
+      detectarMudancasPerfil();
+      showToast('Foto carregada para salvar.', 'success');
+      resolve();
+    };
+    reader.onerror = () => {
+      showToast('Erro ao carregar a imagem.', 'error');
+      reject();
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function removerFotoPerfil() {
@@ -428,16 +482,17 @@ function removerFotoPerfil() {
     if (imgEl)      { imgEl.src = ''; imgEl.classList.remove('is-visible'); }
     if (initialsEl) initialsEl.style.display = '';
     if (inp)        inp.value = '';
-    const u = carregarDoLocalStorage('sc_usuario', {});
-    u.avatar = null;
-    salvarNoLocalStorage('sc_usuario', u);
+    _pendingAvatarFile = null;
+    _pendingAvatarDataUrl = null;
+    _pendingAvatarRemoved = true;
+    detectarMudancasPerfil();
     atualizarAvatarHeader();
-    showToast('Foto removida.', 'info');
+    showToast('Foto removida. Clique em salvar para confirmar.', 'info');
   });
 }
 
 function atualizarAvatarHeader() {
-  const u = carregarDoLocalStorage('sc_usuario', {});
+  const u = carregarUsuarioLocal({});
   const iniciais = gerarIniciais(u.nome);
   const siEl = document.getElementById('sidebarInitials');
   const haEl = document.getElementById('headerAvatar');
@@ -450,8 +505,11 @@ function detectarMudancasPerfil() {
   const emailEl = document.getElementById('profileEmail');
   const btn     = document.getElementById('saveProfileBtn');
   if (!btn) return;
-  const mudou = (nomeEl?.value.trim() !== _perfilSnapshot.nome) ||
-                (emailEl?.value.trim() !== _perfilSnapshot.email);
+  const nomeMudou  = nomeEl?.value.trim() !== _perfilSnapshot.nome;
+  const emailMudou = emailEl?.value.trim() !== _perfilSnapshot.email;
+  const currentAvatar = _pendingAvatarRemoved ? null : (_pendingAvatarDataUrl || carregarUsuarioLocal({}).avatar || null);
+  const avatarMudou = currentAvatar !== _perfilSnapshot.avatar;
+  const mudou = nomeMudou || emailMudou || avatarMudou;
   btn.disabled = !mudou;
   if (nomeEl && !nomeEl._profileWired) {
     nomeEl._profileWired = true;
@@ -739,7 +797,7 @@ function toggleStatusUsuario(id) {
 }
 
 function excluirUsuario(id) {
-  const atual = carregarDoLocalStorage('sc_usuario', {});
+  const atual = carregarUsuarioLocal({});
   if (id === atual.id) { showToast('Você não pode excluir sua própria conta aqui.', 'error'); return; }
   const u = carregarDoLocalStorage('sc_usuarios', []).find(x => x.id === id);
   confirmarAcao('Excluir usuário', `Excluir ${u?.nome || 'este usuário'}? Esta ação não pode ser desfeita.`, () => {
@@ -1202,7 +1260,7 @@ function alterarSenha() {
   })
     .then(async r => { const d = await r.json(); if (!r.ok) throw d; return d; })
     .then(() => {
-      registrarLog('Senha alterada', 'seguranca', carregarDoLocalStorage('sc_usuario', {}).nome || '', '');
+      registrarLog('Senha alterada', 'seguranca', carregarUsuarioLocal({}).nome || '', '');
       if (atualEl)    atualEl.value    = '';
       if (novaEl)     novaEl.value     = '';
       if (confirmaEl) confirmaEl.value = '';
