@@ -5,6 +5,23 @@ const pool    = require("../db");
 
 const router = express.Router();
 
+/* GET /api/usuarios?organization_id=X */
+router.get("/", async (req, res) => {
+  try {
+    const orgId = req.query.organization_id;
+    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    const [usuarios] = await pool.query(
+      `SELECT id, name AS nome, email, role, is_active AS ativo, created_at AS criadoEm
+       FROM users WHERE organization_id = ? AND is_active = 1 ORDER BY id ASC`,
+      [orgId],
+    );
+    res.json({ success: true, usuarios });
+  } catch (err) {
+    console.error("GET /api/usuarios:", err);
+    res.status(500).json({ message: "Erro ao buscar usuários." });
+  }
+});
+
 /* POST /api/usuarios */
 router.post("/", async (req, res) => {
   try {
