@@ -1,156 +1,339 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Solicitações — StockControl</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/main.css" />
-  <link rel="stylesheet" href="/styles/components.css" />
-  <style>
-    /* ── KPI panel – stacked rows ─────────────────────────────── */
-    .req-kpi-panel {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-      margin-bottom: var(--space-5);
-    }
-    .req-kpi-row {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      padding: var(--space-3) var(--space-5);
-      cursor: pointer;
-      transition: background var(--transition-fast), box-shadow var(--transition-fast);
-      border-bottom: 1px solid var(--color-border);
-      user-select: none;
-    }
-    .req-kpi-row:last-child { border-bottom: none; }
-    .req-kpi-row:hover      { background: var(--color-surface-alt); }
-    .req-kpi-row.is-active  { background: rgba(37,99,235,.05); box-shadow: inset 4px 0 0 var(--color-primary); }
-    .req-kpi-bar  { width: 4px; min-height: 28px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
-    .req-kpi-lbl  { flex: 1; font-size: .9375rem; font-weight: 500; }
-    .req-kpi-val  { font-size: 1.25rem; font-weight: 700; min-width: 44px; text-align: right; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solicitações — StockControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+    <style>
+      /* ── KPI panel – stacked rows ─────────────────────────────── */
+      .req-kpi-panel {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        margin-bottom: var(--space-5);
+      }
+      .req-kpi-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        padding: var(--space-3) var(--space-5);
+        cursor: pointer;
+        transition:
+          background var(--transition-fast),
+          box-shadow var(--transition-fast);
+        border-bottom: 1px solid var(--color-border);
+        user-select: none;
+      }
+      .req-kpi-row:last-child {
+        border-bottom: none;
+      }
+      .req-kpi-row:hover {
+        background: var(--color-surface-alt);
+      }
+      .req-kpi-row.is-active {
+        background: rgba(37, 99, 235, 0.05);
+        box-shadow: inset 4px 0 0 var(--color-primary);
+      }
+      .req-kpi-bar {
+        width: 4px;
+        min-height: 28px;
+        align-self: stretch;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      .req-kpi-lbl {
+        flex: 1;
+        font-size: 0.9375rem;
+        font-weight: 500;
+      }
+      .req-kpi-val {
+        font-size: 1.25rem;
+        font-weight: 700;
+        min-width: 44px;
+        text-align: right;
+      }
 
-    @keyframes req-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
-    .is-pulsing .req-kpi-val { animation: req-pulse 2s ease-in-out infinite; }
+      @keyframes req-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.45;
+        }
+      }
+      .is-pulsing .req-kpi-val {
+        animation: req-pulse 2s ease-in-out infinite;
+      }
 
-    /* ── Urgency badges ───────────────────────────────────────── */
-    .urg-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: .75rem; font-weight: 600; padding: 3px 9px;
-      border-radius: 999px; white-space: nowrap;
-    }
-    .urg-urgente { background:#FEE2E2; color:#DC2626; }
-    .urg-alta    { background:#FFEDD5; color:#EA580C; }
-    .urg-media   { background:#FEF9C3; color:#CA8A04; }
-    .urg-baixa   { background:#DCFCE7; color:#16A34A; }
+      /* ── Urgency badges ───────────────────────────────────────── */
+      .urg-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .urg-urgente {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+      .urg-alta {
+        background: #ffedd5;
+        color: #ea580c;
+      }
+      .urg-media {
+        background: #fef9c3;
+        color: #ca8a04;
+      }
+      .urg-baixa {
+        background: #dcfce7;
+        color: #16a34a;
+      }
 
-    /* ── Status badges ────────────────────────────────────────── */
-    .sta-badge {
-      display: inline-block;
-      font-size: .75rem; font-weight: 600; padding: 3px 10px;
-      border-radius: 999px; white-space: nowrap;
-    }
-    .sta-pendente  { background:#FEF9C3; color:#854D0E; }
-    .sta-aprovada  { background:#DCFCE7; color:#166534; }
-    .sta-recusada  { background:#FEE2E2; color:#991B1B; }
-    .sta-concluida { background:#DBEAFE; color:#1E40AF; }
-    .sta-cancelada { background:#F1F5F9; color:#475569; }
+      /* ── Status badges ────────────────────────────────────────── */
+      .sta-badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .sta-pendente {
+        background: #fef9c3;
+        color: #854d0e;
+      }
+      .sta-aprovada {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .sta-recusada {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .sta-concluida {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .sta-cancelada {
+        background: #f1f5f9;
+        color: #475569;
+      }
 
-    /* ── Requester avatar ─────────────────────────────────────── */
-    .req-av {
-      width:28px; height:28px; border-radius:50%; flex-shrink:0;
-      display:inline-flex; align-items:center; justify-content:center;
-      font-size:.6875rem; font-weight:700; color:#fff;
-    }
+      /* ── Requester avatar ─────────────────────────────────────── */
+      .req-av {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: #fff;
+      }
 
-    /* ── Table urgent row ─────────────────────────────────────── */
-    tr.row-urg td:first-child { border-left: 3px solid #DC2626; padding-left: 13px; }
+      /* ── Table urgent row ─────────────────────────────────────── */
+      tr.row-urg td:first-child {
+        border-left: 3px solid #dc2626;
+        padding-left: 13px;
+      }
 
-    /* ── Item search dropdown inside modal ───────────────────── */
-    .req-drop {
-      position:absolute; top:calc(100% + 4px); left:0; right:0;
-      background:var(--color-surface); border:1px solid var(--color-border);
-      border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
-      z-index:200; max-height:220px; overflow-y:auto; display:none;
-    }
-    .req-drop.is-open { display:block; }
-    .req-drop-row {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:var(--space-2-5) var(--space-3);
-      cursor:pointer; font-size:.875rem;
-      border-bottom:1px solid var(--color-border-light);
-      transition:background var(--transition-fast);
-    }
-    .req-drop-row:last-child { border-bottom:none; }
-    .req-drop-row:hover { background:var(--color-surface-alt); }
+      /* ── Item search dropdown inside modal ───────────────────── */
+      .req-drop {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        z-index: 200;
+        max-height: 220px;
+        overflow-y: auto;
+        display: none;
+      }
+      .req-drop.is-open {
+        display: block;
+      }
+      .req-drop-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-2-5) var(--space-3);
+        cursor: pointer;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--color-border-light);
+        transition: background var(--transition-fast);
+      }
+      .req-drop-row:last-child {
+        border-bottom: none;
+      }
+      .req-drop-row:hover {
+        background: var(--color-surface-alt);
+      }
 
-    /* ── Search highlight ────────────────────────────────────── */
-    mark { background:#FEF9C3; color:inherit; border-radius:2px; padding:0 1px; }
+      /* ── Search highlight ────────────────────────────────────── */
+      mark {
+        background: #fef9c3;
+        color: inherit;
+        border-radius: 2px;
+        padding: 0 1px;
+      }
 
-    /* ── Misc ────────────────────────────────────────────────── */
-    .act-btn { padding:4px 5px !important; }
-  </style>
-</head>
-<body>
-
-  <main class="page-content">
-
+      /* ── Misc ────────────────────────────────────────────────── */
+      .act-btn {
+        padding: 4px 5px !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-content">
       <!-- Page header -->
       <div class="page-header">
         <div>
           <h1 class="page-title">Solicitações</h1>
-          <p class="page-subtitle">Gerencie pedidos de retirada de itens do estoque</p>
+          <p class="page-subtitle">
+            Gerencie pedidos de retirada de itens do estoque
+          </p>
         </div>
         <button class="btn btn-primary" id="btnNewRequest">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
           Nova Solicitação
         </button>
       </div>
 
       <!-- KPI Panel -->
       <div class="req-kpi-panel">
-        <div class="req-kpi-row" id="reqKpiTotal" data-kpi="" title="Clique para mostrar todas">
-          <div class="req-kpi-bar" style="background:#64748b;"></div>
-          <span class="req-kpi-lbl" style="color:var(--color-text-secondary);">Total</span>
+        <div
+          class="req-kpi-row"
+          id="reqKpiTotal"
+          data-kpi=""
+          title="Clique para mostrar todas"
+        >
+          <div class="req-kpi-bar" style="background: #64748b"></div>
+          <span class="req-kpi-lbl" style="color: var(--color-text-secondary)"
+            >Total</span
+          >
           <span class="req-kpi-val" id="kpiTotal">—</span>
         </div>
-        <div class="req-kpi-row" id="reqKpiPending" data-kpi="pendente" title="Clique para filtrar">
-          <div class="req-kpi-bar" style="background:#f59e0b;"></div>
-          <span class="req-kpi-lbl" style="color:#854d0e;">Pendentes</span>
-          <span class="req-kpi-val" id="kpiPending" style="color:#854d0e;">—</span>
+        <div
+          class="req-kpi-row"
+          id="reqKpiPending"
+          data-kpi="pendente"
+          title="Clique para filtrar"
+        >
+          <div class="req-kpi-bar" style="background: #f59e0b"></div>
+          <span class="req-kpi-lbl" style="color: #854d0e">Pendentes</span>
+          <span class="req-kpi-val" id="kpiPending" style="color: #854d0e"
+            >—</span
+          >
         </div>
-        <div class="req-kpi-row" id="reqKpiApproved" data-kpi="aprovada" title="Clique para filtrar">
-          <div class="req-kpi-bar" style="background:#16a34a;"></div>
-          <span class="req-kpi-lbl" style="color:#166534;">Aprovadas</span>
-          <span class="req-kpi-val" id="kpiApproved" style="color:#166534;">—</span>
+        <div
+          class="req-kpi-row"
+          id="reqKpiApproved"
+          data-kpi="aprovada"
+          title="Clique para filtrar"
+        >
+          <div class="req-kpi-bar" style="background: #16a34a"></div>
+          <span class="req-kpi-lbl" style="color: #166534">Aprovadas</span>
+          <span class="req-kpi-val" id="kpiApproved" style="color: #166534"
+            >—</span
+          >
         </div>
-        <div class="req-kpi-row" id="reqKpiRejected" data-kpi="recusada" title="Clique para filtrar">
-          <div class="req-kpi-bar" style="background:#dc2626;"></div>
-          <span class="req-kpi-lbl" style="color:#991b1b;">Recusadas</span>
-          <span class="req-kpi-val" id="kpiRejected" style="color:#991b1b;">—</span>
+        <div
+          class="req-kpi-row"
+          id="reqKpiRejected"
+          data-kpi="recusada"
+          title="Clique para filtrar"
+        >
+          <div class="req-kpi-bar" style="background: #dc2626"></div>
+          <span class="req-kpi-lbl" style="color: #991b1b">Recusadas</span>
+          <span class="req-kpi-val" id="kpiRejected" style="color: #991b1b"
+            >—</span
+          >
         </div>
-        <div class="req-kpi-row" id="reqKpiCompleted" data-kpi="concluida" title="Clique para filtrar">
-          <div class="req-kpi-bar" style="background:#2563eb;"></div>
-          <span class="req-kpi-lbl" style="color:#1e40af;">Concluídas</span>
-          <span class="req-kpi-val" id="kpiCompleted" style="color:#1e40af;">—</span>
+        <div
+          class="req-kpi-row"
+          id="reqKpiCompleted"
+          data-kpi="concluida"
+          title="Clique para filtrar"
+        >
+          <div class="req-kpi-bar" style="background: #2563eb"></div>
+          <span class="req-kpi-lbl" style="color: #1e40af">Concluídas</span>
+          <span class="req-kpi-val" id="kpiCompleted" style="color: #1e40af"
+            >—</span
+          >
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="page-toolbar" style="flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-4);">
-        <div class="page-toolbar-left" style="flex-wrap:wrap; gap:var(--space-2);">
-          <div class="search-input-wrap" style="min-width:220px; max-width:340px;">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <div
+        class="page-toolbar"
+        style="
+          flex-wrap: wrap;
+          gap: var(--space-2);
+          margin-bottom: var(--space-4);
+        "
+      >
+        <div
+          class="page-toolbar-left"
+          style="flex-wrap: wrap; gap: var(--space-2)"
+        >
+          <div
+            class="search-input-wrap"
+            style="min-width: 220px; max-width: 340px"
+          >
+            <svg
+              class="search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <input type="search" id="reqSearch" placeholder="Buscar por item ou solicitante…" />
+            <input
+              type="search"
+              id="reqSearch"
+              placeholder="Buscar por item ou solicitante…"
+            />
           </div>
-          <select class="form-control" id="reqFilterStatus" style="width:160px; height:34px; font-size:.8125rem;">
+          <select
+            class="form-control"
+            id="reqFilterStatus"
+            style="width: 160px; height: 34px; font-size: 0.8125rem"
+          >
             <option value="">Todos os status</option>
             <option value="pendente">🟡 Pendente</option>
             <option value="aprovada">🟢 Aprovada</option>
@@ -158,17 +341,33 @@
             <option value="concluida">🔵 Concluída</option>
             <option value="cancelada">⚫ Cancelada</option>
           </select>
-          <select class="form-control" id="reqFilterUrgency" style="width:160px; height:34px; font-size:.8125rem;">
+          <select
+            class="form-control"
+            id="reqFilterUrgency"
+            style="width: 160px; height: 34px; font-size: 0.8125rem"
+          >
             <option value="">Qualquer urgência</option>
             <option value="urgente">🔴 Urgente</option>
             <option value="alta">🟠 Alta</option>
             <option value="media">🟡 Média</option>
             <option value="baixa">🟢 Baixa</option>
           </select>
-          <div style="display:flex; align-items:center; gap:var(--space-2);">
-            <input type="date" class="form-control" id="reqDateFrom" style="width:140px; height:34px; font-size:.8125rem;" />
-            <span style="color:var(--color-text-muted); font-size:.875rem;">até</span>
-            <input type="date" class="form-control" id="reqDateTo" style="width:140px; height:34px; font-size:.8125rem;" />
+          <div style="display: flex; align-items: center; gap: var(--space-2)">
+            <input
+              type="date"
+              class="form-control"
+              id="reqDateFrom"
+              style="width: 140px; height: 34px; font-size: 0.8125rem"
+            />
+            <span style="color: var(--color-text-muted); font-size: 0.875rem"
+              >até</span
+            >
+            <input
+              type="date"
+              class="form-control"
+              id="reqDateTo"
+              style="width: 140px; height: 34px; font-size: 0.8125rem"
+            />
           </div>
         </div>
       </div>
@@ -179,16 +378,40 @@
           <thead>
             <tr>
               <th data-sort="created_at">
-                <span class="th-sort">Data
-                  <svg class="th-sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 3 18 9"/><polyline points="6 15 12 21 18 15"/></svg>
+                <span class="th-sort"
+                  >Data
+                  <svg
+                    class="th-sort-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="6 9 12 3 18 9" />
+                    <polyline points="6 15 12 21 18 15" />
+                  </svg>
                 </span>
               </th>
               <th data-sort="nome_item">
-                <span class="th-sort">Item
-                  <svg class="th-sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 3 18 9"/><polyline points="6 15 12 21 18 15"/></svg>
+                <span class="th-sort"
+                  >Item
+                  <svg
+                    class="th-sort-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="6 9 12 3 18 9" />
+                    <polyline points="6 15 12 21 18 15" />
+                  </svg>
                 </span>
               </th>
-              <th style="text-align:center;">Qtd</th>
+              <th style="text-align: center">Qtd</th>
               <th>Solicitante</th>
               <th>Urgência</th>
               <th>Status</th>
@@ -196,13 +419,24 @@
             </tr>
           </thead>
           <tbody id="reqBody">
-            <tr><td colspan="7" style="text-align:center; padding:var(--space-10); color:var(--color-text-muted);">Carregando…</td></tr>
+            <tr>
+              <td
+                colspan="7"
+                style="
+                  text-align: center;
+                  padding: var(--space-10);
+                  color: var(--color-text-muted);
+                "
+              >
+                Carregando…
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Pagination -->
-      <div class="pagination" id="reqPagination" style="display:none;">
+      <div class="pagination" id="reqPagination" style="display: none">
         <span class="pagination-info" id="reqPagInfo">—</span>
         <div class="pagination-controls" id="reqPagControls"></div>
         <div class="pagination-per-page">
@@ -216,151 +450,406 @@
       </div>
 
       <!-- Empty: no data -->
-      <div class="empty-state" id="reqEmptyAll" style="display:none;">
+      <div class="empty-state" id="reqEmptyAll" style="display: none">
         <div class="empty-state-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-            <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="9" y1="15" x2="15" y2="15" />
           </svg>
         </div>
         <h3 class="empty-state-title">Nenhuma solicitação registrada</h3>
-        <p class="empty-state-text">Crie a primeira solicitação de item do estoque.</p>
-        <button class="btn btn-primary" id="btnEmptyNew" style="margin-top:var(--space-4);">+ Nova Solicitação</button>
+        <p class="empty-state-text">
+          Crie a primeira solicitação de item do estoque.
+        </p>
+        <button
+          class="btn btn-primary"
+          id="btnEmptyNew"
+          style="margin-top: var(--space-4)"
+        >
+          + Nova Solicitação
+        </button>
       </div>
 
       <!-- Empty: filtered -->
-      <div class="empty-state" id="reqEmptyFiltered" style="display:none;">
+      <div class="empty-state" id="reqEmptyFiltered" style="display: none">
         <div class="empty-state-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </div>
         <h3 class="empty-state-title">Nenhuma solicitação encontrada</h3>
-        <p class="empty-state-text">Nenhum resultado para os filtros aplicados.</p>
-        <button class="btn btn-secondary" id="btnClearFilters" style="margin-top:var(--space-4);">Limpar filtros</button>
+        <p class="empty-state-text">
+          Nenhum resultado para os filtros aplicados.
+        </p>
+        <button
+          class="btn btn-secondary"
+          id="btnClearFilters"
+          style="margin-top: var(--space-4)"
+        >
+          Limpar filtros
+        </button>
       </div>
-
     </main>
-  
 
-  <!-- Toast -->
-  <div class="toast-container" id="toastContainer"></div>
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
 
-  <!-- ═══ MODAL: Nova / Editar Solicitação ═══ -->
-  <div class="modal-backdrop" id="modalNewRequest">
-    <div class="modal modal-lg">
-      <div class="modal-header">
-        <h3 class="modal-title" id="modalReqTitle">Nova Solicitação</h3>
-        <button class="modal-close" data-close-modal="modalNewRequest" aria-label="Fechar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="reqEditId" value="" />
-
-        <div id="reqFormErr" style="display:none; margin-bottom:var(--space-3); padding:var(--space-2) var(--space-3); background:#FEE2E2; color:#991B1B; border-radius:var(--radius-md); font-size:.875rem;"></div>
-
-        <!-- Item selector -->
-        <div class="form-group">
-          <label class="form-label">Item solicitado <span style="color:var(--color-danger);">*</span></label>
-          <!-- search wrap -->
-          <div id="reqItemSearchWrap" style="position:relative;">
-            <div class="search-input-wrap">
-              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="search" id="reqItemSearch" placeholder="Buscar item por nome ou patrimônio…" autocomplete="off" />
-            </div>
-            <div class="req-drop" id="reqItemDrop"></div>
-          </div>
-          <!-- selected chip -->
-          <div id="reqItemChip" style="display:none; margin-top:var(--space-2); align-items:center; gap:var(--space-3); padding:var(--space-3); background:var(--color-surface-alt); border:1px solid var(--color-border); border-radius:var(--radius-md);">
-            <div style="flex:1;">
-              <div id="reqChipName" style="font-size:.9375rem; font-weight:600; color:var(--color-text-primary);">—</div>
-              <div id="reqChipMeta" style="font-size:.8125rem; color:var(--color-text-muted);">—</div>
-            </div>
-            <button type="button" class="btn btn-ghost btn-sm" id="btnChangeItem">Trocar</button>
-          </div>
-          <span id="errReqItem" class="form-error" style="display:none;">Selecione um item.</span>
+    <!-- ═══ MODAL: Nova / Editar Solicitação ═══ -->
+    <div class="modal-backdrop" id="modalNewRequest">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h3 class="modal-title" id="modalReqTitle">Nova Solicitação</h3>
+          <button
+            class="modal-close"
+            data-close-modal="modalNewRequest"
+            aria-label="Fechar"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
+        <div class="modal-body">
+          <input type="hidden" id="reqEditId" value="" />
 
-        <div class="form-row">
+          <div
+            id="reqFormErr"
+            style="
+              display: none;
+              margin-bottom: var(--space-3);
+              padding: var(--space-2) var(--space-3);
+              background: #fee2e2;
+              color: #991b1b;
+              border-radius: var(--radius-md);
+              font-size: 0.875rem;
+            "
+          ></div>
+
+          <!-- Item selector -->
           <div class="form-group">
-            <label class="form-label" for="reqQty">Quantidade <span style="color:var(--color-danger);">*</span></label>
-            <input type="number" class="form-control" id="reqQty" min="1" value="1" />
-            <span class="form-hint" id="reqQtyHint">Disponível: —</span>
-            <span id="errReqQty" class="form-error" style="display:none;">Quantidade inválida.</span>
+            <label class="form-label"
+              >Item solicitado
+              <span style="color: var(--color-danger)">*</span></label
+            >
+            <!-- search wrap -->
+            <div id="reqItemSearchWrap" style="position: relative">
+              <div class="search-input-wrap">
+                <svg
+                  class="search-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="search"
+                  id="reqItemSearch"
+                  placeholder="Buscar item por nome ou patrimônio…"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="req-drop" id="reqItemDrop"></div>
+            </div>
+            <!-- selected chip -->
+            <div
+              id="reqItemChip"
+              style="
+                display: none;
+                margin-top: var(--space-2);
+                align-items: center;
+                gap: var(--space-3);
+                padding: var(--space-3);
+                background: var(--color-surface-alt);
+                border: 1px solid var(--color-border);
+                border-radius: var(--radius-md);
+              "
+            >
+              <div style="flex: 1">
+                <div
+                  id="reqChipName"
+                  style="
+                    font-size: 0.9375rem;
+                    font-weight: 600;
+                    color: var(--color-text-primary);
+                  "
+                >
+                  —
+                </div>
+                <div
+                  id="reqChipMeta"
+                  style="font-size: 0.8125rem; color: var(--color-text-muted)"
+                >
+                  —
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                id="btnChangeItem"
+              >
+                Trocar
+              </button>
+            </div>
+            <span id="errReqItem" class="form-error" style="display: none"
+              >Selecione um item.</span
+            >
           </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="reqQty"
+                >Quantidade
+                <span style="color: var(--color-danger)">*</span></label
+              >
+              <input
+                type="number"
+                class="form-control"
+                id="reqQty"
+                min="1"
+                value="1"
+              />
+              <span class="form-hint" id="reqQtyHint">Disponível: —</span>
+              <span id="errReqQty" class="form-error" style="display: none"
+                >Quantidade inválida.</span
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reqUrgency">Urgência</label>
+              <select class="form-control" id="reqUrgency">
+                <option value="baixa">🟢 Baixa</option>
+                <option value="media" selected>🟡 Média</option>
+                <option value="alta">🟠 Alta</option>
+                <option value="urgente">🔴 Urgente</option>
+              </select>
+            </div>
+          </div>
+
           <div class="form-group">
-            <label class="form-label" for="reqUrgency">Urgência</label>
-            <select class="form-control" id="reqUrgency">
-              <option value="baixa">🟢 Baixa</option>
-              <option value="media" selected>🟡 Média</option>
-              <option value="alta">🟠 Alta</option>
-              <option value="urgente">🔴 Urgente</option>
-            </select>
+            <label class="form-label" for="reqJustification"
+              >Justificativa
+              <span style="color: var(--color-danger)">*</span></label
+            >
+            <textarea
+              class="form-control"
+              id="reqJustification"
+              rows="3"
+              placeholder="Descreva o motivo da solicitação…"
+              maxlength="500"
+            ></textarea>
+            <span
+              id="errReqJustification"
+              class="form-error"
+              style="display: none"
+              >Justificativa é obrigatória.</span
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reqNeededBy">Necessário até</label>
+            <input type="date" class="form-control" id="reqNeededBy" />
           </div>
         </div>
-
-        <div class="form-group">
-          <label class="form-label" for="reqJustification">Justificativa <span style="color:var(--color-danger);">*</span></label>
-          <textarea class="form-control" id="reqJustification" rows="3" placeholder="Descreva o motivo da solicitação…" maxlength="500"></textarea>
-          <span id="errReqJustification" class="form-error" style="display:none;">Justificativa é obrigatória.</span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="reqNeededBy">Necessário até</label>
-          <input type="date" class="form-control" id="reqNeededBy" />
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="modalNewRequest">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" id="btnSaveRequest">
+            Enviar Solicitação
+          </button>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-close-modal="modalNewRequest">Cancelar</button>
-        <button class="btn btn-primary" id="btnSaveRequest">Enviar Solicitação</button>
-      </div>
     </div>
-  </div>
 
-  <!-- ═══ MODAL: Aprovar / Recusar ═══ -->
-  <div class="modal-backdrop" id="modalReview">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title" id="modalReviewTitle">Revisar Solicitação</h3>
-        <button class="modal-close" data-close-modal="modalReview">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div id="reviewSummary" style="padding:var(--space-3) var(--space-4); background:var(--color-surface-alt); border-radius:var(--radius-md); margin-bottom:var(--space-4); font-size:.875rem; border-left:3px solid var(--color-border);"></div>
-        <div class="form-group">
-          <label class="form-label" for="reviewComment" id="reviewCommentLabel">Comentário <span id="reviewCommentRequired" style="color:var(--color-danger); display:none;">*</span></label>
-          <textarea class="form-control" id="reviewComment" rows="3" placeholder="Opcional: adicione uma observação…" maxlength="300"></textarea>
-          <span id="errReviewComment" class="form-error" style="display:none;">Motivo é obrigatório ao recusar.</span>
+    <!-- ═══ MODAL: Aprovar / Recusar ═══ -->
+    <div class="modal-backdrop" id="modalReview">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="modalReviewTitle">Revisar Solicitação</h3>
+          <button class="modal-close" data-close-modal="modalReview">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div
+            id="reviewSummary"
+            style="
+              padding: var(--space-3) var(--space-4);
+              background: var(--color-surface-alt);
+              border-radius: var(--radius-md);
+              margin-bottom: var(--space-4);
+              font-size: 0.875rem;
+              border-left: 3px solid var(--color-border);
+            "
+          ></div>
+          <div class="form-group">
+            <label
+              class="form-label"
+              for="reviewComment"
+              id="reviewCommentLabel"
+              >Comentário
+              <span
+                id="reviewCommentRequired"
+                style="color: var(--color-danger); display: none"
+                >*</span
+              ></label
+            >
+            <textarea
+              class="form-control"
+              id="reviewComment"
+              rows="3"
+              placeholder="Opcional: adicione uma observação…"
+              maxlength="300"
+            ></textarea>
+            <span id="errReviewComment" class="form-error" style="display: none"
+              >Motivo é obrigatório ao recusar.</span
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="modalReview">
+            Cancelar
+          </button>
+          <button
+            class="btn btn-danger"
+            id="btnReviewReject"
+            style="display: none"
+          >
+            Recusar
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btnReviewApprove"
+            style="display: none"
+          >
+            Aprovar
+          </button>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-close-modal="modalReview">Cancelar</button>
-        <button class="btn btn-danger"   id="btnReviewReject"   style="display:none;">Recusar</button>
-        <button class="btn btn-primary"  id="btnReviewApprove"  style="display:none;">Aprovar</button>
+    </div>
+
+    <!-- ═══ MODAL: Detalhes ═══ -->
+    <div class="modal-backdrop" id="modalDetail">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h3 class="modal-title">Detalhes da Solicitação</h3>
+          <button class="modal-close" data-close-modal="modalDetail">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="modalDetailBody"></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="modalDetail">
+            Fechar
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══ MODAL: Detalhes ═══ -->
-  <div class="modal-backdrop" id="modalDetail">
-    <div class="modal modal-lg">
-      <div class="modal-header">
-        <h3 class="modal-title">Detalhes da Solicitação</h3>
-        <button class="modal-close" data-close-modal="modalDetail">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="modal-body" id="modalDetailBody"></div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-close-modal="modalDetail">Fechar</button>
+    <!-- ═══ MODAL: Confirmação ═══ -->
+    <div class="modal-backdrop" id="modalConfirmarSol">
+      <div class="modal modal-sm modal-confirm">
+        <div class="modal-header">
+          <h3 class="modal-title" id="modalConfirmarSolTitulo">
+            Confirme a ação
+          </h3>
+        </div>
+        <div class="modal-body">
+          <div class="modal-confirm-icon" id="modalConfirmarSolIcon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </div>
+          <p class="modal-confirm-title" id="modalConfirmarSolMensagem">
+            Tem certeza?
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            data-close-modal="modalConfirmarSol"
+          >
+            Cancelar
+          </button>
+          <button class="btn btn-primary" id="btnConfirmarSolSim">
+            Confirme a ação
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script src="/js/layout.js"></script>
-  <script src="/js/main.js"></script>
-  <script src="/js/solicitacoes.js"></script>
-</body>
+    <script src="/js/layout.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/solicitacoes.js"></script>
+  </body>
 </html>
