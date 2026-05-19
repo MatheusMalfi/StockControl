@@ -1,386 +1,471 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cadastrar Item — StockControl</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/main.css" />
-  <link rel="stylesheet" href="/styles/components.css" />
-  <style>
-    /* ── Page-specific layout ── */
-    .form-layout {
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: var(--space-6);
-      align-items: start;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastrar Item — StockControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+    <style>
+      /* ── Page-specific layout ── */
+      .form-layout {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: var(--space-6);
+        align-items: start;
+      }
 
-    @media (max-width: 1024px) {
-      .form-layout { grid-template-columns: 1fr; }
-    }
+      @media (max-width: 1024px) {
+        .form-layout {
+          grid-template-columns: 1fr;
+        }
+      }
 
-    /* Section card */
-    .form-section {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-      margin-bottom: var(--space-5);
-    }
+      /* Section card */
+      .form-section {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        margin-bottom: var(--space-5);
+      }
 
-    .form-section:last-child { margin-bottom: 0; }
+      .form-section:last-child {
+        margin-bottom: 0;
+      }
 
-    .form-section-header {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      background: var(--color-surface-alt);
-    }
+      .form-section-header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface-alt);
+      }
 
-    .form-section-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-md);
-      background: var(--color-primary-light);
-      color: var(--color-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .form-section-icon svg { width: 16px; height: 16px; }
+      .form-section-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-md);
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .form-section-icon svg {
+        width: 16px;
+        height: 16px;
+      }
 
-    .form-section-title {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-    }
+      .form-section-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
 
-    .form-section-body {
-      padding: var(--space-5);
-    }
+      .form-section-body {
+        padding: var(--space-5);
+      }
 
-    /* Sidebar sticky panel */
-    .form-sidebar {
-      position: sticky;
-      top: calc(var(--header-height) + var(--space-5));
-    }
+      /* Sidebar sticky panel */
+      .form-sidebar {
+        position: sticky;
+        top: calc(var(--header-height) + var(--space-5));
+      }
 
-    /* Photo upload zone */
-    .photo-upload-zone {
-      width: 100%;
-      aspect-ratio: 4/3;
-      border: 2px dashed var(--color-border);
-      border-radius: var(--radius-lg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-2);
-      cursor: pointer;
-      transition: border-color var(--transition-fast), background var(--transition-fast);
-      position: relative;
-      overflow: hidden;
-      background: var(--color-surface-alt);
-    }
+      /* Photo upload zone */
+      .photo-upload-zone {
+        width: 100%;
+        aspect-ratio: 4/3;
+        border: 2px dashed var(--color-border);
+        border-radius: var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        cursor: pointer;
+        transition:
+          border-color var(--transition-fast),
+          background var(--transition-fast);
+        position: relative;
+        overflow: hidden;
+        background: var(--color-surface-alt);
+      }
 
-    .photo-upload-zone:hover,
-    .photo-upload-zone.dragover {
-      border-color: var(--color-primary);
-      background: var(--color-primary-light);
-    }
+      .photo-upload-zone:hover,
+      .photo-upload-zone.dragover {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+      }
 
-    .photo-upload-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
-    }
+      .photo-upload-zone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+      }
 
-    .photo-upload-icon { color: var(--color-text-muted); }
-    .photo-upload-icon svg { width: 32px; height: 32px; }
+      .photo-upload-icon {
+        color: var(--color-text-muted);
+      }
+      .photo-upload-icon svg {
+        width: 32px;
+        height: 32px;
+      }
 
-    .photo-upload-text {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--color-text-secondary);
-      text-align: center;
-    }
+      .photo-upload-text {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--color-text-secondary);
+        text-align: center;
+      }
 
-    .photo-upload-hint {
-      font-size: 0.8125rem;
-      color: var(--color-text-muted);
-      text-align: center;
-    }
+      .photo-upload-hint {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+        text-align: center;
+      }
 
-    /* Preview image */
-    .photo-preview {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: none;
-      border-radius: calc(var(--radius-lg) - 2px);
-    }
+      /* Preview image */
+      .photo-preview {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+        border-radius: calc(var(--radius-lg) - 2px);
+      }
 
-    .photo-preview.is-visible { display: block; }
+      .photo-preview.is-visible {
+        display: block;
+      }
 
-    .photo-remove-btn {
-      position: absolute;
-      top: var(--space-2);
-      right: var(--space-2);
-      width: 28px;
-      height: 28px;
-      background: rgba(0,0,0,0.55);
-      border: none;
-      border-radius: 50%;
-      color: #fff;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 2;
-      transition: background var(--transition-fast);
-    }
-    .photo-remove-btn:hover { background: rgba(239,68,68,0.85); }
-    .photo-remove-btn.is-visible { display: flex; }
-    .photo-remove-btn svg { width: 14px; height: 14px; }
+      .photo-remove-btn {
+        position: absolute;
+        top: var(--space-2);
+        right: var(--space-2);
+        width: 28px;
+        height: 28px;
+        background: rgba(0, 0, 0, 0.55);
+        border: none;
+        border-radius: 50%;
+        color: #fff;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transition: background var(--transition-fast);
+      }
+      .photo-remove-btn:hover {
+        background: rgba(239, 68, 68, 0.85);
+      }
+      .photo-remove-btn.is-visible {
+        display: flex;
+      }
+      .photo-remove-btn svg {
+        width: 14px;
+        height: 14px;
+      }
 
-    /* Condition selector (button group) */
-    .condition-group {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-2);
-    }
+      /* Condition selector (button group) */
+      .condition-group {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-2);
+      }
 
-    .condition-option {
-      position: relative;
-    }
+      .condition-option {
+        position: relative;
+      }
 
-    .condition-option input[type="radio"] {
-      position: absolute;
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
+      .condition-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
 
-    .condition-label {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--space-1-5);
-      padding: var(--space-3) var(--space-2);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      text-align: center;
-      user-select: none;
-    }
+      .condition-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-1-5);
+        padding: var(--space-3) var(--space-2);
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        text-align: center;
+        user-select: none;
+      }
 
-    .condition-label:hover {
-      border-color: var(--color-border-strong);
-      background: var(--color-surface-alt);
-    }
+      .condition-label:hover {
+        border-color: var(--color-border-strong);
+        background: var(--color-surface-alt);
+      }
 
-    .condition-label-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+      .condition-label-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
-    .condition-label-icon svg { width: 14px; height: 14px; }
+      .condition-label-icon svg {
+        width: 14px;
+        height: 14px;
+      }
 
-    .condition-label-text {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      line-height: 1.2;
-    }
+      .condition-label-text {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        line-height: 1.2;
+      }
 
-    /* Checked states */
-    .condition-option input:checked + .condition-label[data-cond="OTIMO"] {
-      border-color: var(--color-success);
-      background: var(--color-success-light);
-    }
-    .condition-option input:checked + .condition-label[data-cond="REPARO"] {
-      border-color: var(--color-warning);
-      background: var(--color-warning-light);
-    }
-    .condition-option input:checked + .condition-label[data-cond="DESCARTAR"] {
-      border-color: var(--color-danger);
-      background: var(--color-danger-light);
-    }
+      /* Checked states */
+      .condition-option input:checked + .condition-label[data-cond="OTIMO"] {
+        border-color: var(--color-success);
+        background: var(--color-success-light);
+      }
+      .condition-option input:checked + .condition-label[data-cond="REPARO"] {
+        border-color: var(--color-warning);
+        background: var(--color-warning-light);
+      }
+      .condition-option
+        input:checked
+        + .condition-label[data-cond="DESCARTAR"] {
+        border-color: var(--color-danger);
+        background: var(--color-danger-light);
+      }
 
-    /* Ótimo */
-    .condition-label[data-cond="OTIMO"] .condition-label-icon {
-      background: var(--color-success-light);
-      color: var(--color-success-dark);
-    }
-    .condition-option input:checked + .condition-label[data-cond="OTIMO"] .condition-label-text {
-      color: var(--color-success-dark);
-    }
+      /* Ótimo */
+      .condition-label[data-cond="OTIMO"] .condition-label-icon {
+        background: var(--color-success-light);
+        color: var(--color-success-dark);
+      }
+      .condition-option
+        input:checked
+        + .condition-label[data-cond="OTIMO"]
+        .condition-label-text {
+        color: var(--color-success-dark);
+      }
 
-    /* Reparo */
-    .condition-label[data-cond="REPARO"] .condition-label-icon {
-      background: var(--color-warning-light);
-      color: var(--color-warning-dark);
-    }
-    .condition-option input:checked + .condition-label[data-cond="REPARO"] .condition-label-text {
-      color: var(--color-warning-dark);
-    }
+      /* Reparo */
+      .condition-label[data-cond="REPARO"] .condition-label-icon {
+        background: var(--color-warning-light);
+        color: var(--color-warning-dark);
+      }
+      .condition-option
+        input:checked
+        + .condition-label[data-cond="REPARO"]
+        .condition-label-text {
+        color: var(--color-warning-dark);
+      }
 
-    /* Descartar */
-    .condition-label[data-cond="DESCARTAR"] .condition-label-icon {
-      background: var(--color-danger-light);
-      color: var(--color-danger-dark);
-    }
-    .condition-option input:checked + .condition-label[data-cond="DESCARTAR"] .condition-label-text {
-      color: var(--color-danger-dark);
-    }
+      /* Descartar */
+      .condition-label[data-cond="DESCARTAR"] .condition-label-icon {
+        background: var(--color-danger-light);
+        color: var(--color-danger-dark);
+      }
+      .condition-option
+        input:checked
+        + .condition-label[data-cond="DESCARTAR"]
+        .condition-label-text {
+        color: var(--color-danger-dark);
+      }
 
-    /* Tags input */
-    .tags-input-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-1-5);
-      padding: var(--space-2) var(--space-3);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      min-height: 40px;
-      cursor: text;
-      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    }
+      /* Tags input */
+      .tags-input-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1-5);
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        min-height: 40px;
+        cursor: text;
+        transition:
+          border-color var(--transition-fast),
+          box-shadow var(--transition-fast);
+      }
 
-    .tags-input-wrap:focus-within {
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
+      .tags-input-wrap:focus-within {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+      }
 
-    .tag-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      height: 24px;
-      padding: 0 var(--space-2);
-      background: var(--color-primary-light);
-      color: var(--color-primary-dark);
-      border-radius: var(--radius-full);
-      font-size: 0.8125rem;
-      font-weight: 500;
-    }
+      .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 var(--space-2);
+        background: var(--color-primary-light);
+        color: var(--color-primary-dark);
+        border-radius: var(--radius-full);
+        font-size: 0.8125rem;
+        font-weight: 500;
+      }
 
-    .tag-remove {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: currentColor;
-      opacity: 0.6;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      line-height: 1;
-    }
-    .tag-remove:hover { opacity: 1; }
-    .tag-remove svg { width: 12px; height: 12px; }
+      .tag-remove {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: currentColor;
+        opacity: 0.6;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        line-height: 1;
+      }
+      .tag-remove:hover {
+        opacity: 1;
+      }
+      .tag-remove svg {
+        width: 12px;
+        height: 12px;
+      }
 
-    .tags-real-input {
-      border: none;
-      outline: none;
-      font-family: var(--font-sans);
-      font-size: 0.875rem;
-      color: var(--color-text-primary);
-      background: transparent;
-      min-width: 80px;
-      flex: 1;
-      padding: 2px 0;
-    }
+      .tags-real-input {
+        border: none;
+        outline: none;
+        font-family: var(--font-sans);
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+        background: transparent;
+        min-width: 80px;
+        flex: 1;
+        padding: 2px 0;
+      }
 
-    .tags-real-input::placeholder { color: var(--color-text-muted); }
+      .tags-real-input::placeholder {
+        color: var(--color-text-muted);
+      }
 
-    /* Summary card (sticky sidebar) */
-    .summary-card {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-      margin-bottom: var(--space-4);
-    }
+      /* Summary card (sticky sidebar) */
+      .summary-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        margin-bottom: var(--space-4);
+      }
 
-    .summary-card-header {
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      background: var(--color-surface-alt);
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-    }
+      .summary-card-header {
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface-alt);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
 
-    .summary-card-body {
-      padding: var(--space-4) var(--space-5);
-    }
+      .summary-card-body {
+        padding: var(--space-4) var(--space-5);
+      }
 
-    .summary-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--space-2);
-      padding: var(--space-2) 0;
-      border-bottom: 1px solid var(--color-border-light);
-      font-size: 0.875rem;
-    }
-    .summary-row:last-child { border-bottom: none; }
-    .summary-row-label { color: var(--color-text-muted); flex-shrink: 0; }
-    .summary-row-value { font-weight: 500; color: var(--color-text-primary); text-align: right; word-break: break-word; }
+      .summary-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-2);
+        padding: var(--space-2) 0;
+        border-bottom: 1px solid var(--color-border-light);
+        font-size: 0.875rem;
+      }
+      .summary-row:last-child {
+        border-bottom: none;
+      }
+      .summary-row-label {
+        color: var(--color-text-muted);
+        flex-shrink: 0;
+      }
+      .summary-row-value {
+        font-weight: 500;
+        color: var(--color-text-primary);
+        text-align: right;
+        word-break: break-word;
+      }
 
-    /* Step breadcrumb for edit mode */
-    .form-mode-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-1-5);
-      height: 26px;
-      padding: 0 var(--space-3);
-      background: var(--color-primary-light);
-      color: var(--color-primary-dark);
-      border-radius: var(--radius-full);
-      font-size: 0.8125rem;
-      font-weight: 600;
-      margin-bottom: var(--space-2);
-    }
-  </style>
-</head>
-<body>
-
-  <main class="page-content">
-
+      /* Step breadcrumb for edit mode */
+      .form-mode-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1-5);
+        height: 26px;
+        padding: 0 var(--space-3);
+        background: var(--color-primary-light);
+        color: var(--color-primary-dark);
+        border-radius: var(--radius-full);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-content">
       <div class="page-header">
         <div>
           <div class="form-mode-badge" id="modeBadge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Novo Item
           </div>
           <h1 class="page-title" id="pageTitle">Cadastrar Item</h1>
-          <p class="page-subtitle">Preencha os dados do equipamento a ser registrado no estoque.</p>
+          <p class="page-subtitle">
+            Preencha os dados do equipamento a ser registrado no estoque.
+          </p>
         </div>
-        <div style="display:flex; gap:var(--space-2);">
+        <div style="display: flex; gap: var(--space-2)">
           <a href="estoque.html" class="btn btn-secondary">Cancelar</a>
-          <button type="submit" form="itemForm" class="btn btn-primary" id="saveBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
+          <button
+            type="submit"
+            form="itemForm"
+            class="btn btn-primary"
+            id="saveBtn"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
             </svg>
             Salvar Item
           </button>
@@ -391,52 +476,98 @@
         <input type="hidden" id="itemId" name="id" value="" />
 
         <div class="form-layout">
-
           <!-- LEFT: main fields -->
           <div>
-
             <!-- 1. Identificação -->
             <div class="form-section">
               <div class="form-section-header">
                 <div class="form-section-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10 9 9 9 8 9"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
                   </svg>
                 </div>
                 <span class="form-section-title">Identificação</span>
               </div>
               <div class="form-section-body">
-                <div class="form-row" style="grid-template-columns: 1fr auto;">
+                <div class="form-row" style="grid-template-columns: 1fr auto">
                   <div class="form-group" id="groupProductName">
-                    <label class="form-label required" for="productName">Nome do Item</label>
-                    <input type="text" id="productName" name="product_name" class="form-control"
-                      placeholder="Ex: Notebook Dell Inspiron 15" required maxlength="200" />
-                    <span class="form-error" id="errorProductName">Informe o nome do item.</span>
+                    <label class="form-label required" for="productName"
+                      >Nome do Item</label
+                    >
+                    <input
+                      type="text"
+                      id="productName"
+                      name="product_name"
+                      class="form-control"
+                      placeholder="Ex: Notebook Dell Inspiron 15"
+                      required
+                      maxlength="200"
+                    />
+                    <span class="form-error" id="errorProductName"
+                      >Informe o nome do item.</span
+                    >
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="assetTag">Nº Patrimônio</label>
-                    <input type="text" id="assetTag" name="asset_tag" class="form-control"
-                      placeholder="Ex: PAT-00123" style="width:160px;" maxlength="50" />
+                    <label class="form-label" for="assetTag"
+                      >Nº Patrimônio</label
+                    >
+                    <input
+                      type="text"
+                      id="assetTag"
+                      name="asset_tag"
+                      class="form-control"
+                      placeholder="Ex: PAT-00123"
+                      style="width: 160px"
+                      maxlength="50"
+                    />
                   </div>
                 </div>
 
                 <div class="form-row cols-3">
                   <div class="form-group" id="groupCategory">
-                    <label class="form-label required" for="categoryId">Categoria</label>
-                    <select id="categoryId" name="category_id" class="form-control" required>
+                    <label class="form-label required" for="categoryId"
+                      >Categoria</label
+                    >
+                    <select
+                      id="categoryId"
+                      name="category_id"
+                      class="form-control"
+                      required
+                    >
                       <option value="">Selecione…</option>
                     </select>
-                    <span class="form-error" id="errorCategory">Selecione uma categoria.</span>
+                    <span class="form-error" id="errorCategory"
+                      >Selecione uma categoria.</span
+                    >
                   </div>
-                  <div class="form-group">
-                    <label class="form-label" for="brandId">Marca</label>
-                    <select id="brandId" name="brand_id" class="form-control">
+                  <div class="form-group" id="groupBrand">
+                    <label class="form-label required" for="brandId"
+                      >Marca</label
+                    >
+                    <select
+                      id="brandId"
+                      name="brand_id"
+                      class="form-control"
+                      required
+                    >
                       <option value="">Selecione…</option>
                     </select>
+                    <span class="form-error" id="errorBrand"
+                      >Selecione uma marca.</span
+                    >
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="modelId">Modelo</label>
@@ -448,8 +579,14 @@
 
                 <div class="form-group">
                   <label class="form-label" for="description">Descrição</label>
-                  <textarea id="description" name="description" class="form-control" rows="3"
-                    placeholder="Especificações técnicas, observações relevantes…" maxlength="1000"></textarea>
+                  <textarea
+                    id="description"
+                    name="description"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Especificações técnicas, observações relevantes…"
+                    maxlength="1000"
+                  ></textarea>
                 </div>
               </div>
             </div>
@@ -458,76 +595,170 @@
             <div class="form-section">
               <div class="form-section-header">
                 <div class="form-section-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                 </div>
                 <span class="form-section-title">Condição e Quantidade</span>
               </div>
               <div class="form-section-body">
-
-                <div class="form-group" id="groupCondition" style="margin-bottom:var(--space-5);">
+                <div
+                  class="form-group"
+                  id="groupCondition"
+                  style="margin-bottom: var(--space-5)"
+                >
                   <label class="form-label required">Condição</label>
                   <div class="condition-group">
                     <div class="condition-option">
-                      <input type="radio" name="condition_code" id="condOtimo" value="OTIMO" required />
-                      <label class="condition-label" for="condOtimo" data-cond="OTIMO">
+                      <input
+                        type="radio"
+                        name="condition_code"
+                        id="condOtimo"
+                        value="OTIMO"
+                        required
+                      />
+                      <label
+                        class="condition-label"
+                        for="condOtimo"
+                        data-cond="OTIMO"
+                      >
                         <div class="condition-label-icon">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"/>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
                           </svg>
                         </div>
                         <span class="condition-label-text">Ótimo</span>
                       </label>
                     </div>
                     <div class="condition-option">
-                      <input type="radio" name="condition_code" id="condReparo" value="REPARO" />
-                      <label class="condition-label" for="condReparo" data-cond="REPARO">
+                      <input
+                        type="radio"
+                        name="condition_code"
+                        id="condReparo"
+                        value="REPARO"
+                      />
+                      <label
+                        class="condition-label"
+                        for="condReparo"
+                        data-cond="REPARO"
+                      >
                         <div class="condition-label-icon">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path
+                              d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                            />
                           </svg>
                         </div>
                         <span class="condition-label-text">Reparo</span>
                       </label>
                     </div>
                     <div class="condition-option">
-                      <input type="radio" name="condition_code" id="condDescartar" value="DESCARTAR" />
-                      <label class="condition-label" for="condDescartar" data-cond="DESCARTAR">
+                      <input
+                        type="radio"
+                        name="condition_code"
+                        id="condDescartar"
+                        value="DESCARTAR"
+                      />
+                      <label
+                        class="condition-label"
+                        for="condDescartar"
+                        data-cond="DESCARTAR"
+                      >
                         <div class="condition-label-icon">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                            <path d="M10 11v6"/><path d="M14 11v6"/>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path
+                              d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+                            />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
                           </svg>
                         </div>
                         <span class="condition-label-text">Descartar</span>
                       </label>
                     </div>
                   </div>
-                  <span class="form-error" id="errorCondition" style="margin-top:var(--space-2);">Selecione a condição do item.</span>
+                  <span
+                    class="form-error"
+                    id="errorCondition"
+                    style="margin-top: var(--space-2)"
+                    >Selecione a condição do item.</span
+                  >
                 </div>
 
                 <div class="form-row cols-3">
                   <div class="form-group" id="groupQty">
-                    <label class="form-label required" for="quantity">Quantidade</label>
-                    <input type="number" id="quantity" name="quantity" class="form-control"
-                      min="1" value="1" required />
-                    <span class="form-error" id="errorQty">Quantidade deve ser ≥ 1.</span>
+                    <label class="form-label required" for="quantity"
+                      >Quantidade</label
+                    >
+                    <input
+                      type="number"
+                      id="quantity"
+                      name="quantity"
+                      class="form-control"
+                      min="1"
+                      value="1"
+                      required
+                    />
+                    <span class="form-error" id="errorQty"
+                      >Quantidade deve ser ≥ 1.</span
+                    >
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="estimatedValue">Valor Estimado (R$)</label>
-                    <input type="number" id="estimatedValue" name="estimated_value" class="form-control"
-                      min="0" step="0.01" placeholder="0,00" />
+                    <label class="form-label" for="estimatedValue"
+                      >Valor Estimado (R$)</label
+                    >
+                    <input
+                      type="number"
+                      id="estimatedValue"
+                      name="estimated_value"
+                      class="form-control"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                    />
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="locationId">Localização</label>
-                    <select id="locationId" name="storage_location_id" class="form-control">
+                    <label class="form-label" for="locationId"
+                      >Localização</label
+                    >
+                    <select
+                      id="locationId"
+                      name="storage_location_id"
+                      class="form-control"
+                    >
                       <option value="">Sem localização</option>
                     </select>
                   </div>
                 </div>
-
               </div>
             </div>
 
@@ -535,9 +766,18 @@
             <div class="form-section">
               <div class="form-section-header">
                 <div class="form-section-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+                    />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
                   </svg>
                 </div>
                 <span class="form-section-title">Tags e Observações</span>
@@ -546,56 +786,111 @@
                 <div class="form-group">
                   <label class="form-label" for="tagsInput">Tags</label>
                   <div class="tags-input-wrap" id="tagsWrap">
-                    <input type="text" id="tagsInput" class="tags-real-input"
-                      placeholder="Digite e pressione Enter para adicionar…" maxlength="50" />
+                    <input
+                      type="text"
+                      id="tagsInput"
+                      class="tags-real-input"
+                      placeholder="Digite e pressione Enter para adicionar…"
+                      maxlength="50"
+                    />
                   </div>
-                  <span class="form-hint">Pressione Enter ou vírgula para confirmar cada tag.</span>
+                  <span class="form-hint"
+                    >Pressione Enter ou vírgula para confirmar cada tag.</span
+                  >
                   <input type="hidden" id="tagsHidden" name="tags" value="[]" />
                 </div>
 
-                <div class="form-group" style="margin-top:var(--space-4);">
-                  <label class="form-label" for="notes">Observações Internas</label>
-                  <textarea id="notes" name="notes" class="form-control" rows="3"
-                    placeholder="Anotações visíveis apenas para a equipe interna…" maxlength="2000"></textarea>
+                <div class="form-group" style="margin-top: var(--space-4)">
+                  <label class="form-label" for="notes"
+                    >Observações Internas</label
+                  >
+                  <textarea
+                    id="notes"
+                    name="notes"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Anotações visíveis apenas para a equipe interna…"
+                    maxlength="2000"
+                  ></textarea>
                 </div>
               </div>
             </div>
-
-          </div><!-- /left -->
+          </div>
+          <!-- /left -->
 
           <!-- RIGHT: photo + summary -->
           <div class="form-sidebar">
-
             <!-- Photo -->
             <div class="form-section">
               <div class="form-section-header">
                 <div class="form-section-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
                   </svg>
                 </div>
                 <span class="form-section-title">Foto do Item</span>
               </div>
               <div class="form-section-body">
                 <div class="photo-upload-zone" id="photoZone">
-                  <input type="file" id="photoInput" name="photo" accept="image/jpeg,image/png,image/webp" />
-                  <img class="photo-preview" id="photoPreview" src="" alt="Preview" />
-                  <button type="button" class="photo-remove-btn" id="photoRemoveBtn" aria-label="Remover foto">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  <input
+                    type="file"
+                    id="photoInput"
+                    name="photo"
+                    accept="image/jpeg,image/png,image/webp"
+                  />
+                  <img
+                    class="photo-preview"
+                    id="photoPreview"
+                    src=""
+                    alt="Preview"
+                  />
+                  <button
+                    type="button"
+                    class="photo-remove-btn"
+                    id="photoRemoveBtn"
+                    aria-label="Remover foto"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
                   </button>
                   <div class="photo-upload-icon" id="photoPlaceholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
                     </svg>
                   </div>
-                  <p class="photo-upload-text" id="photoUploadText">Clique ou arraste uma foto</p>
-                  <p class="photo-upload-hint" id="photoUploadHint">JPG, PNG ou WebP • máx. 5 MB</p>
+                  <p class="photo-upload-text" id="photoUploadText">
+                    Clique ou arraste uma foto
+                  </p>
+                  <p class="photo-upload-hint" id="photoUploadHint">
+                    JPG, PNG ou WebP • máx. 5 MB
+                  </p>
                 </div>
               </div>
             </div>
@@ -632,77 +927,133 @@
             </div>
 
             <!-- QR (only in edit mode) -->
-            <div class="summary-card" id="qrSection" style="display:none;">
+            <div class="summary-card" id="qrSection" style="display: none">
               <div class="summary-card-header">QR Code Token</div>
               <div class="summary-card-body">
                 <div class="qr-token-box" id="qrTokenBox">
                   <span id="qrTokenText">—</span>
-                  <button type="button" class="qr-copy-btn" id="qrCopyBtn" aria-label="Copiar token">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  <button
+                    type="button"
+                    class="qr-copy-btn"
+                    id="qrCopyBtn"
+                    aria-label="Copiar token"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path
+                        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                      />
                     </svg>
                   </button>
                 </div>
               </div>
             </div>
-
-          </div><!-- /right -->
-
-        </div><!-- /form-layout -->
+          </div>
+          <!-- /right -->
+        </div>
+        <!-- /form-layout -->
 
         <!-- Bottom action bar (mobile) -->
-        <div style="display:flex; justify-content:flex-end; gap:var(--space-2); margin-top:var(--space-5); padding-top:var(--space-5); border-top:1px solid var(--color-border);">
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space-2);
+            margin-top: var(--space-5);
+            padding-top: var(--space-5);
+            border-top: 1px solid var(--color-border);
+          "
+        >
           <a href="estoque.html" class="btn btn-secondary">Cancelar</a>
           <button type="submit" class="btn btn-primary" id="saveBtn2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
             </svg>
             Salvar Item
           </button>
         </div>
-
       </form>
-
     </main>
-  
 
-  <!-- Toast -->
-  <div class="toast-container" id="toastContainer"></div>
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Unsaved changes modal -->
-  <div class="modal-backdrop" id="unsavedModal">
-    <div class="modal modal-sm modal-confirm">
-      <div class="modal-header">
-        <h3 class="modal-title">Alterações não salvas</h3>
-        <button class="modal-close" data-close-modal="unsavedModal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-confirm-icon warning">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
+    <!-- Unsaved changes modal -->
+    <div class="modal-backdrop" id="unsavedModal">
+      <div class="modal modal-sm modal-confirm">
+        <div class="modal-header">
+          <h3 class="modal-title">Alterações não salvas</h3>
+          <button class="modal-close" data-close-modal="unsavedModal">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
-        <p class="modal-confirm-title">Sair sem salvar?</p>
-        <p class="modal-confirm-desc">As alterações feitas neste formulário serão perdidas.</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-close-modal="unsavedModal">Continuar editando</button>
-        <button class="btn btn-danger" id="discardChangesBtn">Sair sem salvar</button>
+        <div class="modal-body">
+          <div class="modal-confirm-icon warning">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </div>
+          <p class="modal-confirm-title">Sair sem salvar?</p>
+          <p class="modal-confirm-desc">
+            As alterações feitas neste formulário serão perdidas.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="unsavedModal">
+            voltar
+          </button>
+          <button class="btn btn-danger" id="discardChangesBtn">Sair</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script src="/js/layout.js"></script>
-  <script src="/js/main.js"></script>
-  <script src="/js/form-item.js"></script>
-</body>
+    <script src="/js/layout.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/form-item.js"></script>
+  </body>
 </html>
