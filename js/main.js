@@ -66,6 +66,35 @@
      ============================================================ */
   const SC = (window.SC = window.SC || {});
 
+  /* ============================================================
+     THEME MANAGER
+     ============================================================ */
+  function aplicarTema(tema) {
+    const html = document.documentElement;
+    if (tema === 'escuro') {
+      html.setAttribute('data-theme', 'dark');
+    } else if (tema === 'auto') {
+      html.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    } else {
+      html.setAttribute('data-theme', 'light');
+    }
+  }
+
+  function carregarTemaPreferido() {
+    try {
+      const prefsRaw = localStorage.getItem('sc_preferencias');
+      const prefs = prefsRaw ? JSON.parse(prefsRaw) : {};
+      const tema = prefs.tema || 'claro';
+      aplicarTema(tema);
+    } catch {}
+  }
+
+  carregarTemaPreferido();
+
+  /* Expose theme manager to global scope */
+  SC.aplicarTema = aplicarTema;
+  SC.carregarTemaPreferido = carregarTemaPreferido;
+
   /**
    * SC.api(path, options)
    * Thin wrapper around fetch that:
@@ -286,18 +315,74 @@
     };
     const roleLabel = roleLabels[user.role] || user.role || "—";
 
+    // Try to load user's avatar from local storage
+    const getUserStorageKey = () => {
+      const id = user?.id || user?.user_id || user?.userId || '';
+      return id ? `sc_usuario_${id}` : 'sc_usuario';
+    };
+    let userAvatar = null;
+    try {
+      const userDataRaw = localStorage.getItem(getUserStorageKey());
+      const userData = userDataRaw ? JSON.parse(userDataRaw) : {};
+      userAvatar = userData.avatar || null;
+    } catch {}
+
     /* Sidebar */
     const sidebarInitials = document.getElementById("sidebarInitials");
     const sidebarUserName = document.getElementById("sidebarUserName");
     const sidebarUserRole = document.getElementById("sidebarUserRole");
-    if (sidebarInitials) sidebarInitials.textContent = initials;
+    
+    if (sidebarInitials) {
+      const sidebarAvatar = sidebarInitials.parentElement;
+      if (sidebarAvatar && userAvatar) {
+        sidebarInitials.style.display = 'none';
+        let img = sidebarAvatar.querySelector('img');
+        if (!img) {
+          img = document.createElement('img');
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = 'inherit';
+          sidebarAvatar.appendChild(img);
+        }
+        img.src = userAvatar;
+      } else if (sidebarInitials) {
+        sidebarInitials.textContent = initials;
+        sidebarInitials.style.display = '';
+        if (sidebarAvatar) {
+          const img = sidebarAvatar.querySelector('img');
+          if (img) img.remove();
+        }
+      }
+    }
+    
     if (sidebarUserName) sidebarUserName.textContent = user.name || "Usuário";
     if (sidebarUserRole) sidebarUserRole.textContent = roleLabel;
 
     /* Header */
     const headerAvatar = document.getElementById("headerAvatar");
     const headerUserName = document.getElementById("headerUserName");
-    if (headerAvatar) headerAvatar.textContent = initials;
+    
+    if (headerAvatar) {
+      if (userAvatar) {
+        headerAvatar.textContent = '';
+        let img = headerAvatar.querySelector('img');
+        if (!img) {
+          img = document.createElement('img');
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = 'inherit';
+          headerAvatar.appendChild(img);
+        }
+        img.src = userAvatar;
+      } else {
+        headerAvatar.textContent = initials;
+        const img = headerAvatar.querySelector('img');
+        if (img) img.remove();
+      }
+    }
+    
     if (headerUserName)
       headerUserName.textContent = user.name
         ? user.name.split(" ")[0]
