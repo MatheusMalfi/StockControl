@@ -1,6 +1,6 @@
 "use strict";
 
-document.addEventListener("sc:ready", function () {
+document.addEventListener("DOMContentLoaded", function () {
 
   // ── Storage ───────────────────────────────────────────────────────────────
   const KEYS = { ITEMS: "sc_items", REQUESTS: "sc_requests" };

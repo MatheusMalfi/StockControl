@@ -6,23 +6,23 @@
 
 (() => {
   "use strict";
-
-  function onReady(fn) {
-    if (window.SC && SC.ready) fn();
-    else document.addEventListener("sc:ready", fn, { once: true });
-  }
-
-  onReady(init);
-
-  /* ================================================================
-     CHAVES DO LOCALSTORAGE
-     ================================================================ */
   const KEYS = {
     ITEMS    : "sc_items",
     MOVEMENTS: "sc_movements",
     ALERTS   : "sc_alerts",
     GOAL     : "sc_goal",
   };
+
+  function onReady(fn) {
+    if (window.SC && SC.ready) fn();
+    else document.addEventListener("sc:ready", fn, { once: true });
+  }
+
+ 
+
+  /* ================================================================
+     CHAVES DO LOCALSTORAGE
+     ================================================================ */
 
   function dbGet(key)      { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
   function dbSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
@@ -687,5 +687,7 @@
   function iconTrash()  { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`; }
   function iconWrench() { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`; }
   function iconInfo()   { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`; }
+
+ onReady(init);
 
 })();
