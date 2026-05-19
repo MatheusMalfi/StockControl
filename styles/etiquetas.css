@@ -505,6 +505,10 @@ body { margin: 0; font-family: Inter, -apple-system, sans-serif;
   .etiqueta-print.grande .print-info { font-size: 8pt; }
 }
 
+.checkbox-wrapper span {
+  color: black !important;
+}
+
 [data-theme="dark"] .item-nome,
 .dark .item-nome {
   color: #ffffff !important;
