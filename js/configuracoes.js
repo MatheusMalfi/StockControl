@@ -298,20 +298,6 @@ function initConfiguracoes() {
     if (_confirmarCallback) { _confirmarCallback(); _confirmarCallback = null; }
   });
 
-  // Wire password toggles (all pages, including modal)
-  document.querySelectorAll('.password-toggle[data-target]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const inp = document.getElementById(btn.dataset.target);
-      if (!inp) return;
-      const hidden = inp.type === 'password';
-      inp.type = hidden ? 'text' : 'password';
-      const svg = btn.querySelector('svg');
-      if (svg) svg.innerHTML = hidden
-        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
-        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-    });
-  });
-
   // Wire modal senha strength
   document.getElementById('modalUsuarioSenha')?.addEventListener('input', function () {
     const { nivel, pct, cor } = calcularForcaSenha(this.value);
@@ -463,10 +449,10 @@ function detectarMudancasPerfil() {
   const mudou = (nomeEl?.value.trim() !== _perfilSnapshot.nome) ||
                 (emailEl?.value.trim() !== _perfilSnapshot.email);
   btn.disabled = !mudou;
-  if (!nomeEl._profileWired) {
-    nomeEl._profileWired  = true;
-    nomeEl.addEventListener('input',  detectarMudancasPerfil);
-    emailEl.addEventListener('input', detectarMudancasPerfil);
+  if (nomeEl && !nomeEl._profileWired) {
+    nomeEl._profileWired = true;
+    nomeEl.addEventListener('input', detectarMudancasPerfil);
+    emailEl?.addEventListener('input', detectarMudancasPerfil);
   }
 }
 
@@ -591,14 +577,25 @@ function removerLogoOrganizacao() {
 
 // ── Usuários ──────────────────────────────────────────────────────────────────
 function carregarUsuarios() {
-  const lista = carregarDoLocalStorage('sc_usuarios', []);
-  renderTabelaUsuarios(lista);
+  // Render cached immediately so the "Carregando…" placeholder is always replaced
+  renderTabelaUsuarios(carregarDoLocalStorage('sc_usuarios', []));
+
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi("GET", `/api/usuarios?organization_id=${organization_id}`)
+    .then(data => {
+      if (Array.isArray(data.usuarios)) {
+        salvarNoLocalStorage('sc_usuarios', data.usuarios);
+        renderTabelaUsuarios(data.usuarios);
+      }
+    })
+    .catch(() => {});
 }
 
 function renderTabelaUsuarios(lista) {
   const tbody = document.getElementById('usersBody');
   if (!tbody) return;
-  if (!lista.length) {
+  if (!lista || !lista.length) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:var(--space-6);color:var(--color-text-muted);">Nenhum usuário cadastrado.</td></tr>`;
     return;
   }
@@ -1296,6 +1293,20 @@ function wireCategoriasEvents() {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Password toggle — event delegation so it works regardless of init order
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.password-toggle[data-target]');
+    if (!btn) return;
+    const inp = document.getElementById(btn.dataset.target);
+    if (!inp) return;
+    const hidden = inp.type === 'password';
+    inp.type = hidden ? 'text' : 'password';
+    const svg = btn.querySelector('svg');
+    if (svg) svg.innerHTML = hidden
+      ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  });
+
   carregarDados();
   wireProfileEvents();
   wireOrgEvents();
