@@ -607,7 +607,6 @@ table {
   gap: var(--space-4);
   z-index: var(--z-sticky);
   box-shadow: var(--shadow-xs);
-  overflow: hidden;
 }
 
 .breadcrumb {
