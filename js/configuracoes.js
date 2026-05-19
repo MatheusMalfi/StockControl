@@ -1221,7 +1221,7 @@ function limparTodosDados() {
       if (digitado !== 'CONFIRMAR') { showToast('Operação cancelada.', 'info'); return; }
       localStorage.clear();
       showToast('Dados removidos. Redirecionando…', 'success');
-      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+      setTimeout(() => { window.location.href = '/acesso/login/login.html'; }, 1500);
     });
 }
 
@@ -1233,7 +1233,7 @@ function initDangerZone() {
       salvarNoLocalStorage('log_acessos', log);
       registrarLog('Sessões encerradas', 'seguranca', '', '');
       showToast('Todas as sessões foram encerradas.', 'success');
-      setTimeout(() => { window.location.href = 'login.html'; }, 1300);
+      setTimeout(() => { window.location.href = '/acesso/login/login.html'; }, 1300);
     });
   });
 
@@ -1248,7 +1248,7 @@ function initDangerZone() {
     if (!pw || pw !== usuario.senha) { showToast('Senha incorreta.', 'error'); return; }
     localStorage.clear();
     sessionStorage.clear();
-    window.location.href = 'login.html';
+    window.location.href = '/acesso/login/login.html';
   });
 }
 

@@ -19,30 +19,30 @@
     else document.addEventListener("sc:ready", fn, { once: true });
   }
 
-  onReady(init);
-
   /* ============================================================
      STATE
      ============================================================ */
   const state = {
-    view:        "table",   // "table" | "grid"
-    page:        1,
-    perPage:     20,
-    total:       0,
-    search:      "",
-    condition:   "",
-    categoryId:  "",
-    sortBy:      "product_name",
-    sortDir:     "asc",
-    items:       [],
-    selected:    new Set(),
+    view: "table", // "table" | "grid"
+    page: 1,
+    perPage: 20,
+    total: 0,
+    search: "",
+    condition: "",
+    categoryId: "",
+    sortBy: "product_name",
+    sortDir: "asc",
+    items: [],
+    selected: new Set(),
     activeItemId: null,
     discardItemId: null,
   };
 
   /* Current session user — populated in init() */
   let _sessionUser = {};
-  let _orgId       = "";
+  let _orgId = "";
+
+  onReady(init);
 
   /* ============================================================
      INIT
@@ -50,9 +50,17 @@
   async function init() {
     /* Resolve org context from session */
     try {
-      _sessionUser = SC.currentUser ||
-        JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "null") || {};
-    } catch { _sessionUser = {}; }
+      _sessionUser =
+        SC.currentUser ||
+        JSON.parse(
+          localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user") ||
+            "null",
+        ) ||
+        {};
+    } catch {
+      _sessionUser = {};
+    }
     _orgId = _sessionUser.organization_id || "";
 
     readURLParams();
@@ -74,9 +82,9 @@
      ============================================================ */
   function readURLParams() {
     const p = SC.urlParams();
-    if (p.q)         state.search    = p.q;
+    if (p.q) state.search = p.q;
     if (p.condition) state.condition = p.condition;
-    if (p.item)      state.activeItemId = p.item;
+    if (p.item) state.activeItemId = p.item;
 
     /* Pre-fill search input */
     const si = document.getElementById("searchInput");
@@ -84,7 +92,7 @@
 
     /* Pre-select condition chip */
     if (state.condition) {
-      document.querySelectorAll(".filter-chip[data-condition]").forEach(c => {
+      document.querySelectorAll(".filter-chip[data-condition]").forEach((c) => {
         c.classList.toggle("active", c.dataset.condition === state.condition);
       });
     }
@@ -98,14 +106,16 @@
     if (!sel) return;
     try {
       const data = await SC.api("/categories");
-      const cats  = Array.isArray(data) ? data : (data.categories || []);
-      cats.forEach(c => {
+      const cats = Array.isArray(data) ? data : data.categories || [];
+      cats.forEach((c) => {
         const opt = document.createElement("option");
-        opt.value       = c.id;
+        opt.value = c.id;
         opt.textContent = c.name;
         sel.appendChild(opt);
       });
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   }
 
   /* ============================================================
@@ -116,17 +126,17 @@
 
     const params = new URLSearchParams({
       organization_id: _orgId,
-      page:    state.page,
-      limit:   state.perPage,
-      sort:    `${state.sortBy}:${state.sortDir}`,
-      ...(state.search    && { search:    state.search }),
+      page: state.page,
+      limit: state.perPage,
+      sort: `${state.sortBy}:${state.sortDir}`,
+      ...(state.search && { search: state.search }),
       ...(state.condition && { condition: state.condition }),
-      ...(state.categoryId&& { category:  state.categoryId }),
+      ...(state.categoryId && { category: state.categoryId }),
     });
 
     try {
       const data = await SC.api(`/items?${params}`);
-      state.items = Array.isArray(data) ? data : (data.items || data.data || []);
+      state.items = Array.isArray(data) ? data : data.items || data.data || [];
       state.total = data.total || data.count || state.items.length;
 
       updateSubtitle();
@@ -150,7 +160,9 @@
     }
 
     hideEmpty();
-    tbody.innerHTML = state.items.map(item => `
+    tbody.innerHTML = state.items
+      .map(
+        (item) => `
       <tr data-id="${item.id}" class="${state.selected.has(item.id) ? "selected" : ""}">
         <td class="col-check">
           <input type="checkbox" class="row-check" data-id="${item.id}"
@@ -159,19 +171,23 @@
         </td>
         <td>
           <div class="table-item-info">
-            ${item.photo_url
-              ? `<img class="table-item-thumb" src="${SC.escHtml(item.photo_url)}" alt="" loading="lazy" />`
-              : `<div class="table-item-thumb-placeholder">
+            ${
+              item.photo_url
+                ? `<img class="table-item-thumb" src="${SC.escHtml(item.photo_url)}" alt="" loading="lazy" />`
+                : `<div class="table-item-thumb-placeholder">
                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
                      <polyline points="21 15 16 10 5 21"/>
                    </svg>
-                 </div>`}
+                 </div>`
+            }
             <div>
               <div class="table-item-name">${SC.escHtml(item.product_name)}</div>
-              ${item.description
-                ? `<div class="table-item-meta" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${SC.escHtml(item.description)}</div>`
-                : ""}
+              ${
+                item.description
+                  ? `<div class="table-item-meta" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${SC.escHtml(item.description)}</div>`
+                  : ""
+              }
             </div>
           </div>
         </td>
@@ -202,17 +218,32 @@
             </button>
           </div>
         </td>
-      </tr>`).join("");
+      </tr>`,
+      )
+      .join("");
 
     /* Wire row events */
-    tbody.querySelectorAll(".btn-view").forEach(btn =>
-      btn.addEventListener("click", () => openDrawer(btn.dataset.id)));
+    tbody
+      .querySelectorAll(".btn-view")
+      .forEach((btn) =>
+        btn.addEventListener("click", () => openDrawer(btn.dataset.id)),
+      );
 
-    tbody.querySelectorAll(".row-check").forEach(chk =>
-      chk.addEventListener("change", () => toggleSelect(chk.dataset.id, chk.checked)));
+    tbody
+      .querySelectorAll(".row-check")
+      .forEach((chk) =>
+        chk.addEventListener("change", () =>
+          toggleSelect(chk.dataset.id, chk.checked),
+        ),
+      );
 
-    tbody.querySelectorAll(".btn-discard-row").forEach(btn =>
-      btn.addEventListener("click", () => openDiscardModal(btn.dataset.id, btn.dataset.name)));
+    tbody
+      .querySelectorAll(".btn-discard-row")
+      .forEach((btn) =>
+        btn.addEventListener("click", () =>
+          openDiscardModal(btn.dataset.id, btn.dataset.name),
+        ),
+      );
 
     updateSelectAll();
   }
@@ -224,18 +255,25 @@
     const grid = document.getElementById("stockGrid");
     if (!grid) return;
 
-    if (!state.items.length) { showEmpty(); return; }
+    if (!state.items.length) {
+      showEmpty();
+      return;
+    }
     hideEmpty();
 
-    grid.innerHTML = state.items.map(item => `
+    grid.innerHTML = state.items
+      .map(
+        (item) => `
       <div class="item-card" data-id="${item.id}" tabindex="0" role="button" aria-label="${SC.escHtml(item.product_name)}">
         <div class="item-card-img">
-          ${item.photo_url
-            ? `<img src="${SC.escHtml(item.photo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          ${
+            item.photo_url
+              ? `<img src="${SC.escHtml(item.photo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/>`
+              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
                  <polyline points="21 15 16 10 5 21"/>
-               </svg>`}
+               </svg>`
+          }
         </div>
         <div class="item-card-body">
           <div class="item-card-name" title="${SC.escHtml(item.product_name)}">${SC.escHtml(item.product_name)}</div>
@@ -252,12 +290,19 @@
             </span>
           </div>
         </div>
-      </div>`).join("");
+      </div>`,
+      )
+      .join("");
 
-    grid.querySelectorAll(".item-card").forEach(card => {
+    grid.querySelectorAll(".item-card").forEach((card) => {
       const open = () => openDrawer(card.dataset.id);
       card.addEventListener("click", open);
-      card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open();
+        }
+      });
     });
   }
 
@@ -266,15 +311,15 @@
      ============================================================ */
   function renderItems() {
     const tableView = document.getElementById("tableView");
-    const gridView  = document.getElementById("gridView");
+    const gridView = document.getElementById("gridView");
 
     if (state.view === "grid") {
       if (tableView) tableView.style.display = "none";
-      if (gridView)  gridView.style.display  = "block";
+      if (gridView) gridView.style.display = "block";
       renderGridView();
     } else {
       if (tableView) tableView.style.display = "block";
-      if (gridView)  gridView.style.display  = "none";
+      if (gridView) gridView.style.display = "none";
       renderTableView();
     }
   }
@@ -283,10 +328,12 @@
      PAGINATION
      ============================================================ */
   function renderPagination() {
-    const isGrid     = state.view === "grid";
-    const pagEl      = document.getElementById(isGrid ? "gridPagination"    : "tablePagination");
-    const infoId     = isGrid ? "gridPaginationInfo"    : "paginationInfo";
-    const controlsId = isGrid ? "gridPaginationControls": "paginationControls";
+    const isGrid = state.view === "grid";
+    const pagEl = document.getElementById(
+      isGrid ? "gridPagination" : "tablePagination",
+    );
+    const infoId = isGrid ? "gridPaginationInfo" : "paginationInfo";
+    const controlsId = isGrid ? "gridPaginationControls" : "paginationControls";
 
     if (!pagEl) return;
     pagEl.style.display = state.total > state.perPage ? "flex" : "none";
@@ -294,10 +341,13 @@
     SC.renderPagination({
       containerId: controlsId,
       infoId,
-      page:        state.page,
-      perPage:     state.perPage,
-      total:       state.total,
-      onPageChange: p => { state.page = p; loadItems(); },
+      page: state.page,
+      perPage: state.perPage,
+      total: state.total,
+      onPageChange: (p) => {
+        state.page = p;
+        loadItems();
+      },
     });
   }
 
@@ -308,30 +358,37 @@
     /* Search */
     const searchInput = document.getElementById("searchInput");
     if (searchInput) {
-      searchInput.addEventListener("input", SC.debounce(() => {
-        state.search = searchInput.value.trim();
-        state.page   = 1;
-        loadItems();
-      }, 350));
+      searchInput.addEventListener(
+        "input",
+        SC.debounce(() => {
+          state.search = searchInput.value.trim();
+          state.page = 1;
+          loadItems();
+        }, 350),
+      );
     }
 
     /* Condition chips */
-    document.querySelectorAll(".filter-chip[data-condition]").forEach(chip => {
-      chip.addEventListener("click", () => {
-        document.querySelectorAll(".filter-chip[data-condition]").forEach(c => c.classList.remove("active"));
-        chip.classList.add("active");
-        state.condition = chip.dataset.condition;
-        state.page      = 1;
-        loadItems();
+    document
+      .querySelectorAll(".filter-chip[data-condition]")
+      .forEach((chip) => {
+        chip.addEventListener("click", () => {
+          document
+            .querySelectorAll(".filter-chip[data-condition]")
+            .forEach((c) => c.classList.remove("active"));
+          chip.classList.add("active");
+          state.condition = chip.dataset.condition;
+          state.page = 1;
+          loadItems();
+        });
       });
-    });
 
     /* Category select */
     const catSel = document.getElementById("categoryFilter");
     if (catSel) {
       catSel.addEventListener("change", () => {
         state.categoryId = catSel.value;
-        state.page       = 1;
+        state.page = 1;
         loadItems();
       });
     }
@@ -341,7 +398,7 @@
     if (perPage) {
       perPage.addEventListener("change", () => {
         state.perPage = Number(perPage.value);
-        state.page    = 1;
+        state.page = 1;
         loadItems();
       });
     }
@@ -354,7 +411,7 @@
       if (state.sortBy === col) {
         state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
       } else {
-        state.sortBy  = col;
+        state.sortBy = col;
         state.sortDir = "asc";
       }
       state.page = 1;
@@ -367,25 +424,27 @@
      ============================================================ */
   function wireViewToggle() {
     const btnTable = document.getElementById("viewTable");
-    const btnGrid  = document.getElementById("viewGrid");
+    const btnGrid = document.getElementById("viewGrid");
 
-    btnTable && btnTable.addEventListener("click", () => {
-      if (state.view === "table") return;
-      state.view = "table";
-      btnTable.classList.add("active");
-      btnGrid  && btnGrid.classList.remove("active");
-      renderItems();
-      renderPagination();
-    });
+    btnTable &&
+      btnTable.addEventListener("click", () => {
+        if (state.view === "table") return;
+        state.view = "table";
+        btnTable.classList.add("active");
+        btnGrid && btnGrid.classList.remove("active");
+        renderItems();
+        renderPagination();
+      });
 
-    btnGrid && btnGrid.addEventListener("click", () => {
-      if (state.view === "grid") return;
-      state.view = "grid";
-      btnGrid.classList.add("active");
-      btnTable && btnTable.classList.remove("active");
-      renderItems();
-      renderPagination();
-    });
+    btnGrid &&
+      btnGrid.addEventListener("click", () => {
+        if (state.view === "grid") return;
+        state.view = "grid";
+        btnGrid.classList.add("active");
+        btnTable && btnTable.classList.remove("active");
+        renderItems();
+        renderPagination();
+      });
   }
 
   /* ============================================================
@@ -393,7 +452,7 @@
      ============================================================ */
   function toggleSelect(id, checked) {
     if (checked) state.selected.add(id);
-    else         state.selected.delete(id);
+    else state.selected.delete(id);
     updateSelectAll();
     updateBulkBar();
 
@@ -406,22 +465,28 @@
     const chk = document.getElementById("selectAll");
     if (!chk) return;
     chk.addEventListener("change", () => {
-      state.items.forEach(item => toggleSelect(String(item.id), chk.checked));
-      document.querySelectorAll(".row-check").forEach(c => (c.checked = chk.checked));
+      state.items.forEach((item) => toggleSelect(String(item.id), chk.checked));
+      document
+        .querySelectorAll(".row-check")
+        .forEach((c) => (c.checked = chk.checked));
     });
   }
 
   function updateSelectAll() {
     const chk = document.getElementById("selectAll");
     if (!chk || !state.items.length) return;
-    const allSelected = state.items.every(i => state.selected.has(String(i.id)));
-    const someSelected= state.items.some(i => state.selected.has(String(i.id)));
-    chk.checked       = allSelected;
+    const allSelected = state.items.every((i) =>
+      state.selected.has(String(i.id)),
+    );
+    const someSelected = state.items.some((i) =>
+      state.selected.has(String(i.id)),
+    );
+    chk.checked = allSelected;
     chk.indeterminate = !allSelected && someSelected;
   }
 
   function updateBulkBar() {
-    const bar   = document.getElementById("bulkBar");
+    const bar = document.getElementById("bulkBar");
     const count = document.getElementById("bulkCount");
     if (!bar) return;
     const n = state.selected.size;
@@ -439,7 +504,7 @@
         if (!state.selected.size) return;
         /* For simplicity, open discard modal for first selected; full bulk could iterate */
         const id = [...state.selected][0];
-        const item = state.items.find(i => String(i.id) === String(id));
+        const item = state.items.find((i) => String(i.id) === String(id));
         openDiscardModal(id, item ? item.product_name : "Itens selecionados");
       });
     }
@@ -458,22 +523,23 @@
      DETAIL DRAWER
      ============================================================ */
   function wireDrawer() {
-    const drawer    = document.getElementById("detailDrawer");
-    const closeBtn  = document.getElementById("drawerClose");
-    const overlay   = document.getElementById("drawerOverlay");
+    const drawer = document.getElementById("detailDrawer");
+    const closeBtn = document.getElementById("drawerClose");
+    const overlay = document.getElementById("drawerOverlay");
 
     closeBtn && closeBtn.addEventListener("click", closeDrawer);
-    overlay  && overlay.addEventListener("click", closeDrawer);
+    overlay && overlay.addEventListener("click", closeDrawer);
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && drawer && drawer.classList.contains("is-open")) closeDrawer();
+      if (e.key === "Escape" && drawer && drawer.classList.contains("is-open"))
+        closeDrawer();
     });
   }
 
   async function openDrawer(id) {
-    const drawer  = document.getElementById("detailDrawer");
-    const body    = document.getElementById("drawerBody");
-    const title   = document.getElementById("drawerTitle");
+    const drawer = document.getElementById("detailDrawer");
+    const body = document.getElementById("drawerBody");
+    const title = document.getElementById("drawerTitle");
     const editBtn = document.getElementById("drawerEditBtn");
     const overlay = document.getElementById("drawerOverlay");
 
@@ -491,21 +557,22 @@
 
     /* Wire discard + move buttons */
     const discardBtn = document.getElementById("drawerDiscardBtn");
-    const moveBtn    = document.getElementById("drawerMoveBtn");
+    const moveBtn = document.getElementById("drawerMoveBtn");
 
     try {
       const data = await SC.api(`/items/${id}`);
-      const item  = data.item || data;
+      const item = data.item || data;
 
       state.activeItemId = item.id;
-      if (title)   title.textContent = item.product_name || "Item";
+      if (title) title.textContent = item.product_name || "Item";
       if (editBtn) editBtn.href = `form-item.html?id=${item.id}`;
 
       if (discardBtn) {
         discardBtn.onclick = () => openDiscardModal(item.id, item.product_name);
       }
       if (moveBtn) {
-        moveBtn.onclick = () => window.location.href = `movimentacoes.html?item=${item.id}`;
+        moveBtn.onclick = () =>
+          (window.location.href = `movimentacoes.html?item=${item.id}`);
       }
 
       body.innerHTML = buildDrawerContent(item);
@@ -513,9 +580,10 @@
       /* Wire QR copy */
       const qrCopy = body.querySelector("#drawerQrCopy");
       if (qrCopy && item.qr_code_token) {
-        qrCopy.addEventListener("click", () => SC.copyText(item.qr_code_token, "Token copiado!"));
+        qrCopy.addEventListener("click", () =>
+          SC.copyText(item.qr_code_token, "Token copiado!"),
+        );
       }
-
     } catch (err) {
       body.innerHTML = `<div class="alert alert-danger">
         <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -528,9 +596,9 @@
   }
 
   function closeDrawer() {
-    const drawer  = document.getElementById("detailDrawer");
+    const drawer = document.getElementById("detailDrawer");
     const overlay = document.getElementById("drawerOverlay");
-    drawer  && drawer.classList.remove("is-open");
+    drawer && drawer.classList.remove("is-open");
     overlay && overlay.classList.remove("active");
     document.body.style.overflow = "";
     state.activeItemId = null;
@@ -584,23 +652,33 @@
         </div>
       </div>
 
-      ${item.description ? `
+      ${
+        item.description
+          ? `
         <div class="detail-field" style="margin-bottom:var(--space-4);">
           <span class="detail-field-label">Descrição</span>
           <div class="detail-field-value" style="font-size:0.875rem; color:var(--color-text-secondary); line-height:1.6;">
             ${SC.escHtml(item.description)}
           </div>
-        </div>` : ""}
+        </div>`
+          : ""
+      }
 
-      ${item.tags && item.tags.length ? `
+      ${
+        item.tags && item.tags.length
+          ? `
         <div class="detail-field" style="margin-bottom:var(--space-4);">
           <span class="detail-field-label">Tags</span>
           <div style="display:flex; flex-wrap:wrap; gap:var(--space-1-5); margin-top:var(--space-1);">
-            ${item.tags.map(t => `<span class="badge badge-neutral">${SC.escHtml(t.name || t)}</span>`).join("")}
+            ${item.tags.map((t) => `<span class="badge badge-neutral">${SC.escHtml(t.name || t)}</span>`).join("")}
           </div>
-        </div>` : ""}
+        </div>`
+          : ""
+      }
 
-      ${item.qr_code_token ? `
+      ${
+        item.qr_code_token
+          ? `
         <div class="detail-field">
           <span class="detail-field-label">QR Code Token</span>
           <div class="qr-token-box" style="margin-top:var(--space-1);">
@@ -613,7 +691,9 @@
               </svg>
             </button>
           </div>
-        </div>` : ""}`;
+        </div>`
+          : ""
+      }`;
   }
 
   /* ============================================================
@@ -622,7 +702,8 @@
   function openDiscardModal(id, name) {
     state.discardItemId = id;
     const desc = document.getElementById("discardDesc");
-    if (desc) desc.textContent = `Descartar "${name}"? Esta ação registrará o descarte e não pode ser desfeita.`;
+    if (desc)
+      desc.textContent = `Descartar "${name}"? Esta ação registrará o descarte e não pode ser desfeita.`;
     SC.openModal("discardModal");
   }
 
@@ -632,7 +713,7 @@
 
     confirmBtn.addEventListener("click", async () => {
       const reason = document.getElementById("discardReason")?.value || "";
-      const notes  = document.getElementById("discardNotes")?.value  || "";
+      const notes = document.getElementById("discardNotes")?.value || "";
 
       if (!reason) {
         SC.toastWarning("Selecione o motivo do descarte.");
@@ -646,9 +727,9 @@
         await SC.api("/items/discard", {
           method: "POST",
           body: JSON.stringify({
-            item_id:         state.discardItemId,
+            item_id: state.discardItemId,
             organization_id: _orgId,
-            created_by:      _sessionUser.id || null,
+            created_by: _sessionUser.id || null,
             reason,
             notes,
           }),
@@ -674,15 +755,18 @@
      ============================================================ */
   function updateSubtitle() {
     const el = document.getElementById("stockSubtitle");
-    if (el) el.textContent = `${state.total.toLocaleString("pt-BR")} ite${state.total !== 1 ? "ns" : "m"} encontrado${state.total !== 1 ? "s" : ""}`;
+    if (el)
+      el.textContent = `${state.total.toLocaleString("pt-BR")} ite${state.total !== 1 ? "ns" : "m"} encontrado${state.total !== 1 ? "s" : ""}`;
   }
 
   function showSkeleton() {
     const tbody = document.getElementById("stockBody");
-    const grid  = document.getElementById("stockGrid");
+    const grid = document.getElementById("stockGrid");
     hideEmpty();
     if (tbody && state.view === "table") {
-      tbody.innerHTML = Array(6).fill(`
+      tbody.innerHTML = Array(6)
+        .fill(
+          `
         <tr>
           <td class="col-check"><div class="skeleton" style="width:15px;height:15px;border-radius:3px;"></div></td>
           <td><div style="display:flex;gap:var(--space-3);align-items:center;">
@@ -696,21 +780,27 @@
           <td><div class="skeleton" style="width:30px;height:13px;margin-left:auto;"></div></td>
           <td><div class="skeleton" style="width:70px;height:13px;"></div></td>
           <td></td>
-        </tr>`).join("");
+        </tr>`,
+        )
+        .join("");
     }
     if (grid && state.view === "grid") {
-      grid.innerHTML = Array(8).fill(`
-        <div class="skeleton" style="height:220px;border-radius:var(--radius-xl);"></div>`).join("");
+      grid.innerHTML = Array(8)
+        .fill(
+          `
+        <div class="skeleton" style="height:220px;border-radius:var(--radius-xl);"></div>`,
+        )
+        .join("");
     }
   }
 
   function showEmpty() {
     const empty = document.getElementById("emptyState");
     const tableView = document.getElementById("tableView");
-    const gridView  = document.getElementById("gridView");
+    const gridView = document.getElementById("gridView");
     if (tableView) tableView.style.display = "none";
-    if (gridView)  gridView.style.display  = "none";
-    if (empty)     empty.style.display     = "flex";
+    if (gridView) gridView.style.display = "none";
+    if (empty) empty.style.display = "flex";
   }
 
   function hideEmpty() {
@@ -731,5 +821,4 @@
       </td></tr>`;
     }
   }
-
 })();

@@ -111,8 +111,7 @@
           : sessionStorage;
         storage.setItem("sc_token", data.token);
         storage.setItem("sc_user", JSON.stringify(data.user ?? {}));
-        window.location.href = "index.html";
-      } else {
+        window.location.href = "/index.html";      } else {
         const msg = data.mensagem || data.message || data.error || "E-mail ou senha incorretos.";
         errorMsg.textContent = msg;
         loginError.classList.add("is-visible");
@@ -129,5 +128,5 @@
   });
 
   const token = localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
-  if (token) window.location.href = "index.html";
+  if (token) window.location.href = "/index.html";
 })();

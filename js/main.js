@@ -47,7 +47,7 @@
      ============================================================ */
   const token = getToken();
   if (!token) {
-    window.location.replace("login.html");
+    window.location.replace("/acesso/login/login.html");
     /* Stop execution — the rest of this file must not run */
     throw new Error("unauthenticated");
   }
@@ -81,7 +81,7 @@
 
     if (res.status === 401) {
       clearSession();
-      window.location.replace("login.html");
+      window.location.replace("/acesso/login/login.html");
       throw new Error("Session expired");
     }
 
@@ -334,7 +334,7 @@
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       clearSession();
-      window.location.replace("login.html");
+      window.location.replace("/acesso/login/login.html");
     });
   }
 
@@ -543,6 +543,6 @@
      READY
      ============================================================ */
   SC.ready = true;
-  document.dispatchEvent(new Event("sc:ready"));
+  setTimeout(() => document.dispatchEvent(new Event("sc:ready")), 0);
 
 })();
