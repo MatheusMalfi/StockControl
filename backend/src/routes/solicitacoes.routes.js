@@ -1,6 +1,6 @@
 "use strict";
 const express = require("express");
-const pool    = require("../db");
+const pool = require("../db");
 
 const router = express.Router();
 
@@ -38,7 +38,10 @@ router.get("/", async (req, res) => {
   try {
     await ensureTable();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const [rows] = await pool.query(
       "SELECT * FROM solicitacoes WHERE organization_id = ? ORDER BY created_at DESC",
       [orgId],
@@ -55,17 +58,41 @@ router.post("/", async (req, res) => {
   try {
     await ensureTable();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
-    const { id, tipo, item, quantidade, solicitante, email, status, prioridade,
-            data_solicitacao, obs } = req.body;
-    const newId = id || `sol_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    const {
+      id,
+      tipo,
+      item,
+      quantidade,
+      solicitante,
+      email,
+      status,
+      prioridade,
+      data_solicitacao,
+      obs,
+    } = req.body;
+    const newId =
+      id || `sol_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     await pool.execute(
       `INSERT INTO solicitacoes
          (id, organization_id, tipo, item, quantidade, solicitante, email, status, prioridade, data_solicitacao, obs)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [newId, orgId, tipo || null, item || null, quantidade || 1,
-       solicitante || null, email || null, status || "pendente",
-       prioridade || "media", data_solicitacao || null, obs || null],
+      [
+        newId,
+        orgId,
+        tipo || null,
+        item || null,
+        quantidade || 1,
+        solicitante || null,
+        email || null,
+        status || "pendente",
+        prioridade || "media",
+        data_solicitacao || null,
+        obs || null,
+      ],
     );
     res.status(201).json({ success: true, id: newId });
   } catch (err) {
@@ -78,16 +105,34 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     await ensureTable();
-    const { tipo, item, quantidade, solicitante, email, status, prioridade,
-            data_solicitacao, obs } = req.body;
+    const {
+      tipo,
+      item,
+      quantidade,
+      solicitante,
+      email,
+      status,
+      prioridade,
+      data_solicitacao,
+      obs,
+    } = req.body;
     await pool.execute(
       `UPDATE solicitacoes
        SET tipo = ?, item = ?, quantidade = ?, solicitante = ?, email = ?,
-           status = ?, prioridade = ?, data_solicitacao = ?, obs = ?
+           status = COALESCE(?, status), prioridade = ?, data_solicitacao = ?, obs = ?
        WHERE id = ?`,
-      [tipo || null, item || null, quantidade || 1, solicitante || null,
-       email || null, status || "pendente", prioridade || "media",
-       data_solicitacao || null, obs || null, req.params.id],
+      [
+        tipo || null,
+        item || null,
+        quantidade || 1,
+        solicitante || null,
+        email || null,
+        status !== undefined ? status : null,
+        prioridade || "media",
+        data_solicitacao || null,
+        obs || null,
+        req.params.id,
+      ],
     );
     res.json({ success: true });
   } catch (err) {
@@ -105,7 +150,12 @@ router.patch("/:id/revisar", async (req, res) => {
       `UPDATE solicitacoes
        SET status = ?, revisor = ?, data_revisao = CURDATE(), obs = CONCAT(COALESCE(obs,''), ?)
        WHERE id = ?`,
-      [status || "revisado", revisor || null, obs ? `\n${obs}` : "", req.params.id],
+      [
+        status || "revisado",
+        revisor || null,
+        obs ? `\n${obs}` : "",
+        req.params.id,
+      ],
     );
     res.json({ success: true });
   } catch (err) {
@@ -119,8 +169,12 @@ router.patch("/:id/status", async (req, res) => {
   try {
     await ensureTable();
     const { status } = req.body;
-    if (!status) return res.status(400).json({ message: "status é obrigatório." });
-    await pool.execute("UPDATE solicitacoes SET status = ? WHERE id = ?", [status, req.params.id]);
+    if (!status)
+      return res.status(400).json({ message: "status é obrigatório." });
+    await pool.execute("UPDATE solicitacoes SET status = ? WHERE id = ?", [
+      status,
+      req.params.id,
+    ]);
     res.json({ success: true });
   } catch (err) {
     console.error("PATCH /api/solicitacoes/:id/status:", err);
@@ -132,7 +186,9 @@ router.patch("/:id/status", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     await ensureTable();
-    await pool.execute("DELETE FROM solicitacoes WHERE id = ?", [req.params.id]);
+    await pool.execute("DELETE FROM solicitacoes WHERE id = ?", [
+      req.params.id,
+    ]);
     res.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/solicitacoes/:id:", err);
