@@ -722,3 +722,19 @@ INSERT INTO organizations (org_type, name, cnpj, email)
 VALUES ('ONG', 'Sua ONG', '11.111.111/0001-11', 'contato@suaong.org')
 AS new_row
 ON DUPLICATE KEY UPDATE name = new_row.name;
+
+--SET SQL_SAFE_UPDATES = 0;
+
+--UPDATE users SET email_verified = 1 WHERE email_verified = 0;
+
+--CREATE TABLE IF NOT EXISTS email_verifications (
+--  id         BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  --user_id    BIGINT UNSIGNED NOT NULL,
+  --code       CHAR(6)         NOT NULL,
+  --expires_at DATETIME        NOT NULL,
+  --used       TINYINT         NOT NULL DEFAULT 0,
+  --created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  --KEY idx_ev_user_code (user_id, code),
+  --CONSTRAINT fk_ev_user FOREIGN KEY (user_id) REFERENCES users(id)
+    --ON UPDATE CASCADE ON DELETE CASCADE
+--) ENGINE=InnoDB;

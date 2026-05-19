@@ -696,7 +696,7 @@ document.addEventListener("sc:ready", function () {
 
     reqItemDrop.querySelectorAll(".req-drop-row[data-id]").forEach((row) => {
       row.addEventListener("click", () => {
-        const found = items.find((i) => i.id === row.dataset.id);
+        const found = items.find((i) => String(i.id) === String(row.dataset.id));
         if (found) selectItem(found);
       });
     });
