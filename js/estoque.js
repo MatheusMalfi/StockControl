@@ -28,7 +28,7 @@
     perPage: 20,
     total: 0,
     search: "",
-    condition: "",
+    condition: "ALL",
     categoryId: "",
     sortBy: "product_name",
     sortDir: "asc",
@@ -130,7 +130,7 @@
       limit: state.perPage,
       sort: `${state.sortBy}:${state.sortDir}`,
       ...(state.search && { search: state.search }),
-      ...(state.condition && { condition: state.condition }),
+      ...(state.condition !== "ALL" && { condition: state.condition }),
       ...(state.categoryId && { category: state.categoryId }),
     });
 

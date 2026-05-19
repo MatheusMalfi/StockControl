@@ -341,3 +341,41 @@ body {
 .login-footer a:hover {
   text-decoration: underline;
 }
+
+/* Success banner for forgot password */
+.forgot-success {
+  display: none;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: #f0fdf4;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: #166534;
+}
+
+.forgot-success.is-visible {
+  display: flex;
+}
+
+.forgot-success svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  stroke: currentColor;
+}
+
+.forgot-success-title {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.forgot-success-desc {
+  display: block;
+  font-size: 0.8125rem;
+  color: #16a34a;
+  opacity: 0.9;
+}

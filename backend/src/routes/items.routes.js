@@ -19,13 +19,11 @@ router.get("/", async (req, res) => {
     const conditions = ["i.organization_id = ?", "i.is_active = 1"];
     const params = [organization_id];
 
-    // Por padrão exclui itens com condição DESCARTAR do estoque ativo.
-    // Quando o chip "Descartar" é clicado, condition=DESCARTAR é enviado explicitamente.
+    // Se uma condição específica for enviada, filtra por ela
+    // Se nenhuma for enviada, mostra todos os itens (incluindo DESCARTAR)
     if (condition) {
       conditions.push("c.code = ?");
       params.push(condition);
-    } else {
-      conditions.push("c.code != 'DESCARTAR'");
     }
 
     if (search) {
