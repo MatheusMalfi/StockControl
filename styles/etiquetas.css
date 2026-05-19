@@ -19,11 +19,6 @@
 body { margin: 0; font-family: Inter, -apple-system, sans-serif;
        background: var(--cinza-bg); }
 
-.sidebar { width: var(--sidebar-w); height: 100vh;
-           background: var(--escuro); position: fixed;
-           left: 0; top: 0; display: flex;
-           flex-direction: column; align-items: center;
-           padding: 12px 0; gap: 4px; z-index: 100; }
 
 .main-wrapper { margin-left: var(--sidebar-w);
                 min-height: 100vh; }
@@ -37,53 +32,9 @@ body { margin: 0; font-family: Inter, -apple-system, sans-serif;
 .conteudo { padding: 24px; }
 
 /* ── SIDEBAR NAV ─────────────────────────────────────── */
-.sidebar-logo-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: var(--azul); display: flex;
-  align-items: center; justify-content: center;
-  flex-shrink: 0; margin-bottom: 4px; }
-
-.sidebar-divider {
-  width: 32px; height: 1px; background: rgba(255,255,255,0.1);
-  margin: 4px 0; }
-
-.sidebar-nav-link {
-  width: 40px; height: 40px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,0.5); text-decoration: none;
-  transition: background 0.15s, color 0.15s;
-  flex-shrink: 0; position: relative; }
-.sidebar-nav-link:hover { background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.9); }
-.sidebar-nav-link.ativo { background: rgba(255,255,255,0.18);
-  color: white; }
-.sidebar-nav-link svg { width: 18px; height: 18px;
-                        stroke: currentColor; fill: none;
-                        stroke-width: 2; stroke-linecap: round;
-                        stroke-linejoin: round; }
-
-.sidebar-user-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--azul); color: white;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; margin-top: auto;
-  flex-shrink: 0; cursor: default; user-select: none; }
 
 /* ── HEADER UTILITIES ─────────────────────────────────── */
-.header-search { flex: 1; display: flex; align-items: center;
-                 gap: 8px; max-width: 360px; }
-.header-search svg { width: 16px; height: 16px; stroke: var(--cinza-texto);
-                     fill: none; stroke-width: 2;
-                     stroke-linecap: round; flex-shrink: 0; }
-.header-search input {
-  flex: 1; padding: 7px 10px; border: 1px solid var(--cinza-borda);
-  border-radius: 8px; font-size: 14px; outline: none;
-  background: var(--cinza-bg); }
-.header-search input:focus { border-color: var(--azul);
-  background: white; }
 
-.header-actions { margin-left: auto; display: flex;
-                  align-items: center; gap: 8px; }
 
 .icon-btn-hdr { width: 36px; height: 36px; border: none;
   background: none; cursor: pointer; border-radius: 8px;
@@ -285,10 +236,10 @@ body { margin: 0; font-family: Inter, -apple-system, sans-serif;
 
 /* ── PAINEL CONFIG ───────────────────────────────────── */
 .secao-config {
-  background: white; border-radius: 12px;
+  background: transparent; border-radius: 12px;
   border: 1px solid var(--cinza-borda); padding: 16px; }
 .secao-config h3 { font-size: 14px; font-weight: 600;
-                   color: #0f172a; margin: 0 0 14px; }
+                   color: white; margin: 0 0 14px; }
 
 /* ── CARDS DE TAMANHO ────────────────────────────────── */
 .tamanhos-wrapper { display: flex; gap: 8px;
@@ -321,11 +272,11 @@ body { margin: 0; font-family: Inter, -apple-system, sans-serif;
 
 /* ── CAMPOS VISÍVEIS ─────────────────────────────────── */
 .campos-config h4 { font-size: 13px; font-weight: 600;
-                    color: #374151; margin: 0 0 8px; }
+                    color: white; margin: 0 0 8px; }
 .campo-toggle {
   display: flex; align-items: center; gap: 8px;
   padding: 5px 0; cursor: pointer; font-size: 13px;
-  color: #374151; }
+  color: white; }
 .campo-toggle input[type="checkbox"] {
   width: 15px; height: 15px;
   accent-color: var(--azul); cursor: pointer; }
@@ -480,7 +431,18 @@ body { margin: 0; font-family: Inter, -apple-system, sans-serif;
   .etiqueta-print.pequena { width: 40mm; height: 20mm; }
   .etiqueta-print.media   { width: 60mm; height: 30mm; }
   .etiqueta-print.grande  { width: 80mm; height: 40mm; }
+.sidebar-user-avatar {
+  overflow: hidden;
+}
 
+.sidebar-user-avatar img,
+#sidebarInitials img {
+  width: 32px !important;
+  height: 32px !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  display: block !important;
+}
   .print-qr { flex-shrink: 0; line-height: 0; }
   .print-qr canvas { display: block !important; }
   .print-campos { flex: 1; min-width: 0; }
@@ -503,6 +465,11 @@ body { margin: 0; font-family: Inter, -apple-system, sans-serif;
   .etiqueta-print.grande .print-nome { font-size: 11pt; }
   .etiqueta-print.grande .print-pat  { font-size: 9pt; }
   .etiqueta-print.grande .print-info { font-size: 8pt; }
+}
+
+ .page-content {
+                margin-left: 72px;
+                padding-left: 16px;
 }
 
 .checkbox-wrapper span {
