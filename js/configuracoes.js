@@ -567,6 +567,17 @@ function detectarMudancasPerfil() {
   }
 }
 
+function aplicarTema(tema) {
+  const html = document.documentElement;
+  if (tema === 'escuro') {
+    html.setAttribute('data-theme', 'dark');
+  } else if (tema === 'auto') {
+    html.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  } else {
+    html.setAttribute('data-theme', 'light');
+  }
+}
+
 function salvarPreferenciasExibicao() {
   const prefs = {
     tema:        document.getElementById('prefTema')?.value        || 'claro',
@@ -577,19 +588,13 @@ function salvarPreferenciasExibicao() {
   salvarNoLocalStorage('sc_preferencias', prefs);
   const { organization_id: _preoid } = _getOrgData();
   _cfgApi("PUT", "/api/configuracoes/preferencias", { ...prefs, organization_id: _preoid }).catch(() => {});
-  aplicarTema(prefs.tema);
-  showToast('Preferências salvas!', 'success');
-}
-
-function aplicarTema(tema) {
-  const html = document.documentElement;
-  if (tema === 'escuro') {
-    html.setAttribute('data-theme', 'dark');
-  } else if (tema === 'auto') {
-    html.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  
+  if (typeof SC !== 'undefined' && SC.aplicarTema) {
+    SC.aplicarTema(prefs.tema);
   } else {
-    html.setAttribute('data-theme', 'light');
+    aplicarTema(prefs.tema);
   }
+  showToast('Preferências salvas!', 'success');
 }
 
 // ── Organização ───────────────────────────────────────────────────────────────

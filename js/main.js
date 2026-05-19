@@ -66,6 +66,35 @@
      ============================================================ */
   const SC = (window.SC = window.SC || {});
 
+  /* ============================================================
+     THEME MANAGER
+     ============================================================ */
+  function aplicarTema(tema) {
+    const html = document.documentElement;
+    if (tema === 'escuro') {
+      html.setAttribute('data-theme', 'dark');
+    } else if (tema === 'auto') {
+      html.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    } else {
+      html.setAttribute('data-theme', 'light');
+    }
+  }
+
+  function carregarTemaPreferido() {
+    try {
+      const prefsRaw = localStorage.getItem('sc_preferencias');
+      const prefs = prefsRaw ? JSON.parse(prefsRaw) : {};
+      const tema = prefs.tema || 'claro';
+      aplicarTema(tema);
+    } catch {}
+  }
+
+  carregarTemaPreferido();
+
+  /* Expose theme manager to global scope */
+  SC.aplicarTema = aplicarTema;
+  SC.carregarTemaPreferido = carregarTemaPreferido;
+
   /**
    * SC.api(path, options)
    * Thin wrapper around fetch that:
