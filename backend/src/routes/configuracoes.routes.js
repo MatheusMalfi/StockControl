@@ -267,6 +267,33 @@ router.put("/categorias", async (req, res) => {
   }
 });
 
+/* GET /api/configuracoes/notificacoes?organization_id=X */
+router.get("/notificacoes", async (req, res) => {
+  try {
+    const orgId = getOrgId(req);
+    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notif_rules (
+        organization_id  INT         NOT NULL PRIMARY KEY,
+        estoque_baixo    TINYINT(1)  NOT NULL DEFAULT 1,
+        descarte         TINYINT(1)  NOT NULL DEFAULT 1,
+        doacao_pendente  TINYINT(1)  NOT NULL DEFAULT 1,
+        email            TINYINT(1)  NOT NULL DEFAULT 0,
+        minimo           INT         NOT NULL DEFAULT 5,
+        updated_at       TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    const [rows] = await pool.query(
+      "SELECT estoque_baixo AS estoqueBaixo, descarte, doacao_pendente AS doacaoPendente, email, minimo FROM notif_rules WHERE organization_id = ? LIMIT 1",
+      [orgId],
+    );
+    res.json({ success: true, regras: rows[0] || null });
+  } catch (err) {
+    console.error("GET /api/configuracoes/notificacoes:", err);
+    res.status(500).json({ message: "Erro ao buscar preferências de notificação." });
+  }
+});
+
 /* PUT /api/configuracoes/notificacoes — delegates to notif_rules via same table */
 router.put("/notificacoes", async (req, res) => {
   try {

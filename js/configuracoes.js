@@ -1109,8 +1109,7 @@ function excluirLocalizacao(id) {
 }
 
 // ── Notificações ──────────────────────────────────────────────────────────────
-function carregarPreferenciasNotificacao() {
-  const r = carregarDoLocalStorage('sc_notif_rules', MOCK.regrasNotif);
+function _aplicarRegrasNotif(r) {
   const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = Boolean(val); };
   setChk('notifLowStock',  r.estoqueBaixo);
   setChk('notifDiscard',   r.descarte);
@@ -1119,6 +1118,19 @@ function carregarPreferenciasNotificacao() {
   const thEl = document.getElementById('lowStockThreshold');
   if (thEl) thEl.value = r.minimo ?? 5;
   toggleRegra('estoqueBaixo', r.estoqueBaixo);
+}
+
+function carregarPreferenciasNotificacao() {
+  _aplicarRegrasNotif(carregarDoLocalStorage('sc_notif_rules', MOCK.regrasNotif));
+  const { organization_id } = _getOrgData();
+  if (!organization_id) return;
+  _cfgApi('GET', `/api/configuracoes/notificacoes?organization_id=${organization_id}`)
+    .then(res => {
+      if (!res.success || !res.regras) return;
+      salvarNoLocalStorage('sc_notif_rules', res.regras);
+      _aplicarRegrasNotif(res.regras);
+    })
+    .catch(() => {});
 }
 
 function salvarPreferenciasNotificacao() {
