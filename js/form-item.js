@@ -262,6 +262,40 @@
     });
   }
 
+  // ── Local storage helpers ─────────────────────────────────────────────────
+  function mergeUniqueStrings(list) {
+    const seen = new Set();
+    return list
+      .map((value) => String(value || "").trim())
+      .filter((value) => {
+        if (!value) return false;
+        const key = value.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function readStoredCategories() {
+    try {
+      const data = JSON.parse(localStorage.getItem("sc_categorias") || "{}");
+      if (!Array.isArray(data.categorias)) return [];
+      return data.categorias.map((c) => c.nome || "").filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  function readStoredBrands() {
+    try {
+      const data = JSON.parse(localStorage.getItem("sc_categorias") || "{}");
+      if (!Array.isArray(data.marcas)) return [];
+      return data.marcas.map((m) => m.nome || m || "").filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
   // ── Populate dropdowns ────────────────────────────────────────────────────
   function populateCategories(categories) {
     if (!categoryId) return;
@@ -285,7 +319,9 @@
 
   function populateBrands(cat, selectedBrand) {
     if (!brandId) return;
-    const brands = BRAND_DATA[cat] || [];
+    const storedBrands = readStoredBrands();
+    const staticBrands = BRAND_DATA[cat] || [];
+    const brands = mergeUniqueStrings([...staticBrands, ...storedBrands]);
     brandId.innerHTML =
       '<option value="">Selecione…</option>' +
       brands
@@ -295,21 +331,10 @@
         )
         .join("");
     brandId.disabled = !brands.length;
-    populateModels(cat, selectedBrand || "");
   }
 
-  function populateModels(cat, brand, selectedModel) {
-    if (!modelId) return;
-    const models = (MODEL_DATA[cat] || {})[brand] || [];
-    modelId.innerHTML =
-      '<option value="">Selecione…</option>' +
-      models
-        .map(
-          (m) =>
-            `<option value="${SC.escHtml(m)}"${m === selectedModel ? " selected" : ""}>${SC.escHtml(m)}</option>`,
-        )
-        .join("");
-    modelId.disabled = !models.length;
+  function populateModels() {
+    // Campo de modelo agora é digitável manualmente.
   }
 
   // ── Edit: load item ───────────────────────────────────────────────────────
@@ -379,8 +404,7 @@
       } else {
         categoryId.value = item.categoria;
         populateBrands(item.categoria, item.marca || "");
-        if (item.marca)
-          populateModels(item.categoria, item.marca, item.modelo || "");
+        if (modelId) modelId.value = item.modelo || "";
       }
     }
     if (locationId && item.localizacao) locationId.value = item.localizacao;
@@ -736,7 +760,6 @@
     });
     brandId?.addEventListener("change", () => {
       setFieldError("errorBrand", "groupBrand", null, false);
-      populateModels(categoryId?.value || "", brandId.value, "");
       markDirty();
     });
     modelId?.addEventListener("change", () => markDirty());
@@ -823,8 +846,10 @@
     fetch("/api/categories", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data) => {
-        const cats = (data.categories || []).map((c) => c.name);
-        populateCategories(cats.length ? cats : ["Outros"]);
+        const apiCats = (data.categories || []).map((c) => c.name).filter(Boolean);
+        const storedCats = readStoredCategories();
+        const cats = mergeUniqueStrings([...storedCats, ...apiCats]);
+        populateCategories(cats.length ? cats : storedCats.length ? storedCats : ["Outros"]);
         // Se já carregou o item (edição), re-aplica a categoria
         if (IS_EDIT && categoryId && categoryId.dataset.pendingValue) {
           categoryId.value = categoryId.dataset.pendingValue;
@@ -832,18 +857,16 @@
             categoryId.value,
             categoryId.dataset.pendingBrand || "",
           );
-          if (categoryId.dataset.pendingBrand)
-            populateModels(
-              categoryId.value,
-              categoryId.dataset.pendingBrand,
-              categoryId.dataset.pendingModel || "",
-            );
+          if (modelId) modelId.value = categoryId.dataset.pendingModel || "";
           delete categoryId.dataset.pendingValue;
           delete categoryId.dataset.pendingBrand;
           delete categoryId.dataset.pendingModel;
         }
       })
-      .catch(() => populateCategories(["Outros"]));
+      .catch(() => {
+        const storedCats = readStoredCategories();
+        populateCategories(storedCats.length ? storedCats : ["Outros"]);
+      });
 
     populateLocations();
     addCharCounter(productName, 200);

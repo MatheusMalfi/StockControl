@@ -612,6 +612,10 @@
            <polyline points="21 15 16 10 5 21"/>
          </svg></div>`;
 
+    const brand = item.brand || item.product_brand || item.brand_name || "";
+    const model = item.model || item.product_model || item.model_name || "";
+    const brandModelText = [brand, model].filter(Boolean).join(" · ") || "—";
+
     return `
       ${photo}
 
@@ -632,11 +636,11 @@
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Marca / Modelo</span>
-          <div class="detail-field-value">${SC.escHtml([item.brand_name, item.model_name].filter(Boolean).join(" · ") || "—")}</div>
+          <div class="detail-field-value">${SC.escHtml(brandModelText)}</div>
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Nº Patrimônio</span>
-          <div class="detail-field-value">${SC.escHtml(item.asset_tag || "—")}</div>
+          <div class="detail-field-value">${SC.escHtml(item.serial_number || item.asset_tag || "—")}</div>
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Localização</span>
