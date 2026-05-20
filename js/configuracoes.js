@@ -1385,7 +1385,7 @@ function renderLogAcessos(limite) {
   const lista = Array.isArray(raw) ? raw : [];
   const itens = lista.slice(0, limite);
   if (!itens.length) { cont.innerHTML = '<p style="color:var(--color-text-muted);font-size:0.875rem;">Nenhum acesso registrado.</p>'; return; }
-  const fmt = iso => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+  const fmt = iso => SC.fmtDateTime(iso);
   cont.innerHTML = itens.map(e => `
     <div style="display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:1px solid var(--color-border-light);">
       <div style="margin-top:4px;width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${e.atual ? '#22c55e' : 'var(--color-border-strong)'};"></div>
