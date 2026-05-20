@@ -376,13 +376,19 @@ function carregarPerfil() {
   // Real session (set by login) lives in sc_user with field "name"; sc_usuario is user-specific local profile data
   const session = _getOrgData();
   const u       = carregarUsuarioLocal({});
-  const nome    = session.name  || u.nome  || '';
-  const email   = session.email || u.email || '';
+  const nome    = session.name  || session.nome || u.nome  || '';
+  const email   = session.email || session.user?.email || session.usuario?.email || u.email || '';
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   set('profileName',  nome);
   set('profileEmail', email);
   set('profileRole',  u.cargo || '');
+
+  const emailEl = document.getElementById('profileEmail');
+  if (emailEl) {
+    emailEl.readOnly = true;
+    emailEl.classList.add('is-readonly');
+  }
 
   const initialsEl = document.getElementById('profileAvatarInitials');
   const imgEl      = document.getElementById('profileAvatarImg');
@@ -417,15 +423,12 @@ function carregarPerfil() {
 
 async function salvarPerfil() {
   const nomeEl  = document.getElementById('profileName');
-  const emailEl = document.getElementById('profileEmail');
   const nome    = nomeEl?.value.trim();
-  const email   = emailEl?.value.trim();
   if (!nome)            { showToast('Nome é obrigatório.', 'error'); return; }
-  if (!validarEmail(email || '')) { showToast('E-mail inválido.', 'error'); return; }
 
   const u = carregarUsuarioLocal({});
   u.nome  = nome;
-  u.email = email;
+  u.email = _perfilSnapshot.email;
 
   if (_pendingAvatarRemoved) {
     u.avatar = null;
@@ -562,19 +565,16 @@ function atualizarAvatarHeader() {
 
 function detectarMudancasPerfil() {
   const nomeEl  = document.getElementById('profileName');
-  const emailEl = document.getElementById('profileEmail');
   const btn     = document.getElementById('saveProfileBtn');
   if (!btn) return;
   const nomeMudou  = nomeEl?.value.trim() !== _perfilSnapshot.nome;
-  const emailMudou = emailEl?.value.trim() !== _perfilSnapshot.email;
   const currentAvatar = _pendingAvatarRemoved ? null : (_pendingAvatarDataUrl || carregarUsuarioLocal({}).avatar || null);
   const avatarMudou = currentAvatar !== _perfilSnapshot.avatar;
-  const mudou = nomeMudou || emailMudou || avatarMudou;
+  const mudou = nomeMudou || avatarMudou;
   btn.disabled = !mudou;
   if (nomeEl && !nomeEl._profileWired) {
     nomeEl._profileWired = true;
     nomeEl.addEventListener('input', detectarMudancasPerfil);
-    emailEl?.addEventListener('input', detectarMudancasPerfil);
   }
 }
 
@@ -610,11 +610,21 @@ function salvarPreferenciasExibicao() {
 
 // ── Organização ───────────────────────────────────────────────────────────────
 function carregarOrganizacao() {
+  const session = _getOrgData();
   const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), MOCK.organizacao);
+  const fallbackEmail = session.email || session.user?.email || session.usuario?.email || '';
+  const orgEmail = org.email || fallbackEmail;
+
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   set('orgName',    org.nome);
-  set('orgEmail',   org.email);
+  set('orgEmail',   orgEmail);
   set('orgPhone',   org.telefone);
+
+  const orgEmailEl = document.getElementById('orgEmail');
+  if (orgEmailEl) {
+    orgEmailEl.readOnly = true;
+    orgEmailEl.classList.add('is-readonly');
+  }
   set('orgAddress', org.endereco);
   set('orgCNPJ',    org.cnpj ? formatarCNPJ(org.cnpj) : '');
   set('goalTarget', org.meta?.quantidade);
@@ -656,7 +666,8 @@ function salvarOrganizacao() {
 
   const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
   org.nome      = document.getElementById('orgName')?.value.trim();
-  org.email     = document.getElementById('orgEmail')?.value.trim();
+  const orgEmail = document.getElementById('orgEmail')?.value.trim();
+  org.email     = orgEmail || org.email;
   org.telefone  = document.getElementById('orgPhone')?.value.trim();
   org.endereco  = document.getElementById('orgAddress')?.value.trim();
   org.cnpj      = cnpjRaw;
