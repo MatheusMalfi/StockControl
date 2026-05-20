@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const pool = require("../db");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -82,12 +83,12 @@ router.get("/", async (req, res) => {
 });
 
 // POST /api/items
-router.post("/", upload.single("photo"), async (req, res) => {
+router.post("/", requireAuth, upload.single("photo"), async (req, res) => {
   try {
     const photo_blob = req.file ? req.file.buffer : null;
+    const organization_id = req.user.org;
 
     const {
-      organization_id,
       category_id,
       brand_id,
       model_id,
@@ -115,10 +116,9 @@ router.post("/", upload.single("photo"), async (req, res) => {
 
     let resolvedCategoryId = category_id;
     if (!resolvedCategoryId && req.body.category_name) {
-      await pool.execute(
-        "INSERT IGNORE INTO categories (name) VALUES (?)",
-        [req.body.category_name],
-      );
+      await pool.execute("INSERT IGNORE INTO categories (name) VALUES (?)", [
+        req.body.category_name,
+      ]);
       const [cat] = await pool.query(
         "SELECT id FROM categories WHERE name = ? LIMIT 1",
         [req.body.category_name],
@@ -348,10 +348,9 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
     }
 
     if (categoria !== undefined) {
-      await pool.execute(
-        "INSERT IGNORE INTO categories (name) VALUES (?)",
-        [categoria],
-      );
+      await pool.execute("INSERT IGNORE INTO categories (name) VALUES (?)", [
+        categoria,
+      ]);
       const [catRow] = await pool.query(
         "SELECT id FROM categories WHERE name = ? LIMIT 1",
         [categoria],
