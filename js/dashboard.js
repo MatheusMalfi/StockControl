@@ -20,6 +20,7 @@
     MOVEMENTS: "sc_movements",
     ALERTS: "sc_alerts",
     GOAL: "sc_goal",
+    DELETED: "sc_movements_deleted",
   };
 
   function dbGet(key) {
@@ -31,6 +32,34 @@
   }
   function dbSet(key, val) {
     localStorage.setItem(key, JSON.stringify(val));
+  }
+
+  function normalizeMovement(m) {
+    return {
+      id: String(m.id),
+      nome: m.nome || m.product_name || "—",
+      patrimonio: m.patrimonio || m.serial_number || m.origem || "",
+      tipo: m.tipo || "DESCARTE",
+      quantidade: m.quantidade ?? m.quantity ?? 1,
+      responsavel: m.responsavel || m.usuario || "—",
+      created_at: m.created_at || m.data || new Date().toISOString(),
+      destino: m.destino || m.origem || "",
+      notas: m.obs || m.observacao || null,
+    };
+  }
+
+  function mergeMovements(localMovs, serverMovs) {
+    const map = new Map();
+    const deleted = new Set((JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]") || []).map(String));
+    (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
+      map.set(String(m.id), m);
+    });
+    (Array.isArray(serverMovs) ? serverMovs : []).forEach((m) => {
+      const normalized = normalizeMovement(m);
+      if (deleted.has(String(normalized.id))) return;
+      map.set(String(normalized.id), normalized);
+    });
+    return Array.from(map.values());
   }
 
   // ── API helpers ───────────────────────────────────────────────────────────
@@ -475,7 +504,7 @@
             responsavel: "—",
             created_at: h.created_at,
           }));
-          dbSet(KEYS.MOVEMENTS, movs);
+          dbSet(KEYS.MOVEMENTS, mergeMovements(dbGet(KEYS.MOVEMENTS) || [], movs));
         }
         loadKPIs();
         loadConditionChart();

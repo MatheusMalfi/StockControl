@@ -3,7 +3,7 @@
 document.addEventListener("sc:ready", function () {
 
   // ── Storage ───────────────────────────────────────────────────────────────
-  const KEYS = { ITEMS: "sc_items", MOVEMENTS: "sc_movements" };
+  const KEYS = { ITEMS: "sc_items", MOVEMENTS: "sc_movements", DELETED: "sc_movements_deleted" };
 
   function dbGet(key) {
     try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
@@ -21,6 +21,77 @@ document.addEventListener("sc:ready", function () {
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       ...(body != null ? { body: JSON.stringify(body) } : {}),
     }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+  }
+
+  function getStoredUser() {
+    try {
+      return JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function loadItems() {
+    const user = getStoredUser();
+    const qs = user.organization_id ? `?organization_id=${user.organization_id}&limit=1000` : "?limit=1000";
+    return _movApi("GET", `/api/items${qs}`)
+      .then(data => {
+        const items = Array.isArray(data) ? data : data.items || data.itens || [];
+        if (items.length) {
+          const mapped = items.map(it => ({
+            id: it.id,
+            nome: it.product_name || it.nome || "—",
+            patrimonio: it.serial_number || it.patrimonio || "",
+            categoria: it.category_name || it.categoria || "",
+            disponivel: it.quantity_available ?? it.disponivel ?? 0,
+            total: it.quantity ?? it.total ?? 0,
+          }));
+          dbSet(KEYS.ITEMS, mapped);
+        }
+        return items;
+      })
+      .catch(() => []);
+  }
+
+  function normalizeServerMovement(m) {
+    return {
+      id: m.id,
+      item_id: m.item_id || m.product_id || null,
+      nome: m.nome || m.produto || m.product_name || "—",
+      patrimonio: m.patrimonio || m.origem || "",
+      tipo: m.tipo,
+      quantidade: m.quantidade ?? m.quantity ?? 0,
+      responsavel: m.responsavel || m.responsible || "—",
+      created_at: m.created_at || m.data || new Date().toISOString(),
+      destino: m.destino || null,
+      notas: m.notas || m.obs || m.notes || null,
+    };
+  }
+
+  function dbGetDeleted() {
+    try { return JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]"); } catch { return []; }
+  }
+  function dbSetDeleted(arr) { try { localStorage.setItem(KEYS.DELETED, JSON.stringify(arr)); } catch {} }
+  function addDeletedId(id) {
+    const arr = dbGetDeleted().map(String);
+    if (!arr.includes(String(id))) { arr.push(String(id)); dbSetDeleted(arr); }
+  }
+  function removeDeletedId(id) {
+    const arr = dbGetDeleted().filter(x => String(x) !== String(id));
+    dbSetDeleted(arr);
+  }
+
+  function mergeMovements(serverMovs) {
+    const localMovs = dbGet(KEYS.MOVEMENTS);
+    const deleted = new Set(dbGetDeleted().map(String));
+    const map = new Map();
+    (Array.isArray(localMovs) ? localMovs : []).forEach(m => map.set(String(m.id), m));
+    (Array.isArray(serverMovs) ? serverMovs : []).forEach(m => {
+      const id = String(m.id);
+      if (deleted.has(id)) return; // skip server entries that were deleted locally
+      map.set(id, normalizeServerMovement(m));
+    });
+    return Array.from(map.values());
   }
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -133,16 +204,29 @@ document.addEventListener("sc:ready", function () {
   }
 
   // ── Period / date filtering ───────────────────────────────────────────────
+  function parseDateInput(value) {
+    if (!value) return null;
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   function inPeriod(mov) {
     const d = new Date(mov.created_at);
+    if (Number.isNaN(d.getTime())) return false;
+
     if (state.dateFrom) {
-      if (d < new Date(state.dateFrom)) return false;
+      const from = parseDateInput(state.dateFrom);
+      if (from && d < from) return false;
     }
+
     if (state.dateTo) {
-      const dt = new Date(state.dateTo);
-      dt.setHours(23, 59, 59, 999);
-      if (d > dt) return false;
+      const to = parseDateInput(state.dateTo);
+      if (to) {
+        to.setHours(23, 59, 59, 999);
+        if (d > to) return false;
+      }
     }
+
     if (!state.dateFrom && !state.dateTo && state.period && state.period !== "0") {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - parseInt(state.period));
@@ -390,6 +474,9 @@ document.addEventListener("sc:ready", function () {
   // ── New movement modal ────────────────────────────────────────────────────
   function openNewMovModal() {
     resetMovForm();
+    if (!dbGet(KEYS.ITEMS).length) {
+      loadItems();
+    }
     SC.openModal("newMovModal");
   }
 
@@ -548,7 +635,41 @@ document.addEventListener("sc:ready", function () {
     const movs = dbGet(KEYS.MOVEMENTS);
     movs.unshift(newMov);
     dbSet(KEYS.MOVEMENTS, movs);
-    _movApi("POST", "/api/movimentacoes", newMov).catch(() => {});
+
+    const user = getStoredUser();
+    const payload = {
+      id: newMov.id,
+      organization_id: user.organization_id,
+      tipo: newMov.tipo,
+      produto: newMov.nome,
+      quantidade: newMov.quantidade,
+      responsavel: newMov.responsavel,
+      destino: newMov.destino,
+      origem: newMov.patrimonio,
+      data: newMov.created_at,
+      obs: newMov.notas,
+    };
+
+    _movApi("POST", "/api/movimentacoes", payload)
+      .then((res) => {
+        // If server created/returned a different id, update local cache
+        try {
+          if (res && res.id && String(res.id) !== String(newMov.id)) {
+            const movs2 = dbGet(KEYS.MOVEMENTS).map((m) => {
+              if (String(m.id) === String(newMov.id)) return { ...m, id: String(res.id) };
+              return m;
+            });
+            dbSet(KEYS.MOVEMENTS, movs2);
+            // Also update deleted index if present
+            const dels = dbGetDeleted();
+            const changed = dels.map(x => (String(x) === String(newMov.id) ? String(res.id) : x));
+            dbSetDeleted(changed);
+          }
+        } catch (_) {}
+      })
+      .catch(() => {
+        /* Falha de backend não impede persistência local */
+      });
 
     // Update item stock
     const items = dbGet(KEYS.ITEMS);
@@ -599,7 +720,12 @@ document.addEventListener("sc:ready", function () {
   // ── Delete movement ───────────────────────────────────────────────────────
   function deleteMovement(id) {
     if (!confirm("Excluir esta movimentação? Esta ação não pode ser desfeita.")) return;
-    _movApi("DELETE", `/api/movimentacoes/${id}`).catch(() => {});
+    // Mark as deleted locally so server syncs won't re-add it
+    addDeletedId(id);
+    _movApi("DELETE", `/api/movimentacoes/${id}`).catch(() => {
+      // Failure: keep id in deleted list so merges won't re-add it
+    });
+
     const movs = dbGet(KEYS.MOVEMENTS).filter(m => String(m.id) !== String(id));
     dbSet(KEYS.MOVEMENTS, movs);
     SC.toastSuccess("Movimentação removida.");
@@ -617,11 +743,17 @@ document.addEventListener("sc:ready", function () {
     wireFilters();
     wireNewMovModal();
     wireButtons();
+
     const _mou = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    loadItems();
     _movApi("GET", `/api/movimentacoes${_mou.organization_id ? `?organization_id=${_mou.organization_id}` : ""}`)
       .then(data => {
-        const movs = Array.isArray(data) ? data : data.movimentacoes || [];
-        if (movs.length) { dbSet(KEYS.MOVEMENTS, movs); render(); }
+        const serverMovs = Array.isArray(data) ? data : data.movimentacoes || [];
+        if (serverMovs.length) {
+          const merged = mergeMovements(serverMovs);
+          dbSet(KEYS.MOVEMENTS, merged);
+          render();
+        }
       })
       .catch(() => {});
     render();

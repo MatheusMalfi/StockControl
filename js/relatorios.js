@@ -3,6 +3,7 @@
 document.addEventListener("sc:ready", function () {
   // ── Constants ─────────────────────────────────────────────────────────────
   const KEYS = { ITEMS: "sc_items", MOVEMENTS: "sc_movements", REQUESTS: "sc_requests" };
+  KEYS.DELETED = "sc_movements_deleted";
 
   // ── State ─────────────────────────────────────────────────────────────────
   const state = {
@@ -53,6 +54,35 @@ document.addEventListener("sc:ready", function () {
   }
   function dbSet(key, val) {
     try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  }
+
+  function normalizeMovement(m) {
+    return {
+      id: String(m.id),
+      item_id: m.item_id || m.id || null,
+      nome_item: m.nome_item || m.nome || m.product_name || "—",
+      patrimonio: m.patrimonio || "",
+      tipo: m.tipo || "ENTRADA",
+      quantidade: m.quantidade ?? m.quantity ?? 0,
+      destino: m.destino || "",
+      observacao: m.observacao || m.obs || "",
+      created_at: m.created_at || m.data || new Date().toISOString(),
+      usuario: m.usuario || m.responsavel || "—",
+    };
+  }
+
+  function mergeMovements(localMovs, serverMovs) {
+    const map = new Map();
+    const deleted = new Set((JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]") || []).map(String));
+    (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
+      map.set(String(m.id), m);
+    });
+    (Array.isArray(serverMovs) ? serverMovs : []).forEach((m) => {
+      const normalized = normalizeMovement(m);
+      if (deleted.has(String(normalized.id))) return;
+      map.set(String(normalized.id), normalized);
+    });
+    return Array.from(map.values());
   }
 
   // ── API helpers ───────────────────────────────────────────────────────────
@@ -289,8 +319,10 @@ document.addEventListener("sc:ready", function () {
 
     _relApi({ tipo: state.reportType, from, to, cond, cat, movType })
       .then(data => {
-        if (data.items?.length)     dbSet(KEYS.ITEMS,     data.items);
-        if (data.movements?.length) dbSet(KEYS.MOVEMENTS, data.movements);
+        if (data.items?.length) dbSet(KEYS.ITEMS, data.items);
+        if (data.movements?.length) {
+          dbSet(KEYS.MOVEMENTS, mergeMovements(dbGet(KEYS.MOVEMENTS), data.movements));
+        }
       })
       .catch(() => {})
       .finally(() => {
