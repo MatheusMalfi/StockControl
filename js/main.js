@@ -80,9 +80,15 @@
     }
   }
 
+  function getCurrentPreferencesStorageKey() {
+    const user = getUser() || {};
+    const orgId = user.organization_id || user.organizationId || user.orgId || '';
+    return orgId ? `sc_preferencias_${orgId}` : 'sc_preferencias';
+  }
+
   function carregarTemaPreferido() {
     try {
-      const prefsRaw = localStorage.getItem('sc_preferencias');
+      const prefsRaw = localStorage.getItem(getCurrentPreferencesStorageKey());
       const prefs = prefsRaw ? JSON.parse(prefsRaw) : {};
       const tema = prefs.tema || 'claro';
       aplicarTema(tema);
@@ -500,7 +506,7 @@
 
   function getSavedDateFormat() {
     try {
-      const raw = localStorage.getItem('sc_preferencias');
+      const raw = localStorage.getItem(getCurrentPreferencesStorageKey());
       const prefs = raw ? JSON.parse(raw) : {};
       return prefs.formatoData || 'DD/MM/AAAA';
     } catch {

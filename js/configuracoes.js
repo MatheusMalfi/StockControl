@@ -15,6 +15,15 @@ const MOCK = {
   logAcessos:   [],
 };
 
+function getCurrentOrganizationStorageKey() {
+  const { organization_id } = _getOrgData();
+  return organization_id ? `sc_organizacao_${organization_id}` : 'sc_organizacao';
+}
+
+function getCurrentPreferencesStorageKey() {
+  const { organization_id } = _getOrgData();
+  return organization_id ? `sc_preferencias_${organization_id}` : 'sc_preferencias';
+}
 
 // ── Seed / migração ───────────────────────────────────────────────────────────
 function carregarDados() {
@@ -30,8 +39,9 @@ function carregarDados() {
 
       if (data.organizacao) {
         // Preserve locally-stored logo and meta — API doesn't return them
-        const prev = carregarDoLocalStorage('sc_organizacao', {});
-        localStorage.setItem('sc_organizacao', JSON.stringify({
+        const orgKey = getCurrentOrganizationStorageKey();
+        const prev = carregarDoLocalStorage(orgKey, {});
+        localStorage.setItem(orgKey, JSON.stringify({
           ...data.organizacao,
           logo: prev.logo || null,
           meta: prev.meta || null,
@@ -40,7 +50,8 @@ function carregarDados() {
       }
 
       if (data.preferencias) {
-        localStorage.setItem('sc_preferencias', JSON.stringify(data.preferencias));
+        const prefsKey = getCurrentPreferencesStorageKey();
+        localStorage.setItem(prefsKey, JSON.stringify(data.preferencias));
         const p = data.preferencias;
         const setS = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
         setS('prefTema',        p.tema        || 'claro');
@@ -57,9 +68,9 @@ function carregarDados() {
   const seed = (key, val) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(val)); };
   seed(getCurrentUserStorageKey(), MOCK.usuario);
   seed('sc_usuarios',     MOCK.usuarios);
-  seed('sc_organizacao',  MOCK.organizacao);
+  seed(getCurrentOrganizationStorageKey(), MOCK.organizacao);
+  seed(getCurrentPreferencesStorageKey(), MOCK.preferencias);
   seed('sc_notif_rules',  MOCK.regrasNotif);
-  seed('sc_preferencias', MOCK.preferencias);
   seed('log_acessos',     MOCK.logAcessos);
 
   // Migrate categories: string[] → object[]
@@ -339,7 +350,7 @@ function initConfiguracoes() {
   carregarLogAcessos();
 
   // Apply saved theme
-  const prefs = carregarDoLocalStorage('sc_preferencias', MOCK.preferencias);
+  const prefs = carregarDoLocalStorage(getCurrentPreferencesStorageKey(), MOCK.preferencias);
   aplicarTema(prefs.tema || 'claro');
 }
 
@@ -396,7 +407,7 @@ function carregarPerfil() {
   atualizarAvatarHeader();
 
   // Load display prefs
-  const prefs = carregarDoLocalStorage('sc_preferencias', MOCK.preferencias);
+  const prefs = carregarDoLocalStorage(getCurrentPreferencesStorageKey(), MOCK.preferencias);
   const setS = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   setS('prefTema', prefs.tema || 'claro');
   setS('prefIdioma', prefs.idioma || 'pt-BR');
@@ -585,7 +596,7 @@ function salvarPreferenciasExibicao() {
     paginacao:   parseInt(document.getElementById('prefPaginacao')?.value) || 20,
     formatoData: document.getElementById('prefFormatoData')?.value || 'DD/MM/AAAA',
   };
-  salvarNoLocalStorage('sc_preferencias', prefs);
+  salvarNoLocalStorage(getCurrentPreferencesStorageKey(), prefs);
   const { organization_id: _preoid } = _getOrgData();
   _cfgApi("PUT", "/api/configuracoes/preferencias", { ...prefs, organization_id: _preoid }).catch(() => {});
   
@@ -599,7 +610,7 @@ function salvarPreferenciasExibicao() {
 
 // ── Organização ───────────────────────────────────────────────────────────────
 function carregarOrganizacao() {
-  const org = carregarDoLocalStorage('sc_organizacao', MOCK.organizacao);
+  const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), MOCK.organizacao);
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   set('orgName',    org.nome);
   set('orgEmail',   org.email);
@@ -643,13 +654,13 @@ function salvarOrganizacao() {
   const errEl = document.getElementById('errorOrgCNPJ');
   if (errEl) errEl.style.display = 'none';
 
-  const org = carregarDoLocalStorage('sc_organizacao', {});
+  const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
   org.nome      = document.getElementById('orgName')?.value.trim();
   org.email     = document.getElementById('orgEmail')?.value.trim();
   org.telefone  = document.getElementById('orgPhone')?.value.trim();
   org.endereco  = document.getElementById('orgAddress')?.value.trim();
   org.cnpj      = cnpjRaw;
-  salvarNoLocalStorage('sc_organizacao', org);
+  salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
   const { organization_id: _ooid } = _getOrgData();
   _cfgApi("PUT", "/api/configuracoes/organizacao", { ...org, organization_id: _ooid }).catch(() => {});
   registrarLog('Organização atualizada', 'organizacao', org.nome, '');
@@ -668,9 +679,9 @@ function uploadLogoOrganizacao(file) {
     if (imgEl)    { imgEl.src = e.target.result; imgEl.classList.add('is-visible'); }
     if (placehEl) placehEl.style.display = 'none';
     if (remBtn)   remBtn.style.display = '';
-    const org = carregarDoLocalStorage('sc_organizacao', {});
+    const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
     org.logo = e.target.result;
-    salvarNoLocalStorage('sc_organizacao', org);
+    salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
     showToast('Logo atualizado!', 'success');
   };
   reader.readAsDataURL(file);
@@ -684,9 +695,9 @@ function removerLogoOrganizacao() {
     if (imgEl)    { imgEl.src = ''; imgEl.classList.remove('is-visible'); }
     if (placehEl) placehEl.style.display = '';
     if (remBtn)   remBtn.style.display = 'none';
-    const org = carregarDoLocalStorage('sc_organizacao', {});
+    const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
     org.logo = null;
-    salvarNoLocalStorage('sc_organizacao', org);
+    salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
     showToast('Logo removido.', 'info');
   });
 }
@@ -1487,13 +1498,13 @@ function wireProfileEvents() {
 function wireOrgEvents() {
   document.getElementById('saveOrgBtn')?.addEventListener('click', salvarOrganizacao);
   document.getElementById('saveGoalBtn')?.addEventListener('click', () => {
-    const org = carregarDoLocalStorage('sc_organizacao', {});
+    const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
     org.meta  = {
       quantidade: parseInt(document.getElementById('goalTarget')?.value) || null,
       inicio:     document.getElementById('goalStart')?.value || null,
       fim:        document.getElementById('goalEnd')?.value   || null,
     };
-    salvarNoLocalStorage('sc_organizacao', org);
+    salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
     showToast('Meta salva!', 'success');
   });
   document.getElementById('orgLogoInput')?.addEventListener('change', function () {
