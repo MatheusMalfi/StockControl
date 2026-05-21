@@ -130,6 +130,7 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  background-color: var(--color-bg);
 }
 
 body {
@@ -1533,13 +1534,6 @@ html[data-theme="dark"] .user-chip,
 html[data-theme="dark"] .user-chip-avatar,
 html[data-theme="dark"] .user-chip-name,
 html[data-theme="dark"] .btn-logout,
-html[data-theme="dark"] .painel-lista,
-html[data-theme="dark"] .painel-config,
-html[data-theme="dark"] .rodape-lista,
-html[data-theme="dark"] .item-linha,
-html[data-theme="dark"] .item-linha:hover,
-html[data-theme="dark"] .item-linha.selecionado,
-html[data-theme="dark"] .item-icone,
 html[data-theme="dark"] .notif-drop,
 html[data-theme="dark"] .toast {
   background: var(--color-surface) !important;

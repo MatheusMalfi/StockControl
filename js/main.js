@@ -80,9 +80,15 @@
     }
   }
 
+  function getCurrentPreferencesStorageKey() {
+    const user = getUser() || {};
+    const orgId = user.organization_id || user.organizationId || user.orgId || '';
+    return orgId ? `sc_preferencias_${orgId}` : 'sc_preferencias';
+  }
+
   function carregarTemaPreferido() {
     try {
-      const prefsRaw = localStorage.getItem('sc_preferencias');
+      const prefsRaw = localStorage.getItem(getCurrentPreferencesStorageKey());
       const prefs = prefsRaw ? JSON.parse(prefsRaw) : {};
       const tema = prefs.tema || 'claro';
       aplicarTema(tema);
@@ -498,34 +504,93 @@
   };
   const escHtml = SC.escHtml;
 
+  function getSavedDateFormat() {
+    try {
+      const raw = localStorage.getItem(getCurrentPreferencesStorageKey());
+      const prefs = raw ? JSON.parse(raw) : {};
+      return prefs.formatoData || 'DD/MM/AAAA';
+    } catch {
+      return 'DD/MM/AAAA';
+    }
+  }
+
+  function formatDateByPattern(date, pattern) {
+    const pad = (value) => String(value).padStart(2, '0');
+    const day = pad(date.getDate());
+    const month = pad(date.getMonth() + 1);
+    const year = date.getFullYear();
+
+    switch (pattern) {
+      case 'MM/DD/AAAA':
+        return `${month}/${day}/${year}`;
+      case 'AAAA-MM-DD':
+        return `${year}-${month}-${day}`;
+      default:
+        return `${day}/${month}/${year}`;
+    }
+  }
+
+  function parseDateValue(value) {
+    if (!value) return null;
+    if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+    if (typeof value !== 'string') return null;
+
+    const trimmed = value.trim();
+    const isoDate = new Date(trimmed);
+    if (!Number.isNaN(isoDate.getTime())) return isoDate;
+
+    const pattern = getSavedDateFormat();
+    const dateTimeSplit = trimmed.split(' ');
+    const datePart = dateTimeSplit[0];
+    const timePart = dateTimeSplit[1] || null;
+
+    let match;
+    if ((match = datePart.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/))) {
+      const [, year, month, day] = match.map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    if ((match = datePart.match(/^([0-9]{2})\/([0-9]{2})\/([0-9]{4})$/))) {
+      const [_, a, b, c] = match;
+      const n1 = Number(a);
+      const n2 = Number(b);
+      const n3 = Number(c);
+      if (pattern === 'MM/DD/AAAA') {
+        return new Date(n3, n1 - 1, n2);
+      }
+      return new Date(n3, n2 - 1, n1);
+    }
+
+    if (timePart && (match = trimmed.match(/^([0-9]{2})\/([0-9]{2})\/([0-9]{4})\s+([0-9]{2}):([0-9]{2})$/))) {
+      const [, a, b, c, h, m] = match.map(Number);
+      if (pattern === 'MM/DD/AAAA') {
+        return new Date(c, a - 1, b, h, m);
+      }
+      return new Date(c, b - 1, a, h, m);
+    }
+
+    return null;
+  }
+
   /** Format ISO date string to local short date */
   SC.fmtDate = function (iso) {
     if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return iso;
-    }
+    const d = parseDateValue(iso);
+    if (!d) return iso;
+    return formatDateByPattern(d, getSavedDateFormat());
   };
 
   /** Format ISO date+time */
   SC.fmtDateTime = function (iso) {
     if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return iso;
-    }
+    const d = parseDateValue(iso);
+    if (!d) return iso;
+    const datePart = formatDateByPattern(d, getSavedDateFormat());
+    const timePart = d.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${datePart} ${timePart}`;
   };
 
   /** Relative time label */

@@ -41,23 +41,22 @@ const Estado = {
 // 1. INICIALIZAÇÃO
 // ════════════════════════════════════════════════════════
 function initEtiquetas() {
-  mostrarSkeleton();
   carregarPreferencias();
+  carregarItens(true);
+  carregarCategorias();
+  bindEventos();
+  renderListaItens(Estado.itens);
+  atualizarBotaoImprimir();
+  agendarPreview();
 
-  setTimeout(() => {
-    carregarItens();
-    carregarCategorias();
-    bindEventos();
-    renderListaItens(Estado.itens);
-    atualizarBotaoImprimir();
-  }, 600);
+  requestAnimationFrame(() => carregarItens());
 }
 
 function _etiqToken() {
   return localStorage.getItem('sc_token') || sessionStorage.getItem('sc_token');
 }
 
-function carregarItens() {
+function carregarItens(useCacheOnly = false) {
   const salvo = localStorage.getItem('estoque_itens');
   Estado.itens = salvo ? JSON.parse(salvo) : MOCK_ITENS;
   if (!salvo) localStorage.setItem('estoque_itens', JSON.stringify(MOCK_ITENS));
@@ -69,6 +68,10 @@ function carregarItens() {
       user.organizationName ||
       user.organization?.name ||
       Estado.orgName;
+  }
+
+  if (useCacheOnly) {
+    return;
   }
 
   const token = _etiqToken();
@@ -85,8 +88,11 @@ function carregarItens() {
         categoria: it.categoria || '',
         numeroSerie: it.numero_serie || it.numeroSerie || '',
       }));
-      if (itens.length) {
-        localStorage.setItem('estoque_itens', JSON.stringify(itens));
+
+      const atualHash = JSON.stringify(Estado.itens);
+      const novoHash = JSON.stringify(itens);
+      if (itens.length && novoHash !== atualHash) {
+        localStorage.setItem('estoque_itens', novoHash);
         Estado.itens = itens;
         Estado.itensFiltrados = [...itens];
         renderListaItens(Estado.itens);

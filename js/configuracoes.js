@@ -15,6 +15,15 @@ const MOCK = {
   logAcessos:   [],
 };
 
+function getCurrentOrganizationStorageKey() {
+  const { organization_id } = _getOrgData();
+  return organization_id ? `sc_organizacao_${organization_id}` : 'sc_organizacao';
+}
+
+function getCurrentPreferencesStorageKey() {
+  const { organization_id } = _getOrgData();
+  return organization_id ? `sc_preferencias_${organization_id}` : 'sc_preferencias';
+}
 
 // ── Seed / migração ───────────────────────────────────────────────────────────
 function carregarDados() {
@@ -30,8 +39,9 @@ function carregarDados() {
 
       if (data.organizacao) {
         // Preserve locally-stored logo and meta — API doesn't return them
-        const prev = carregarDoLocalStorage('sc_organizacao', {});
-        localStorage.setItem('sc_organizacao', JSON.stringify({
+        const orgKey = getCurrentOrganizationStorageKey();
+        const prev = carregarDoLocalStorage(orgKey, {});
+        localStorage.setItem(orgKey, JSON.stringify({
           ...data.organizacao,
           logo: prev.logo || null,
           meta: prev.meta || null,
@@ -40,7 +50,8 @@ function carregarDados() {
       }
 
       if (data.preferencias) {
-        localStorage.setItem('sc_preferencias', JSON.stringify(data.preferencias));
+        const prefsKey = getCurrentPreferencesStorageKey();
+        localStorage.setItem(prefsKey, JSON.stringify(data.preferencias));
         const p = data.preferencias;
         const setS = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
         setS('prefTema',        p.tema        || 'claro');
@@ -57,9 +68,9 @@ function carregarDados() {
   const seed = (key, val) => { if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(val)); };
   seed(getCurrentUserStorageKey(), MOCK.usuario);
   seed('sc_usuarios',     MOCK.usuarios);
-  seed('sc_organizacao',  MOCK.organizacao);
+  seed(getCurrentOrganizationStorageKey(), MOCK.organizacao);
+  seed(getCurrentPreferencesStorageKey(), MOCK.preferencias);
   seed('sc_notif_rules',  MOCK.regrasNotif);
-  seed('sc_preferencias', MOCK.preferencias);
   seed('log_acessos',     MOCK.logAcessos);
 
   // Migrate categories: string[] → object[]
@@ -339,7 +350,7 @@ function initConfiguracoes() {
   carregarLogAcessos();
 
   // Apply saved theme
-  const prefs = carregarDoLocalStorage('sc_preferencias', MOCK.preferencias);
+  const prefs = carregarDoLocalStorage(getCurrentPreferencesStorageKey(), MOCK.preferencias);
   aplicarTema(prefs.tema || 'claro');
 }
 
@@ -365,13 +376,19 @@ function carregarPerfil() {
   // Real session (set by login) lives in sc_user with field "name"; sc_usuario is user-specific local profile data
   const session = _getOrgData();
   const u       = carregarUsuarioLocal({});
-  const nome    = session.name  || u.nome  || '';
-  const email   = session.email || u.email || '';
+  const nome    = session.name  || session.nome || u.nome  || '';
+  const email   = session.email || session.user?.email || session.usuario?.email || u.email || '';
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   set('profileName',  nome);
   set('profileEmail', email);
   set('profileRole',  u.cargo || '');
+
+  const emailEl = document.getElementById('profileEmail');
+  if (emailEl) {
+    emailEl.readOnly = true;
+    emailEl.classList.add('is-readonly');
+  }
 
   const initialsEl = document.getElementById('profileAvatarInitials');
   const imgEl      = document.getElementById('profileAvatarImg');
@@ -396,7 +413,7 @@ function carregarPerfil() {
   atualizarAvatarHeader();
 
   // Load display prefs
-  const prefs = carregarDoLocalStorage('sc_preferencias', MOCK.preferencias);
+  const prefs = carregarDoLocalStorage(getCurrentPreferencesStorageKey(), MOCK.preferencias);
   const setS = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   setS('prefTema', prefs.tema || 'claro');
   setS('prefIdioma', prefs.idioma || 'pt-BR');
@@ -406,15 +423,12 @@ function carregarPerfil() {
 
 async function salvarPerfil() {
   const nomeEl  = document.getElementById('profileName');
-  const emailEl = document.getElementById('profileEmail');
   const nome    = nomeEl?.value.trim();
-  const email   = emailEl?.value.trim();
   if (!nome)            { showToast('Nome é obrigatório.', 'error'); return; }
-  if (!validarEmail(email || '')) { showToast('E-mail inválido.', 'error'); return; }
 
   const u = carregarUsuarioLocal({});
   u.nome  = nome;
-  u.email = email;
+  u.email = _perfilSnapshot.email;
 
   if (_pendingAvatarRemoved) {
     u.avatar = null;
@@ -551,19 +565,16 @@ function atualizarAvatarHeader() {
 
 function detectarMudancasPerfil() {
   const nomeEl  = document.getElementById('profileName');
-  const emailEl = document.getElementById('profileEmail');
   const btn     = document.getElementById('saveProfileBtn');
   if (!btn) return;
   const nomeMudou  = nomeEl?.value.trim() !== _perfilSnapshot.nome;
-  const emailMudou = emailEl?.value.trim() !== _perfilSnapshot.email;
   const currentAvatar = _pendingAvatarRemoved ? null : (_pendingAvatarDataUrl || carregarUsuarioLocal({}).avatar || null);
   const avatarMudou = currentAvatar !== _perfilSnapshot.avatar;
-  const mudou = nomeMudou || emailMudou || avatarMudou;
+  const mudou = nomeMudou || avatarMudou;
   btn.disabled = !mudou;
   if (nomeEl && !nomeEl._profileWired) {
     nomeEl._profileWired = true;
     nomeEl.addEventListener('input', detectarMudancasPerfil);
-    emailEl?.addEventListener('input', detectarMudancasPerfil);
   }
 }
 
@@ -585,7 +596,7 @@ function salvarPreferenciasExibicao() {
     paginacao:   parseInt(document.getElementById('prefPaginacao')?.value) || 20,
     formatoData: document.getElementById('prefFormatoData')?.value || 'DD/MM/AAAA',
   };
-  salvarNoLocalStorage('sc_preferencias', prefs);
+  salvarNoLocalStorage(getCurrentPreferencesStorageKey(), prefs);
   const { organization_id: _preoid } = _getOrgData();
   _cfgApi("PUT", "/api/configuracoes/preferencias", { ...prefs, organization_id: _preoid }).catch(() => {});
   
@@ -599,11 +610,21 @@ function salvarPreferenciasExibicao() {
 
 // ── Organização ───────────────────────────────────────────────────────────────
 function carregarOrganizacao() {
-  const org = carregarDoLocalStorage('sc_organizacao', MOCK.organizacao);
+  const session = _getOrgData();
+  const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), MOCK.organizacao);
+  const fallbackEmail = session.email || session.user?.email || session.usuario?.email || '';
+  const orgEmail = org.email || fallbackEmail;
+
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   set('orgName',    org.nome);
-  set('orgEmail',   org.email);
+  set('orgEmail',   orgEmail);
   set('orgPhone',   org.telefone);
+
+  const orgEmailEl = document.getElementById('orgEmail');
+  if (orgEmailEl) {
+    orgEmailEl.readOnly = true;
+    orgEmailEl.classList.add('is-readonly');
+  }
   set('orgAddress', org.endereco);
   set('orgCNPJ',    org.cnpj ? formatarCNPJ(org.cnpj) : '');
   set('goalTarget', org.meta?.quantidade);
@@ -643,13 +664,14 @@ function salvarOrganizacao() {
   const errEl = document.getElementById('errorOrgCNPJ');
   if (errEl) errEl.style.display = 'none';
 
-  const org = carregarDoLocalStorage('sc_organizacao', {});
+  const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
   org.nome      = document.getElementById('orgName')?.value.trim();
-  org.email     = document.getElementById('orgEmail')?.value.trim();
+  const orgEmail = document.getElementById('orgEmail')?.value.trim();
+  org.email     = orgEmail || org.email;
   org.telefone  = document.getElementById('orgPhone')?.value.trim();
   org.endereco  = document.getElementById('orgAddress')?.value.trim();
   org.cnpj      = cnpjRaw;
-  salvarNoLocalStorage('sc_organizacao', org);
+  salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
   const { organization_id: _ooid } = _getOrgData();
   _cfgApi("PUT", "/api/configuracoes/organizacao", { ...org, organization_id: _ooid }).catch(() => {});
   registrarLog('Organização atualizada', 'organizacao', org.nome, '');
@@ -668,9 +690,9 @@ function uploadLogoOrganizacao(file) {
     if (imgEl)    { imgEl.src = e.target.result; imgEl.classList.add('is-visible'); }
     if (placehEl) placehEl.style.display = 'none';
     if (remBtn)   remBtn.style.display = '';
-    const org = carregarDoLocalStorage('sc_organizacao', {});
+    const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
     org.logo = e.target.result;
-    salvarNoLocalStorage('sc_organizacao', org);
+    salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
     showToast('Logo atualizado!', 'success');
   };
   reader.readAsDataURL(file);
@@ -684,9 +706,9 @@ function removerLogoOrganizacao() {
     if (imgEl)    { imgEl.src = ''; imgEl.classList.remove('is-visible'); }
     if (placehEl) placehEl.style.display = '';
     if (remBtn)   remBtn.style.display = 'none';
-    const org = carregarDoLocalStorage('sc_organizacao', {});
+    const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
     org.logo = null;
-    salvarNoLocalStorage('sc_organizacao', org);
+    salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
     showToast('Logo removido.', 'info');
   });
 }
@@ -1385,7 +1407,7 @@ function renderLogAcessos(limite) {
   const lista = Array.isArray(raw) ? raw : [];
   const itens = lista.slice(0, limite);
   if (!itens.length) { cont.innerHTML = '<p style="color:var(--color-text-muted);font-size:0.875rem;">Nenhum acesso registrado.</p>'; return; }
-  const fmt = iso => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+  const fmt = iso => SC.fmtDateTime(iso);
   cont.innerHTML = itens.map(e => `
     <div style="display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:1px solid var(--color-border-light);">
       <div style="margin-top:4px;width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${e.atual ? '#22c55e' : 'var(--color-border-strong)'};"></div>
@@ -1487,13 +1509,13 @@ function wireProfileEvents() {
 function wireOrgEvents() {
   document.getElementById('saveOrgBtn')?.addEventListener('click', salvarOrganizacao);
   document.getElementById('saveGoalBtn')?.addEventListener('click', () => {
-    const org = carregarDoLocalStorage('sc_organizacao', {});
+    const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
     org.meta  = {
       quantidade: parseInt(document.getElementById('goalTarget')?.value) || null,
       inicio:     document.getElementById('goalStart')?.value || null,
       fim:        document.getElementById('goalEnd')?.value   || null,
     };
-    salvarNoLocalStorage('sc_organizacao', org);
+    salvarNoLocalStorage(getCurrentOrganizationStorageKey(), org);
     showToast('Meta salva!', 'success');
   });
   document.getElementById('orgLogoInput')?.addEventListener('change', function () {
