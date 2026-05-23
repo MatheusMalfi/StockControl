@@ -95,6 +95,7 @@
   let isDirty = false;
   let pendingNav = null;
   let photoDataUrl = null;
+  let photoFile = null;
   const tags = [];
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
@@ -372,9 +373,10 @@
           categoria: a.category_name || "",
           marca: a.product_brand || a.brand || "",
           modelo: a.product_model || a.model || "",
+          localizacao: a.localizacao || "",
           notas: "",
           tags: [],
-          foto: null,
+          foto: a.photo_url || null,
         };
         fillForm(item);
       })
@@ -550,26 +552,43 @@
               "{}",
           ) || {};
 
+        const formData = new FormData();
+        formData.append("organization_id", user.organization_id || "");
+        formData.append("produto", productName?.value.trim() || "");
+        if (assetTag?.value?.trim()) {
+          formData.append("serial_number", assetTag.value.trim());
+        }
+        if (categoryId?.value) {
+          formData.append("categoria", categoryId.value);
+        }
+        if (brandId?.value) {
+          formData.append("marca", brandId.value);
+        }
+        if (modelId?.value) {
+          formData.append("modelo", modelId.value);
+        }
+        if (description?.value?.trim()) {
+          formData.append("descricao", description.value.trim());
+        }
+        formData.append("status", condValue);
+        formData.append("quantidade", String(qty));
+        if (estimatedValue?.value) {
+          formData.append("valor", String(parseFloat(estimatedValue.value)));
+        }
+        formData.append("localizacao", locationId?.value || "");
+        if (notes?.value?.trim()) {
+          formData.append("notas", notes.value.trim());
+        }
+        if (photoFile) {
+          formData.append("photo", photoFile);
+        }
+
         fetch(`/api/items/${ITEM_ID}`, {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            organization_id: user.organization_id,
-            produto: productName?.value.trim() || "",
-            serial_number: assetTag?.value.trim() || null,
-            categoria: categoryId?.value || null,
-            marca: brandId?.value || null,
-            modelo: modelId?.value || null,
-            descricao: description?.value.trim() || null,
-            status: condValue,
-            quantidade: qty,
-            valor: parseFloat(estimatedValue?.value) || null,
-            localizacao: locationId?.value || null,
-            notas: notes?.value.trim() || null,
-          }),
+          body: formData,
         })
           .then((r) => r.json())
           .then((data) => {
@@ -710,6 +729,7 @@
       SC.toastError("Imagem muito grande. Máximo 5 MB.");
       return;
     }
+    photoFile = file;
     const reader = new FileReader();
     reader.onload = (ev) => {
       photoDataUrl = ev.target.result;
@@ -732,6 +752,7 @@
 
   function clearPhoto() {
     photoDataUrl = null;
+    photoFile = null;
     if (photoPreview) {
       photoPreview.src = "";
       photoPreview.classList.remove("is-visible");

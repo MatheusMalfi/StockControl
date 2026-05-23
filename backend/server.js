@@ -1,6 +1,21 @@
-require("dotenv").config();
-const express = require("express");
+const fs = require("fs");
 const path = require("path");
+const dotenv = require("dotenv");
+
+process.chdir(__dirname);
+
+const envCandidates = [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(__dirname, ".env"),
+];
+const envPath = envCandidates.find((candidate) => fs.existsSync(candidate));
+if (envPath) {
+  dotenv.config({ path: envPath });
+} else {
+  dotenv.config();
+}
+
+const express = require("express");
 const cors = require("cors");
 
 const authRoutes          = require("./src/routes/auth.routes");

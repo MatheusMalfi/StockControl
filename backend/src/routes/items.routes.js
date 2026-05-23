@@ -20,11 +20,13 @@ router.get("/", async (req, res) => {
     const conditions = ["i.organization_id = ?", "i.is_active = 1"];
     const params = [organization_id];
 
-    // Se uma condição específica for enviada, filtra por ela
-    // Se nenhuma for enviada, mostra todos os itens (incluindo DESCARTAR)
+    // Por padrão, esconde itens descartados da listagem principal.
+    // O filtro explícito 'DESCARTAR' continua permitindo visualizá-los.
     if (condition) {
       conditions.push("c.code = ?");
       params.push(condition);
+    } else {
+      conditions.push("(c.code IS NULL OR c.code <> 'DESCARTAR')");
     }
 
     if (search) {
@@ -64,6 +66,7 @@ router.get("/", async (req, res) => {
       `SELECT i.id, i.product_name, i.product_brand, i.product_model,
               i.serial_number, i.description, i.quantity, i.quantity_available,
               i.weight_kg, i.estimated_value, i.is_active, i.created_at,
+              i.photo_blob IS NOT NULL AS has_photo,
               c.label_pt AS condition_label, c.code AS condition_code,
               cat.name AS category_name
        FROM items i
@@ -75,7 +78,13 @@ router.get("/", async (req, res) => {
       [...params, pageSize, offset],
     );
 
-    res.json({ success: true, items, total, page: pageNum, limit: pageSize });
+    const normalizedItems = items.map(({ has_photo, ...item }) => ({
+      ...item,
+      photo_url: has_photo ? `/api/items/${item.id}/photo` : null,
+    }));
+
+    console.log("normalizedItems", JSON.stringify(normalizedItems));
+    res.json({ success: true, items: normalizedItems, total, page: pageNum, limit: pageSize });
   } catch (err) {
     console.error("Erro em GET /api/items:", err);
     res.status(500).json({ message: "Erro ao buscar itens." });
@@ -237,15 +246,18 @@ router.get("/:id", async (req, res) => {
       `SELECT i.id, i.product_name, i.product_brand, i.product_model,
               i.serial_number, i.description, i.quantity, i.quantity_available,
               i.weight_kg, i.estimated_value, i.is_active, i.created_at,
+              i.photo_blob IS NOT NULL AS has_photo,
               COALESCE(i.product_brand, b.name) AS brand,
               COALESCE(i.product_model, m.name) AS model,
               c.label_pt AS condition_label, c.code AS condition_code,
-              cat.name AS category_name
+              cat.name AS category_name,
+              sl.name AS localizacao
        FROM items i
        LEFT JOIN brands b ON b.id = i.brand_id
        LEFT JOIN models m ON m.id = i.model_id
        JOIN conditions c ON c.id = i.condition_id
        LEFT JOIN categories cat ON cat.id = i.category_id
+       LEFT JOIN storage_locations sl ON sl.id = i.storage_location_id
        WHERE i.id = ? LIMIT 1`,
       [req.params.id],
     );
@@ -254,7 +266,10 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "Item não encontrado." });
     }
 
-    res.json({ success: true, item: rows[0] });
+    const item = { ...rows[0], photo_url: rows[0].has_photo ? `/api/items/${rows[0].id}/photo` : null };
+    delete item.has_photo;
+
+    res.json({ success: true, item });
   } catch (err) {
     console.error("Erro em GET /api/items/:id:", err);
     res.status(500).json({ message: "Erro ao buscar item." });
@@ -339,14 +354,37 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
       params.push(parseFloat(valor) || null);
     }
     if (localizacao !== undefined) {
-      updates.push("location_label = ?");
-      params.push(localizacao);
-    }
-    if (notas !== undefined) {
-      updates.push("notes = ?");
-      params.push(notas);
-    }
+      if (localizacao === null || localizacao === "") {
+        updates.push("storage_location_id = ?");
+        params.push(null);
+      } else if (!Number.isNaN(Number(localizacao))) {
+        updates.push("storage_location_id = ?");
+        params.push(parseInt(localizacao, 10));
+      } else {
+        const normalizedLocation = String(localizacao).trim();
+        if (!normalizedLocation) {
+          updates.push("storage_location_id = ?");
+          params.push(null);
+        } else {
+          const [locationRows] = await pool.query(
+            "SELECT id FROM storage_locations WHERE organization_id = ? AND name = ? LIMIT 1",
+            [organization_id, normalizedLocation],
+          );
 
+          let storageLocationId = locationRows[0]?.id;
+          if (!storageLocationId) {
+            const [insertResult] = await pool.execute(
+              "INSERT INTO storage_locations (organization_id, name) VALUES (?, ?)",
+              [organization_id, normalizedLocation],
+            );
+            storageLocationId = insertResult.insertId;
+          }
+
+          updates.push("storage_location_id = ?");
+          params.push(storageLocationId);
+        }
+      }
+    }
     if (categoria !== undefined) {
       await pool.execute("INSERT IGNORE INTO categories (name) VALUES (?)", [
         categoria,
