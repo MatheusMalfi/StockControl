@@ -43,24 +43,30 @@ document.addEventListener("sc:ready", function () {
             nome: it.product_name || it.nome || "—",
             patrimonio: it.serial_number || it.patrimonio || "",
             categoria: it.category_name || it.categoria || "",
-            disponivel: it.quantity_available ?? it.disponivel ?? 0,
+            disponivel: it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
             total: it.quantity ?? it.total ?? 0,
+            quantity_available: it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
           }));
           dbSet(KEYS.ITEMS, mapped);
+          return mapped;
         }
-        return items;
+        return [];
       })
       .catch(() => []);
   }
 
   function normalizeServerMovement(m) {
+    // Garantir quantidade válida (rejeitar valores negativos ou zero)
+    const qty = m.quantidade ?? m.quantity ?? 0;
+    const validQty = typeof qty === 'number' && qty > 0 ? qty : 1;
+    
     return {
       id: m.id,
       item_id: m.item_id || m.product_id || null,
       nome: m.nome || m.produto || m.product_name || "—",
       patrimonio: m.patrimonio || m.origem || "",
-      tipo: m.tipo,
-      quantidade: m.quantidade ?? m.quantity ?? 0,
+      tipo: (m.tipo || "").toUpperCase(),
+      quantidade: validQty,
       responsavel: m.responsavel || m.responsible || "—",
       created_at: m.created_at || m.data || new Date().toISOString(),
       destino: m.destino || null,
@@ -81,14 +87,34 @@ document.addEventListener("sc:ready", function () {
     dbSetDeleted(arr);
   }
 
+  function isValidMovement(m) {
+    // Validar quantidade: não permitir valores negativos, zero ou inválidos
+    const qty = m.quantidade ?? m.quantity ?? 0;
+    if (typeof qty !== 'number' || qty <= 0) return false;
+    
+    // Validar tipo
+    const validTypes = ['ENTRADA', 'SAIDA', 'DOACAO', 'DESCARTE', 'TRANSFERENCIA'];
+    if (!validTypes.includes((m.tipo || '').toUpperCase())) return false;
+    
+    // Validar que tem um ID válido
+    if (!m.id) return false;
+    
+    return true;
+  }
+
   function mergeMovements(serverMovs) {
     const localMovs = dbGet(KEYS.MOVEMENTS);
     const deleted = new Set(dbGetDeleted().map(String));
     const map = new Map();
-    (Array.isArray(localMovs) ? localMovs : []).forEach(m => map.set(String(m.id), m));
+    (Array.isArray(localMovs) ? localMovs : []).forEach(m => {
+      if (isValidMovement(m)) {
+        map.set(String(m.id), m);
+      }
+    });
     (Array.isArray(serverMovs) ? serverMovs : []).forEach(m => {
       const id = String(m.id);
       if (deleted.has(id)) return; // skip server entries that were deleted locally
+      if (!isValidMovement(m)) return; // skip invalid server entries
       map.set(id, normalizeServerMovement(m));
     });
     return Array.from(map.values());
@@ -238,6 +264,9 @@ document.addEventListener("sc:ready", function () {
   // ── Apply filters + sort ──────────────────────────────────────────────────
   function applyFilters() {
     let movs = dbGet(KEYS.MOVEMENTS);
+
+    // Filtrar movimentações inválidas
+    movs = movs.filter(m => isValidMovement(m));
 
     movs = movs.filter(inPeriod);
 
@@ -541,11 +570,41 @@ document.addEventListener("sc:ready", function () {
             : "Destino da transferência";
         }
         if (errorMovType) errorMovType.style.display = "none";
+        
+        // Validar quantidade ao mudar tipo
+        if (errorMovQty) errorMovQty.style.display = "none";
+        if (state.selectedItem && movQuantity) {
+          const qty = parseInt(movQuantity.value || 0);
+          const disponivel = state.selectedItem.disponivel ?? state.selectedItem.quantity_available ?? state.selectedItem.quantity ?? state.selectedItem.total ?? 0;
+          
+          if (["SAIDA", "DOACAO", "DESCARTE"].includes(r.value) && qty > disponivel) {
+            if (errorMovQty) {
+              errorMovQty.style.display = "";
+              errorMovQty.textContent = `Quantidade indisponível. Disponível: ${disponivel}`;
+            }
+          }
+        }
       });
     });
 
     movQuantity && movQuantity.addEventListener("input", () => {
       if (errorMovQty) errorMovQty.style.display = "none";
+      
+      // Validação em tempo real: verificar se quantidade excede disponível
+      if (state.selectedItem && movTypeInputs) {
+        const typeChecked = [...movTypeInputs].find(r => r.checked);
+        if (typeChecked && ["SAIDA", "DOACAO", "DESCARTE"].includes(typeChecked.value)) {
+          const qty = parseInt(movQuantity.value || 0);
+          const disponivel = state.selectedItem.disponivel ?? state.selectedItem.quantity_available ?? state.selectedItem.quantity ?? state.selectedItem.total ?? 0;
+          
+          if (qty > disponivel) {
+            if (errorMovQty) {
+              errorMovQty.style.display = "";
+              errorMovQty.textContent = `Quantidade indisponível. Disponível: ${disponivel}`;
+            }
+          }
+        }
+      }
     });
 
     saveMovBtn && saveMovBtn.addEventListener("click", saveMovement);
@@ -581,8 +640,15 @@ document.addEventListener("sc:ready", function () {
     state.selectedItem = item;
     if (movItemId)       movItemId.value = item.id;
     if (selectedItemName) selectedItemName.textContent = item.nome;
-    if (selectedItemMeta) selectedItemMeta.textContent = `${item.patrimonio} · Disponível: ${item.disponivel ?? "?"}`;
-    if (movQtyHint)      movQtyHint.textContent = `Disponível: ${item.disponivel ?? "?"}`;
+    
+    // Tentar várias variantes de propriedade para disponível
+    const disponivel = item.disponivel ?? item.quantity_available ?? item.quantity ?? item.total ?? 0;
+    const dispText = disponivel > 0 
+      ? `${disponivel} disponível${disponivel === 1 ? '' : 's'}`
+      : "Sem estoque";
+    
+    if (selectedItemMeta) selectedItemMeta.textContent = `${item.patrimonio} · ${dispText}`;
+    if (movQtyHint) movQtyHint.innerHTML = `Disponível: <strong>${disponivel}</strong>`;
     if (selectedItemChip) selectedItemChip.style.display = "";
     if (itemSearchWrap)   itemSearchWrap.style.display   = "none";
     if (itemSearchResult) {
@@ -590,6 +656,7 @@ document.addEventListener("sc:ready", function () {
       itemSearchResult.classList.remove("is-open");
     }
     if (errorMovItem) errorMovItem.style.display = "none";
+    if (errorMovQty) errorMovQty.style.display = "none";
   }
 
   function saveMovement() {
@@ -608,8 +675,23 @@ document.addEventListener("sc:ready", function () {
 
     const qty = parseInt(movQuantity ? movQuantity.value : 0);
     if (!qty || qty < 1) {
-      if (errorMovQty) { errorMovQty.style.display = ""; errorMovQty.textContent = "Quantidade inválida."; }
+      if (errorMovQty) { errorMovQty.style.display = ""; errorMovQty.textContent = "Quantidade deve ser maior que zero."; }
       valid = false;
+    }
+
+    // Validar quantidade contra estoque disponível (exceto para ENTRADA)
+    if (valid && state.selectedItem && typeChecked) {
+      const tipo = typeChecked.value;
+      const disponivel = state.selectedItem.disponivel ?? state.selectedItem.quantity_available ?? state.selectedItem.quantity ?? state.selectedItem.total ?? 0;
+      
+      // Para SAIDA, DOACAO e DESCARTE, a quantidade não pode exceder o disponível
+      if (["SAIDA", "DOACAO", "DESCARTE"].includes(tipo) && qty > disponivel) {
+        if (errorMovQty) {
+          errorMovQty.style.display = "";
+          errorMovQty.textContent = `Quantidade indisponível. Disponível: ${disponivel}`;
+        }
+        valid = false;
+      }
     }
 
     if (!valid) return;
@@ -743,6 +825,15 @@ document.addEventListener("sc:ready", function () {
     wireFilters();
     wireNewMovModal();
     wireButtons();
+
+    // Limpar dados inválidos do localStorage
+    const localMovs = dbGet(KEYS.MOVEMENTS);
+    if (Array.isArray(localMovs) && localMovs.length > 0) {
+      const validMovs = localMovs.filter(m => isValidMovement(m));
+      if (validMovs.length !== localMovs.length) {
+        dbSet(KEYS.MOVEMENTS, validMovs);
+      }
+    }
 
     const _mou = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
     loadItems();
