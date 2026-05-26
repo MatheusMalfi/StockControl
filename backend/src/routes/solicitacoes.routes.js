@@ -145,13 +145,16 @@ router.put("/:id", async (req, res) => {
 router.patch("/:id/revisar", async (req, res) => {
   try {
     await ensureTable();
-    const { revisor, status, obs } = req.body;
+    const { action, revisor, status, obs } = req.body;
+    const finalStatus =
+      status ||
+      (action === "approve" ? "aprovada" : action === "reject" ? "recusada" : "revisado");
     await pool.execute(
       `UPDATE solicitacoes
        SET status = ?, revisor = ?, data_revisao = CURDATE(), obs = CONCAT(COALESCE(obs,''), ?)
        WHERE id = ?`,
       [
-        status || "revisado",
+        finalStatus,
         revisor || null,
         obs ? `\n${obs}` : "",
         req.params.id,

@@ -265,6 +265,12 @@ document.addEventListener("sc:ready", function () {
   function applyFilters() {
     let movs = dbGet(KEYS.MOVEMENTS);
 
+    // Se não houver usuário logado, mostrar apenas movimentações criadas localmente
+    const _user = getStoredUser();
+    if (!_user || !_user.organization_id) {
+      movs = (Array.isArray(movs) ? movs : []).filter(m => m && m._local);
+    }
+
     // Filtrar movimentações inválidas
     movs = movs.filter(m => isValidMovement(m));
 
@@ -708,6 +714,7 @@ document.addEventListener("sc:ready", function () {
       patrimonio:  item.patrimonio,
       tipo,
       quantidade:  qty,
+      _local:      true,
       responsavel: currentUserName(),
       created_at,
       destino:     (movDestination && movDestination.value.trim()) || null,
@@ -837,16 +844,19 @@ document.addEventListener("sc:ready", function () {
 
     const _mou = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
     loadItems();
-    _movApi("GET", `/api/movimentacoes${_mou.organization_id ? `?organization_id=${_mou.organization_id}` : ""}`)
-      .then(data => {
-        const serverMovs = Array.isArray(data) ? data : data.movimentacoes || [];
-        if (serverMovs.length) {
-          const merged = mergeMovements(serverMovs);
-          dbSet(KEYS.MOVEMENTS, merged);
-          render();
-        }
-      })
-      .catch(() => {});
+    // Só buscar movimentações do servidor se houver usuário/organization_id
+    if (_mou && _mou.organization_id) {
+      _movApi("GET", `/api/movimentacoes?organization_id=${_mou.organization_id}`)
+        .then(data => {
+          const serverMovs = Array.isArray(data) ? data : data.movimentacoes || [];
+          if (serverMovs.length) {
+            const merged = mergeMovements(serverMovs);
+            dbSet(KEYS.MOVEMENTS, merged);
+            render();
+          }
+        })
+        .catch(() => {});
+    }
     render();
   }
 
