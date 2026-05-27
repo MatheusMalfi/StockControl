@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pedidos — Impact Metais | StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Variáveis de cor do projeto ── */
+    :root {
+      --bg:       #0a0f1e;
+      --card-bg:  #0d1f1f;
+      --card-alt: #112222;
+      --cyan:     #00e5c8;
+      --white:    #ffffff;
+      --border:   #1e3a3a;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 72px; /* espaço para nav fixa */
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      padding: 36px 24px 28px;
+    }
+    .header-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .header-sub {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    /* ── Container principal ── */
+    .container {
+      flex: 1;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* ── Bloco de identidade do reciclador ── */
+    .recycler-identity {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .logo-placeholder {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #1a5c4e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--white);
+    }
+    .recycler-name {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--white);
+    }
+
+    /* ── Card de pedido ── */
+    .order-card {
+      background: var(--card-alt);
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+    }
+    .order-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 14px;
+    }
+    .order-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .order-link {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .order-link:hover { opacity: 0.7; }
+
+    /* Divisor entre os links */
+    .order-divider {
+      width: 1px;
+      height: 14px;
+      background: var(--border);
+    }
+
+    /* ── Navegação inferior fixa ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 14px 8px;
+      z-index: 100;
+    }
+    .nav-link {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-decoration: none;
+      text-align: center;
+      line-height: 1.3;
+      transition: opacity 0.15s;
+    }
+    .nav-link:hover { opacity: 0.7; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">StockControl</div>
+    <div class="header-sub">Controle de Estoque</div>
+  </header>
+
+  <!-- Container principal -->
+  <main class="container">
+
+    <!-- Identidade do reciclador -->
+    <div class="recycler-identity">
+      <div class="logo-placeholder">I</div>
+      <span class="recycler-name">Impact Metais</span>
+    </div>
+
+    <!-- Pedido 03/2026 -->
+    <div class="order-card">
+      <div class="order-name">Pedido 03/2026</div>
+      <div class="order-actions">
+        <a href="tela3-detalhe-pedido.html" class="order-link">Detalhe do Pedido</a>
+        <div class="order-divider"></div>
+        <a href="tela4-agendamento.html" class="order-link">Agendar Coleta</a>
+      </div>
+    </div>
+
+    <!-- Pedido 07/2026 -->
+    <div class="order-card">
+      <div class="order-name">Pedido 07/2026</div>
+      <div class="order-actions">
+        <a href="tela3-detalhe-pedido.html" class="order-link">Detalhe do Pedido</a>
+        <div class="order-divider"></div>
+        <a href="tela4-agendamento.html" class="order-link">Agendar Coleta</a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Navegação inferior -->
+  <nav class="bottom-nav">
+    <a href="#" class="nav-link">Histórico<br>de Coleta</a>
+    <a href="tela1-inicio.html" class="nav-link">Início 🏠</a>
+  </nav>
+
+</body>
+</html>

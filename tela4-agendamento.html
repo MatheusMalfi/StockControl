@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agendamento de Coleta — Impact Metais | StockControl</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Variáveis de cor do projeto ── */
+    :root {
+      --bg:        #0a0f1e;
+      --card-bg:   #0d1f1f;
+      --card-alt:  #112222;
+      --input-bg:  #162e2e;
+      --cyan:      #00e5c8;
+      --white:     #ffffff;
+      --muted:     #8aaca8;
+      --border:    #1e3a3a;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 72px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      padding: 36px 24px 28px;
+    }
+    .header-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .header-sub {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    /* ── Container principal ── */
+    .container {
+      flex: 1;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* ── Identidade do reciclador ── */
+    .recycler-identity {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .logo-placeholder {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #1a5c4e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--white);
+    }
+    .recycler-name {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--white);
+    }
+
+    /* ── Card de formulário ── */
+    .form-card {
+      background: var(--card-alt);
+      border-radius: 20px;
+      padding: 24px 22px;
+      border: 1px solid var(--border);
+    }
+
+    /* Título dentro do card */
+    .form-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 22px;
+      text-align: center;
+    }
+
+    /* ── Grupo de campo ── */
+    .field-group {
+      margin-bottom: 18px;
+    }
+    .field-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    /* Input de data */
+    .input-date {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+      /* força esquema de cores escuro no picker nativo */
+      color-scheme: dark;
+    }
+    .input-date:focus {
+      border-color: var(--cyan);
+    }
+
+    /* Textarea de observações */
+    .input-textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 400;
+      color: var(--white);
+      resize: vertical;
+      min-height: 110px;
+      outline: none;
+      transition: border-color 0.15s;
+      line-height: 1.55;
+    }
+    .input-textarea::placeholder { color: #4a7a74; }
+    .input-textarea:focus { border-color: var(--cyan); }
+
+    /* ── Botão de ação ── */
+    .btn-agendar {
+      display: block;
+      width: 100%;
+      margin-top: 22px;
+      padding: 14px;
+      background: transparent;
+      border: 2px solid var(--cyan);
+      border-radius: 12px;
+      color: var(--cyan);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-agendar:hover {
+      background: var(--cyan);
+      color: var(--bg);
+    }
+
+    /* ── Navegação inferior fixa ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 14px 8px;
+      z-index: 100;
+    }
+    .nav-link {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-decoration: none;
+      text-align: center;
+      line-height: 1.3;
+      transition: opacity 0.15s;
+    }
+    .nav-link:hover { opacity: 0.7; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">StockControl</div>
+    <div class="header-sub">Controle de Estoque</div>
+  </header>
+
+  <!-- Container principal -->
+  <main class="container">
+
+    <!-- Identidade do reciclador -->
+    <div class="recycler-identity">
+      <div class="logo-placeholder">I</div>
+      <span class="recycler-name">Impact Metais</span>
+    </div>
+
+    <!-- Card com formulário de agendamento -->
+    <div class="form-card">
+
+      <div class="form-title">Agendamento do Pedido 03/2026</div>
+
+      <!-- Campo: data de retirada -->
+      <div class="field-group">
+        <label class="field-label" for="data-retirada">Data de retirada:</label>
+        <input
+          type="date"
+          id="data-retirada"
+          class="input-date"
+        />
+      </div>
+
+      <!-- Campo: observações -->
+      <div class="field-group">
+        <label class="field-label" for="observacoes">Observações à empresa</label>
+        <textarea
+          id="observacoes"
+          class="input-textarea"
+          placeholder="Descreva instruções especiais, restrições de acesso, contato no local…"
+        ></textarea>
+      </div>
+
+      <!-- Botão de ação -->
+      <a href="#" class="btn-agendar">Agendar Coleta</a>
+
+    </div>
+  </main>
+
+  <!-- Navegação inferior -->
+  <nav class="bottom-nav">
+    <a href="#" class="nav-link">Histórico<br>de Coleta</a>
+    <a href="tela1-inicio.html" class="nav-link">Início 🏠</a>
+  </nav>
+
+</body>
+</html>
