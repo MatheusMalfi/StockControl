@@ -124,15 +124,19 @@
   async function loadItems() {
     showSkeleton();
 
-    const params = new URLSearchParams({
+    const paramsObj = {
       organization_id: _orgId,
       page: state.page,
       limit: state.perPage,
       sort: `${state.sortBy}:${state.sortDir}`,
-      ...(state.search && { search: state.search }),
-      ...(state.condition !== "ALL" && { condition: state.condition }),
-      ...(state.categoryId && { category: state.categoryId }),
-    });
+    };
+    if (state.search) paramsObj.search = state.search;
+    // Nunca envia o parâmetro condition se for 'ALL' ou vazio
+    if (state.condition && state.condition !== "ALL" && state.condition !== "") {
+      paramsObj.condition = state.condition;
+    }
+    if (state.categoryId) paramsObj.category = state.categoryId;
+    const params = new URLSearchParams(paramsObj);
 
     try {
       const data = await SC.api(`/items?${params}`);
@@ -161,8 +165,8 @@
 
     hideEmpty();
     tbody.innerHTML = state.items
-      .map(
-        (item) => `
+      .map((item) => {
+        return `
       <tr data-id="${item.id}" class="${state.selected.has(item.id) ? "selected" : ""}">
         <td class="col-check">
           <input type="checkbox" class="row-check" data-id="${item.id}"
@@ -218,8 +222,8 @@
             </button>
           </div>
         </td>
-      </tr>`,
-      )
+      </tr>`;
+      })
       .join("");
 
     /* Wire row events */
