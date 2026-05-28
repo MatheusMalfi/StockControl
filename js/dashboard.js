@@ -12,9 +12,7 @@
     else document.addEventListener("sc:ready", fn, { once: true });
   }
 
-  /* ================================================================
-     CHAVES DO LOCALSTORAGE
-     ================================================================ */
+  /*CHAVES DO LOCALSTORAGE*/
   const KEYS = {
     ITEMS: "sc_items",
     MOVEMENTS: "sc_movements",
@@ -50,7 +48,11 @@
 
   function mergeMovements(localMovs, serverMovs) {
     const map = new Map();
-    const deleted = new Set((JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]") || []).map(String));
+    const deleted = new Set(
+      (JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]") || []).map(
+        String,
+      ),
+    );
     (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
       map.set(String(m.id), m);
     });
@@ -74,14 +76,12 @@
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
   }
+
   function ago(days) {
     return new Date(Date.now() - days * 86_400_000).toISOString();
   }
 
-
-  /* ================================================================
-     SEED — reaplica se localStorage vazio ou schema antigo
-     ================================================================ */
+  /*SEED — reaplica se localStorage vazio ou schema antigo*/
   function seedIfEmpty() {
     const _u =
       JSON.parse(
@@ -121,7 +121,10 @@
             responsavel: "—",
             created_at: h.created_at,
           }));
-          dbSet(KEYS.MOVEMENTS, mergeMovements(dbGet(KEYS.MOVEMENTS) || [], movs));
+          dbSet(
+            KEYS.MOVEMENTS,
+            mergeMovements(dbGet(KEYS.MOVEMENTS) || [], movs),
+          );
         }
         loadKPIs();
         loadConditionChart();
@@ -137,13 +140,12 @@
     if (!stored || isOldSchema) dbSet(KEYS.ITEMS);
 
     if (!dbGet(KEYS.MOVEMENTS)) dbSet(KEYS.MOVEMENTS);
-    if (!dbGet(KEYS.ALERTS)) dbSet(KEYS.ALERTS);
-    if (!dbGet(KEYS.GOAL)) dbSet(KEYS.GOAL);
+    // Limpa alertas e meta de coleta
+    dbSet(KEYS.ALERTS, []);
+    dbSet(KEYS.GOAL, null);
   }
 
-  /* ================================================================
-     INIT
-     ================================================================ */
+  /*INIT*/
   function init() {
     seedIfEmpty();
     loadKPIs();
@@ -155,9 +157,7 @@
     wireQRModal();
   }
 
-  /* ================================================================
-     KPI CARDS
-     ================================================================ */
+  /*KPI CARDS*/
   function loadKPIs() {
     const grid = document.getElementById("kpiGrid");
     if (!grid) return;
@@ -242,9 +242,7 @@
       .join("");
   }
 
-  /* ================================================================
-     DONUT — DISTRIBUIÇÃO POR CONDIÇÃO (5 estados)
-     ================================================================ */
+  /*DONUT — DISTRIBUIÇÃO POR CONDIÇÃO (5 estados)*/
   function loadConditionChart() {
     const wrap = document.getElementById("conditionChart");
     if (!wrap) return;
@@ -314,9 +312,7 @@
       </div>`;
   }
 
-  /* ================================================================
-     BARRAS — TOP CATEGORIAS (por nº de itens e quantidade disponível)
-     ================================================================ */
+  /*BARRAS — TOP CATEGORIAS (por nº de itens e quantidade disponível)*/
   function loadCategoryChart() {
     const wrap = document.getElementById("categoryChart");
     if (!wrap) return;
@@ -358,9 +354,7 @@
       .join("");
   }
 
-  /* ================================================================
-     TABELA — MOVIMENTAÇÕES RECENTES
-     ================================================================ */
+  /*TABELA — MOVIMENTAÇÕES RECENTES*/
   function loadRecentMovements() {
     const tbody = document.getElementById("movementsBody");
     if (!tbody) return;
@@ -396,9 +390,7 @@
       .join("");
   }
 
-  /* ================================================================
-     ALERTAS DO SISTEMA
-     ================================================================ */
+  /*ALERTAS DO SISTEMA*/
   function loadSystemAlerts() {
     const wrap = document.getElementById("systemAlerts");
     const countBadge = document.getElementById("alertCount");
@@ -438,9 +430,7 @@
       .join("");
   }
 
-  /* ================================================================
-     META DE COLETA
-     ================================================================ */
+  /*  META DE COLETA */
   function loadGoal() {
     const wrap = document.getElementById("goalCard");
     if (!wrap) return;
@@ -449,7 +439,7 @@
     if (!goal || !goal.target_quantity) {
       wrap.innerHTML = `
         <p style="font-size:0.875rem; color:var(--color-text-muted);">Nenhuma meta configurada.</p>
-        <a href="configuracoes.html" class="btn btn-secondary btn-sm" style="margin-top:var(--space-3);">Configurar</a>`;
+        <a href="/configuracoes.html#organizacao" class="btn btn-secondary btn-sm" style="margin-top:var(--space-3);">Configurar</a>`;
       return;
     }
 
@@ -478,9 +468,7 @@
       </div>`;
   }
 
-  /* ================================================================
-     MODAL QR — busca por patrimônio ou id
-     ================================================================ */
+  /*MODAL QR — busca por patrimônio ou id*/
   function wireQRModal() {
     const qrScanBtn = document.getElementById("qrScanBtn");
     const qrInput = document.getElementById("qrInput");
@@ -522,9 +510,7 @@
       });
   }
 
-  /* ================================================================
-     UTILITÁRIOS
-     ================================================================ */
+  /*UTILITÁRIOS*/
   function fmt(n) {
     if (n == null) return "—";
     return Number(n).toLocaleString("pt-BR");

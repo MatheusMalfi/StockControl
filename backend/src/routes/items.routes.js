@@ -25,8 +25,6 @@ router.get("/", async (req, res) => {
     if (condition) {
       conditions.push("c.code = ?");
       params.push(condition);
-    } else {
-      conditions.push("(c.code IS NULL OR c.code <> 'DESCARTAR')");
     }
 
     if (search) {
