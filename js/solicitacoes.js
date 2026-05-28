@@ -210,30 +210,30 @@ function initSolicitacoes() {
     switch (r.status) {
       case "pendente":
         return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("approve", "Aprovar", "#16a34a", svgCheck) +
           b("reject", "Recusar", "#dc2626", svgX) +
-          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("edit", "Editar", "inherit", svgEdit) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "aprovada":
         return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("edit", "Editar", "inherit", svgEdit) +
           b("complete", "Concluir", "#2563eb", svgCircleCheck) +
-          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "recusada":
         return (
-          b("edit", "Editar", "inherit", svgEdit) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
           b("reopen", "Reabrir", "#64748b", svgRefresh) +
           b("delete", "Excluir", "#dc2626", svgTrash)
         );
       case "cancelada":
         return (
-          b("edit", "Editar", "inherit", svgEdit) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
           b("reopen", "Reabrir", "#64748b", svgRefresh) +
           b("delete", "Excluir", "#dc2626", svgTrash)
         );
