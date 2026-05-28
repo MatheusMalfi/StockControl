@@ -67,11 +67,17 @@ document.addEventListener("sc:ready", function () {
 
   // ── Notification helpers ──────────────────────────────────────────────────
   function allNotifs()      { return dbGet(KEYS.NOTIFS); }
-  function saveNotifs(arr)  {
+    function saveNotifs(arr)  {
     dbSet(KEYS.NOTIFS, arr);
+
+    if (typeof SC.loadNotifications === "function") {
+      SC.loadNotifications();
+    }
+
     const orgId = getOrganizationId();
     const payload = { notificacoes: arr, ...(orgId ? { organization_id: orgId } : {}) };
-    _notifApi("POST", "/api/notificacoes/sync", payload).catch(() => {});
+
+    return _notifApi("POST", "/api/notificacoes/sync", payload).catch(() => {});
   }
 
   function getRules() { return { ...DEFAULT_RULES, ...dbGetObj(KEYS.RULES, {}) }; }
@@ -680,6 +686,10 @@ document.addEventListener("sc:ready", function () {
 
   state.page = 1;
   renderList();
+
+  if (typeof SC.loadNotifications === "function") {
+    SC.loadNotifications();
+  }
 
   SC.toastSuccess(
     n > 0

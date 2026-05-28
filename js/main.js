@@ -420,75 +420,192 @@
       /* Non-critical: keep showing cached data */
     });
 
-  /* ============================================================
+    /* ============================================================
      NOTIFICATIONS DROPDOWN
      ============================================================ */
+
+  function notifEscHtml(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function notifRelTime(iso) {
+    if (!iso) return "";
+    const time = new Date(iso).getTime();
+    if (Number.isNaN(time)) return "";
+
+    const diff = Date.now() - time;
+    const min = Math.floor(diff / 60000);
+
+    if (min < 1) return "Agora";
+    if (min < 60) return `Há ${min} min`;
+
+    const h = Math.floor(min / 60);
+    if (h < 24) return `Há ${h}h`;
+
+    const d = Math.floor(h / 24);
+    if (d < 7) return `Há ${d} dia${d > 1 ? "s" : ""}`;
+
+    return new Date(iso).toLocaleDateString("pt-BR");
+  }
+
+  function normalizeNotif(n) {
+    return {
+      ...n,
+      id: n.id,
+      titulo: n.titulo || n.title || "Notificação",
+      mensagem: n.mensagem || n.message || "",
+      lida: n.lida === true || n.lida === 1 || n.lida === "1",
+      arquivada: n.arquivada === true || n.arquivada === 1 || n.arquivada === "1",
+      criadaEm: n.criadaEm || n.created_at || n.createdAt || new Date().toISOString(),
+    };
+  }
+
+  function getLocalNotifications() {
+    try {
+      const cacheKey = SC.storageKey("sc_notifications");
+      const arr = JSON.parse(localStorage.getItem(cacheKey) || "[]");
+      return Array.isArray(arr) ? arr.map(normalizeNotif) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveLocalNotifications(notifs) {
+    try {
+      const cacheKey = SC.storageKey("sc_notifications");
+      localStorage.setItem(cacheKey, JSON.stringify(notifs));
+    } catch {}
+  }
+
+  function getCurrentOrgIdForNotifications() {
+    const user = SC.currentUser || getUser() || {};
+    return user.organization_id || user.organizationId || user.org || user.orgId || null;
+  }
+
   function mergeNotificationState(remoteNotifs) {
-    const cacheKey = SC.storageKey("sc_notifications");
-    const localNotifs = JSON.parse(localStorage.getItem(cacheKey) || "[]") || [];
-    return remoteNotifs.map((n) => {
+    const localNotifs = getLocalNotifications();
+
+    return remoteNotifs.map((remote) => {
+      const n = normalizeNotif(remote);
       const local = localNotifs.find(x => x.id === n.id) || {};
+
       return {
         ...n,
-        lida: typeof local.lida === "boolean" ? local.lida : Boolean(n.lida),
-        arquivada: typeof local.arquivada === "boolean" ? local.arquivada : Boolean(n.arquivada),
-        criadaEm: n.criadaEm || n.created_at || n.createdAt || "",
+        lida: typeof local.lida === "boolean" ? local.lida : n.lida,
+        arquivada: typeof local.arquivada === "boolean" ? local.arquivada : n.arquivada,
       };
     });
   }
 
-  async function loadNotifications() {
+  function updateNotificationsUI(notifs) {
     const badge = document.getElementById("notifBadge");
     const listDrop = document.getElementById("notifListDrop");
 
-    try {
-      const _u2 = SC.currentUser || getUser();
-      const _qs = _u2?.organization_id
-        ? `?organization_id=${_u2.organization_id}`
-        : "";
-      const data = await SC.api(`/notificacoes${_qs}`);
-      const rawNotifs = Array.isArray(data)
-        ? data
-        : data.notificacoes || data.notifications || [];
-      const notifs = mergeNotificationState(rawNotifs)
-        .filter(n => !n.arquivada);
-      const unread = notifs.filter(n => !n.lida).length;
+    const activeNotifs = (Array.isArray(notifs) ? notifs : [])
+      .map(normalizeNotif)
+      .filter(n => !n.arquivada);
 
-      if (badge) {
-        if (unread > 0) {
-          badge.textContent = unread > 9 ? "9+" : unread;
-          badge.style.display = "flex";
-        } else {
-          badge.style.display = "none";
-        }
-      }
+    const unreadNotifs = activeNotifs.filter(n => !n.lida);
+    const unread = unreadNotifs.length;
 
-      if (listDrop) {
-        const current = notifs.filter(n => !n.lida).slice(0, 5);
-        if (!current.length) {
-          listDrop.innerHTML = `<div style="padding:var(--space-4);text-align:center;color:var(--color-text-muted);font-size:0.875rem;">Tudo lido</div>`;
-        } else {
-          listDrop.innerHTML = current
-            .map(
-              (n) => `
-          <div class="dropdown-item" style="white-space:normal; cursor:default; padding:var(--space-3);">
-            <div style="font-size:0.875rem; font-weight:500; color:var(--color-text-primary); margin-bottom:2px;">
-              ${escHtml(n.titulo || n.title || n.mensagem || n.message || "Notificação")}
-            </div>
-            <div style="font-size:0.8125rem; color:var(--color-text-muted);">
-              ${n.criadaEm ? formatRelTime(n.criadaEm) : ""}
-            </div>
-          </div>`,
-            )
-            .join("");
-        }
+    if (badge) {
+      if (unread > 0) {
+        badge.textContent = unread > 9 ? "9+" : unread;
+        badge.style.display = "flex";
+      } else {
+        badge.textContent = "0";
+        badge.style.display = "none";
       }
-    } catch {
-      /* Silently fail */
+    }
+
+    if (listDrop) {
+      const current = unreadNotifs.slice(0, 5);
+
+      if (!current.length) {
+        listDrop.innerHTML = `
+          <div style="padding:var(--space-4);text-align:center;color:var(--color-text-muted);font-size:0.875rem;">
+            Tudo lido
+          </div>`;
+      } else {
+        listDrop.innerHTML = current.map(n => `
+          <a href="/notificacoes.html" class="dropdown-item" style="white-space:normal;padding:var(--space-3);">
+            <div style="font-size:0.875rem;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              ${notifEscHtml(n.titulo)}
+            </div>
+            <div style="font-size:0.8125rem;color:var(--color-text-muted);">
+              ${notifRelTime(n.criadaEm)}
+            </div>
+          </a>
+        `).join("") +
+        `<div class="dropdown-separator"></div>
+         <a href="/notificacoes.html" class="dropdown-item" style="text-align:center;font-size:0.8125rem;">Ver todas</a>`;
+      }
     }
   }
 
+  async function loadNotifications() {
+    // 1. Primeiro atualiza pelo localStorage.
+    // Isso faz o sino aparecer nas outras páginas mesmo se o backend demorar/falhar.
+    const localNotifs = getLocalNotifications();
+    updateNotificationsUI(localNotifs);
+
+    // 2. Depois tenta atualizar pelo backend.
+    try {
+      const orgId = getCurrentOrgIdForNotifications();
+
+      if (!orgId) return;
+
+      const data = await SC.api(`/notificacoes?organization_id=${encodeURIComponent(orgId)}`);
+
+      const rawNotifs = Array.isArray(data)
+        ? data
+        : data.notificacoes || data.notifications || [];
+
+      const remoteNotifs = Array.isArray(rawNotifs)
+        ? mergeNotificationState(rawNotifs)
+        : [];
+
+      // Se o backend retornou notificações, salva localmente e atualiza a tela.
+      // Se retornou vazio, mantém o localStorage para não apagar o sino indevidamente.
+      if (remoteNotifs.length > 0) {
+        saveLocalNotifications(remoteNotifs);
+        updateNotificationsUI(remoteNotifs);
+      }
+    } catch {
+      // Se o backend falhar, continua usando localStorage.
+      updateNotificationsUI(getLocalNotifications());
+    }
+  }
+
+  SC.loadNotifications = loadNotifications;
+
   loadNotifications();
+
+  setInterval(loadNotifications, 30000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) loadNotifications();
+  });
+
+  window.addEventListener("storage", (e) => {
+    if (e.key && e.key.includes("sc_notifications")) {
+      loadNotifications();
+    }
+  });
+
+  // Atualiza o contador do sino periodicamente em qualquer página aberta
+  setInterval(loadNotifications, 30000);
+
+  // Atualiza também quando o usuário volta para a aba do sistema
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) loadNotifications();
+  });
 
   /* ============================================================
      LOGOUT
