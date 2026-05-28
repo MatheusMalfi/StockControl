@@ -902,6 +902,8 @@ document.addEventListener("sc:ready", function () {
     const user = getStoredUser();
     const payload = {
       id: newMov.id,
+      item_id: newMov.item_id,
+      patrimonio: newMov.patrimonio,
       organization_id: user.organization_id,
       tipo: newMov.tipo,
       produto: newMov.nome,
