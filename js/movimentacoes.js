@@ -6,9 +6,9 @@ document.addEventListener("sc:ready", function () {
   const KEYS = { ITEMS: "sc_items", MOVEMENTS: "sc_movements", DELETED: "sc_movements_deleted" };
 
   function dbGet(key) {
-    try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(SC.storageKey(key)) || "[]") || []; } catch { return []; }
   }
-  function dbSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+  function dbSet(key, val) { localStorage.setItem(SC.storageKey(key), JSON.stringify(val)); }
 
   // ── API helpers ───────────────────────────────────────────────────────────
   function _movToken() {
@@ -75,9 +75,9 @@ document.addEventListener("sc:ready", function () {
   }
 
   function dbGetDeleted() {
-    try { return JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(SC.storageKey(KEYS.DELETED)) || "[]") || []; } catch { return []; }
   }
-  function dbSetDeleted(arr) { try { localStorage.setItem(KEYS.DELETED, JSON.stringify(arr)); } catch {} }
+  function dbSetDeleted(arr) { try { localStorage.setItem(SC.storageKey(KEYS.DELETED), JSON.stringify(arr)); } catch {} }
   function addDeletedId(id) {
     const arr = dbGetDeleted().map(String);
     if (!arr.includes(String(id))) { arr.push(String(id)); dbSetDeleted(arr); }
@@ -811,7 +811,9 @@ document.addEventListener("sc:ready", function () {
     if (!confirm("Excluir esta movimentação? Esta ação não pode ser desfeita.")) return;
     // Mark as deleted locally so server syncs won't re-add it
     addDeletedId(id);
-    _movApi("DELETE", `/api/movimentacoes/${id}`).catch(() => {
+    const user = getStoredUser();
+    const orgQuery = user.organization_id ? `?organization_id=${user.organization_id}` : "";
+    _movApi("DELETE", `/api/movimentacoes/${id}${orgQuery}`).catch(() => {
       // Failure: keep id in deleted list so merges won't re-add it
     });
 

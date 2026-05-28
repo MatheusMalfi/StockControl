@@ -142,13 +142,13 @@
   // ── Storage ───────────────────────────────────────────────────────────────
   function getItems() {
     try {
-      return JSON.parse(localStorage.getItem("sc_items") || "[]");
+      return JSON.parse(localStorage.getItem(SC.storageKey("sc_items")) || "[]");
     } catch {
       return [];
     }
   }
   function saveItems(items) {
-    localStorage.setItem("sc_items", JSON.stringify(items));
+    localStorage.setItem(SC.storageKey("sc_items"), JSON.stringify(items));
   }
 
   function _syncToBackend(item, isEdit) {

@@ -50,10 +50,10 @@ document.addEventListener("sc:ready", function () {
 
   // ── Data helpers ──────────────────────────────────────────────────────────
   function dbGet(key) {
-    try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(SC.storageKey(key)) || "[]") || []; } catch { return []; }
   }
   function dbSet(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    try { localStorage.setItem(SC.storageKey(key), JSON.stringify(val)); } catch {}
   }
 
   function normalizeMovement(m) {
@@ -73,7 +73,7 @@ document.addEventListener("sc:ready", function () {
 
   function mergeMovements(localMovs, serverMovs) {
     const map = new Map();
-    const deleted = new Set((JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]") || []).map(String));
+    const deleted = new Set((JSON.parse(localStorage.getItem(SC.storageKey(KEYS.DELETED)) || "[]") || []).map(String));
     (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
       map.set(String(m.id), m);
     });

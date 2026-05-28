@@ -101,6 +101,12 @@
   SC.aplicarTema = aplicarTema;
   SC.carregarTemaPreferido = carregarTemaPreferido;
 
+  SC.storageKey = function (key, orgId) {
+    const user = getUser() || {};
+    const organizationId = orgId || user.organization_id || user.organizationId || user.org;
+    return organizationId ? `${key}_${organizationId}` : key;
+  };
+
   /**
    * SC.api(path, options)
    * Thin wrapper around fetch that:

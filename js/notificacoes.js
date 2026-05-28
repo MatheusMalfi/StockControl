@@ -30,13 +30,13 @@ document.addEventListener("sc:ready", function () {
 
   // ── Data helpers ──────────────────────────────────────────────────────────
   function dbGet(key) {
-    try { return JSON.parse(localStorage.getItem(key) || "null") || []; } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(SC.storageKey(key)) || "null") || []; } catch { return []; }
   }
   function dbGetObj(key, def) {
-    try { const v = JSON.parse(localStorage.getItem(key) || "null"); return v && typeof v === "object" && !Array.isArray(v) ? v : def; } catch { return def; }
+    try { const v = JSON.parse(localStorage.getItem(SC.storageKey(key)) || "null"); return v && typeof v === "object" && !Array.isArray(v) ? v : def; } catch { return def; }
   }
   function dbSet(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    try { localStorage.setItem(SC.storageKey(key), JSON.stringify(val)); } catch {}
   }
 
   // ── API helpers ───────────────────────────────────────────────────────────

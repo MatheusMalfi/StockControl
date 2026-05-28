@@ -23,13 +23,13 @@
 
   function dbGet(key) {
     try {
-      return JSON.parse(localStorage.getItem(key) || "null");
+      return JSON.parse(localStorage.getItem(SC.storageKey(key)) || "null");
     } catch {
       return null;
     }
   }
   function dbSet(key, val) {
-    localStorage.setItem(key, JSON.stringify(val));
+    localStorage.setItem(SC.storageKey(key), JSON.stringify(val));
   }
 
   function normalizeMovement(m) {
@@ -49,7 +49,7 @@
   function mergeMovements(localMovs, serverMovs) {
     const map = new Map();
     const deleted = new Set(
-      (JSON.parse(localStorage.getItem(KEYS.DELETED) || "[]") || []).map(
+      (JSON.parse(localStorage.getItem(SC.storageKey(KEYS.DELETED)) || "[]") || []).map(
         String,
       ),
     );

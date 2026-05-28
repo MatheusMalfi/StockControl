@@ -5,13 +5,13 @@ function initSolicitacoes() {
   const KEYS = { ITEMS: "sc_items", REQUESTS: "sc_requests" };
   function dbGet(k) {
     try {
-      return JSON.parse(localStorage.getItem(k)) || [];
+      return JSON.parse(localStorage.getItem(SC.storageKey(k)) || "[]") || [];
     } catch {
       return [];
     }
   }
   function dbSet(k, v) {
-    localStorage.setItem(k, JSON.stringify(v));
+    localStorage.setItem(SC.storageKey(k), JSON.stringify(v));
   }
 
   // ── API helpers ───────────────────────────────────────────────────────────
