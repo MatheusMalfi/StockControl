@@ -423,6 +423,20 @@
   /* ============================================================
      NOTIFICATIONS DROPDOWN
      ============================================================ */
+  function mergeNotificationState(remoteNotifs) {
+    const cacheKey = SC.storageKey("sc_notifications");
+    const localNotifs = JSON.parse(localStorage.getItem(cacheKey) || "[]") || [];
+    return remoteNotifs.map((n) => {
+      const local = localNotifs.find(x => x.id === n.id) || {};
+      return {
+        ...n,
+        lida: typeof local.lida === "boolean" ? local.lida : Boolean(n.lida),
+        arquivada: typeof local.arquivada === "boolean" ? local.arquivada : Boolean(n.arquivada),
+        criadaEm: n.criadaEm || n.created_at || n.createdAt || "",
+      };
+    });
+  }
+
   async function loadNotifications() {
     const badge = document.getElementById("notifBadge");
     const listDrop = document.getElementById("notifListDrop");
@@ -433,33 +447,41 @@
         ? `?organization_id=${_u2.organization_id}`
         : "";
       const data = await SC.api(`/notificacoes${_qs}`);
-      const notifs = Array.isArray(data)
+      const rawNotifs = Array.isArray(data)
         ? data
         : data.notificacoes || data.notifications || [];
+      const notifs = mergeNotificationState(rawNotifs)
+        .filter(n => !n.arquivada);
+      const unread = notifs.filter(n => !n.lida).length;
 
       if (badge) {
-        if (notifs.length > 0) {
-          badge.textContent = notifs.length > 9 ? "9+" : notifs.length;
+        if (unread > 0) {
+          badge.textContent = unread > 9 ? "9+" : unread;
           badge.style.display = "flex";
         } else {
           badge.style.display = "none";
         }
       }
 
-      if (listDrop && notifs.length > 0) {
-        listDrop.innerHTML = notifs
-          .map(
-            (n) => `
+      if (listDrop) {
+        const current = notifs.filter(n => !n.lida).slice(0, 5);
+        if (!current.length) {
+          listDrop.innerHTML = `<div style="padding:var(--space-4);text-align:center;color:var(--color-text-muted);font-size:0.875rem;">Tudo lido</div>`;
+        } else {
+          listDrop.innerHTML = current
+            .map(
+              (n) => `
           <div class="dropdown-item" style="white-space:normal; cursor:default; padding:var(--space-3);">
             <div style="font-size:0.875rem; font-weight:500; color:var(--color-text-primary); margin-bottom:2px;">
               ${escHtml(n.titulo || n.title || n.mensagem || n.message || "Notificação")}
             </div>
             <div style="font-size:0.8125rem; color:var(--color-text-muted);">
-              ${n.created_at ? formatRelTime(n.created_at) : ""}
+              ${n.criadaEm ? formatRelTime(n.criadaEm) : ""}
             </div>
           </div>`,
-          )
-          .join("");
+            )
+            .join("");
+        }
       }
     } catch {
       /* Silently fail */

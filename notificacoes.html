@@ -237,13 +237,18 @@
 
         <!-- ── Left: notification feed ──────────────────────────── -->
         <div>
-          <!-- Tabs -->
-          <div class="tabs" style="margin-bottom:var(--space-4);">
-            <button class="tab active" data-tab="all">Todas <span class="badge" id="tab-badge-all">0</span></button>
-            <button class="tab" data-tab="unread">Não lidas <span class="badge badge-primary" id="tab-badge-unread">0</span></button>
-            <button class="tab" data-tab="stock">Estoque</button>
-            <button class="tab" data-tab="request">Solicitações</button>
-            <button class="tab" data-tab="system">Sistema</button>
+          <!-- Filters -->
+          <div class="filters-bar" style="margin-bottom:var(--space-4);">
+            <span class="filter-label">Filtrar por</span>
+            <button type="button" class="tab filter-chip active" data-tab="all">
+              Todas <span class="badge" id="tab-badge-all">0</span>
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="unread">
+              Não lidas <span class="badge badge-primary" id="tab-badge-unread">0</span>
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="stock">Estoque</button>
+            <button type="button" class="tab filter-chip" data-tab="request">Solicitações</button>
+            <button type="button" class="tab filter-chip" data-tab="system">Sistema</button>
           </div>
 
           <!-- List panel -->

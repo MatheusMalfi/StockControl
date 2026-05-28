@@ -669,7 +669,7 @@
   // ── Notification badge ────────────────────────────────────────────────────
   function updateNotifBadge() {
     try {
-      const notifs = JSON.parse(localStorage.getItem(NOTIF_KEY) || "[]");
+      const notifs = JSON.parse(localStorage.getItem(SC.storageKey(NOTIF_KEY)) || "[]");
       const unread = notifs.filter(n => !n.lida && !n.arquivada).length;
       const badge  = document.getElementById("notifBadge");
       if (badge) {

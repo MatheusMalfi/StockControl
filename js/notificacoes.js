@@ -51,6 +51,10 @@ document.addEventListener("sc:ready", function () {
       ...(body != null ? { body: JSON.stringify(body) } : {}),
     }).then(r => r.ok ? r.json() : Promise.reject(r.status));
   }
+  function getOrganizationId() {
+    const u = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
+    return u.organization_id || u.organizationId || u.org || null;
+  }
   function uid() {
     return "notif_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
@@ -65,13 +69,17 @@ document.addEventListener("sc:ready", function () {
   function allNotifs()      { return dbGet(KEYS.NOTIFS); }
   function saveNotifs(arr)  {
     dbSet(KEYS.NOTIFS, arr);
-    _notifApi("POST", "/api/notificacoes/sync", arr).catch(() => {});
+    const orgId = getOrganizationId();
+    const payload = { notificacoes: arr, ...(orgId ? { organization_id: orgId } : {}) };
+    _notifApi("POST", "/api/notificacoes/sync", payload).catch(() => {});
   }
 
   function getRules() { return { ...DEFAULT_RULES, ...dbGetObj(KEYS.RULES, {}) }; }
   function saveRulesData(r) {
     dbSet(KEYS.RULES, r);
-    _notifApi("PUT", "/api/notificacoes/rules", r).catch(() => {});
+    const orgId = getOrganizationId();
+    const payload = { ...r, ...(orgId ? { organization_id: orgId } : {}) };
+    _notifApi("PUT", "/api/notificacoes/rules", payload).catch(() => {});
   }
 
   function getFiltered() {
@@ -86,14 +94,34 @@ document.addEventListener("sc:ready", function () {
   }
 
   // ── Seed mock notifications ───────────────────────────────────────────────
-  function seedIfNeeded() {
+  function mergeNotificationState(remoteNotifs) {
+    const localNotifs = allNotifs();
+    return remoteNotifs.map((n) => {
+      const local = localNotifs.find(x => x.id === n.id) || {};
+      return {
+        ...n,
+        lida: typeof local.lida === "boolean" ? local.lida : Boolean(n.lida),
+        arquivada: typeof local.arquivada === "boolean" ? local.arquivada : Boolean(n.arquivada),
+        criadaEm: n.criadaEm || n.created_at || n.createdAt || new Date().toISOString(),
+        lidaEm: local.lidaEm || n.lidaEm || null,
+      };
+    });
+  }
+
+  async function seedIfNeeded() {
     const _nu = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
-    _notifApi("GET", `/api/notificacoes${_nu.organization_id ? `?organization_id=${_nu.organization_id}` : ""}`)
-      .then(data => {
-        const notifs = Array.isArray(data) ? data : data.notificacoes || [];
-        if (notifs.length) { dbSet(KEYS.NOTIFS, notifs); renderList(); }
-      })
-      .catch(() => {});
+    try {
+      const data = await _notifApi("GET", `/api/notificacoes${_nu.organization_id ? `?organization_id=${_nu.organization_id}` : ""}`);
+      const notifs = Array.isArray(data) ? data : data.notificacoes || [];
+      const merged = mergeNotificationState(notifs);
+      if (merged.length) {
+        dbSet(KEYS.NOTIFS, merged);
+        renderList();
+      }
+    } catch (_) {
+      /* Ignorar falha ao buscar notificações remotas */
+    }
+
     const existing = allNotifs();
     if (existing.length) return;
 
@@ -251,93 +279,144 @@ document.addEventListener("sc:ready", function () {
 
   // ── Scan for new alerts from data ─────────────────────────────────────────
   function scanForAlerts() {
-    const rules    = getRules();
-    const notifs   = allNotifs();
-    const now      = new Date();
-    let   newCount = 0;
+  const rules = getRules();
+  const now = new Date();
 
-    function hasExisting(subtipo, itemId) {
-      return notifs.some(n => !n.arquivada && n.subtipo === subtipo && n.itemId === itemId);
-    }
+  let generatedCount = 0;
 
-    // Rule 1: Low stock
-    if (rules.lowStock) {
-      const threshold = parseInt(rules.lowStockThreshold, 10) || 5;
-      dbGet(KEYS.ITEMS).forEach(it => {
-        const disp = parseInt(it.disponivel, 10) || 0;
-        if (disp > threshold) return;
-        if (hasExisting("estoque_baixo", it.id)) return;
-        const prio = disp === 0 ? "critica" : disp <= 2 ? "alta" : "media";
-        const msg  = disp === 0
-          ? `${it.nome} está com 0 unidades disponíveis. Reposição necessária.`
-          : `${it.nome} está com apenas ${disp} unidade${disp > 1 ? "s" : ""} disponível (limite: ${threshold}).`;
-        notifs.unshift({
-          id: uid(), tipo: "estoque", subtipo: "estoque_baixo",
-          titulo: disp === 0 ? `Estoque zerado: ${it.nome}` : `Estoque baixo: ${it.nome}`,
-          mensagem: msg,
-          itemId: it.id, itemNome: it.nome,
-          prioridade: prio, lida: false, arquivada: false,
-          criadaEm: new Date().toISOString(), lidaEm: null,
-          acao: { label: "Ver item", url: "estoque.html" },
-        });
-        newCount++;
+  const RULE_ALERT_SUBTYPES = new Set([
+    "estoque_baixo",
+    "descarte_pendente",
+    "solicitacao_nova",
+    "meta_prazo",
+  ]);
+
+  const previousNotifs = allNotifs();
+
+  // Mantém notificações que NÃO são geradas pelas regras
+  // e remove as antigas das regras para gerar tudo novamente.
+  const notifs = previousNotifs.filter(n => !RULE_ALERT_SUBTYPES.has(n.subtipo));
+
+  // Regra 1: Estoque baixo
+  if (rules.lowStock) {
+    const threshold = parseInt(rules.lowStockThreshold, 10) || 5;
+
+    dbGet(KEYS.ITEMS).forEach(it => {
+      const disp = parseInt(it.disponivel, 10) || 0;
+
+      if (disp > threshold) return;
+
+      const prio = disp === 0 ? "critica" : disp <= 2 ? "alta" : "media";
+
+      const msg = disp === 0
+        ? `${it.nome} está com 0 unidades disponíveis. Reposição necessária.`
+        : `${it.nome} está com apenas ${disp} unidade${disp > 1 ? "s" : ""} disponível (limite: ${threshold}).`;
+
+      notifs.unshift({
+        id: uid(),
+        tipo: "estoque",
+        subtipo: "estoque_baixo",
+        titulo: disp === 0 ? `Estoque zerado: ${it.nome}` : `Estoque baixo: ${it.nome}`,
+        mensagem: msg,
+        itemId: it.id,
+        itemNome: it.nome,
+        prioridade: prio,
+        lida: false,
+        arquivada: false,
+        criadaEm: new Date().toISOString(),
+        lidaEm: null,
+        acao: { label: "Ver item", url: "estoque.html" },
       });
-    }
 
-    // Rule 2: Discard items
-    if (rules.discard) {
-      const limitDays = parseInt(rules.discardDays, 10) || 30;
-      const movs      = dbGet(KEYS.MOVEMENTS);
-      dbGet(KEYS.ITEMS).filter(it => it.condicao === "inativo").forEach(it => {
-        if (hasExisting("descarte_pendente", it.id)) return;
-        // Find last movement for this item
+      generatedCount++;
+    });
+  }
+
+  // Regra 2: Itens para descarte
+  if (rules.discard) {
+    const limitDays = parseInt(rules.discardDays, 10) || 30;
+    const movs = dbGet(KEYS.MOVEMENTS);
+
+    dbGet(KEYS.ITEMS)
+      .filter(it => it.condicao === "inativo")
+      .forEach(it => {
         const lastMov = movs
           .filter(m => m.item_id === it.id)
-          .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-        const refDate  = lastMov ? new Date(lastMov.created_at) : new Date(it.created_at || 0);
+          .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))[0];
+
+        const refDate = lastMov
+          ? new Date(lastMov.created_at)
+          : new Date(it.created_at || 0);
+
         const daysSince = Math.floor((now - refDate) / 86400000);
+
         if (daysSince < limitDays) return;
+
         notifs.unshift({
-          id: uid(), tipo: "descarte", subtipo: "descarte_pendente",
+          id: uid(),
+          tipo: "descarte",
+          subtipo: "descarte_pendente",
           titulo: `Descarte pendente: ${it.nome}`,
           mensagem: `${it.nome} está marcado para descarte há ${daysSince} dia${daysSince !== 1 ? "s" : ""} sem movimentação.`,
-          itemId: it.id, itemNome: it.nome,
-          prioridade: daysSince > 60 ? "critica" : "alta", lida: false, arquivada: false,
-          criadaEm: new Date().toISOString(), lidaEm: null,
+          itemId: it.id,
+          itemNome: it.nome,
+          prioridade: daysSince > 60 ? "critica" : "alta",
+          lida: false,
+          arquivada: false,
+          criadaEm: new Date().toISOString(),
+          lidaEm: null,
           acao: { label: "Ver item", url: "estoque.html" },
         });
-        newCount++;
-      });
-    }
 
-    // Rule 3: Pending requests
-    if (rules.request) {
-      const urgPrio = { urgente: "critica", alta: "alta", media: "media", baixa: "baixa" };
-      dbGet(KEYS.REQUESTS).filter(r => r.status === "pendente").forEach(r => {
-        if (hasExisting("solicitacao_nova", r.id)) return;
+        generatedCount++;
+      });
+  }
+
+  // Regra 3: Solicitações pendentes
+  if (rules.request) {
+    const urgPrio = {
+      urgente: "critica",
+      alta: "alta",
+      media: "media",
+      baixa: "baixa",
+    };
+
+    dbGet(KEYS.REQUESTS)
+      .filter(r => r.status === "pendente")
+      .forEach(r => {
         notifs.unshift({
-          id: uid(), tipo: "solicitacao", subtipo: "solicitacao_nova",
+          id: uid(),
+          tipo: "solicitacao",
+          subtipo: "solicitacao_nova",
           titulo: `Nova solicitação — ${r.setor || "Setor"}`,
           mensagem: `${r.solicitante || "Usuário"} solicitou ${r.quantidade}x ${r.nome_item}. Urgência: ${r.urgencia || "—"}.`,
-          itemId: r.id, itemNome: r.nome_item,
-          prioridade: urgPrio[r.urgencia] || "media", lida: false, arquivada: false,
-          criadaEm: r.created_at || new Date().toISOString(), lidaEm: null,
+          itemId: r.id,
+          itemNome: r.nome_item,
+          prioridade: urgPrio[r.urgencia] || "media",
+          lida: false,
+          arquivada: false,
+          criadaEm: r.created_at || new Date().toISOString(),
+          lidaEm: null,
           acao: { label: "Ver solicitação", url: "solicitacoes.html" },
         });
-        newCount++;
-      });
-    }
 
-    if (newCount > 0) {
-      saveNotifs(notifs);
-      if (rulesCount) {
-        rulesCount.textContent = newCount;
-        rulesCount.style.display = "inline-flex";
-        setTimeout(() => { if (rulesCount) rulesCount.style.display = "none"; }, 5000);
-      }
-    }
-    return newCount;
+        generatedCount++;
+      });
   }
+
+  saveNotifs(notifs);
+
+  if (rulesCount) {
+    rulesCount.textContent = generatedCount;
+    rulesCount.style.display = generatedCount > 0 ? "inline-flex" : "none";
+
+    setTimeout(() => {
+      if (rulesCount) rulesCount.style.display = "none";
+    }, 5000);
+  }
+
+  return generatedCount;
+}
 
   // ── Render ────────────────────────────────────────────────────────────────
   const TYPE_ICON = {
@@ -565,19 +644,19 @@ document.addEventListener("sc:ready", function () {
   }
 
   function saveRules() {
-    const btn   = document.getElementById("btn-save-rules");
-    const rules = collectRules();
-    saveRulesData(rules);
-    if (btn) { btn.disabled = true; }
-    const newCount = scanForAlerts();
-    renderList();
-    if (btn) { btn.disabled = false; }
-    if (newCount > 0) {
-      SC.toastSuccess(`Regras salvas. ${newCount} novo${newCount > 1 ? "s alertas gerados" : " alerta gerado"}.`);
-    } else {
-      SC.toastSuccess("Regras de alertas salvas com sucesso.");
-    }
-  }
+  const btn = document.getElementById("btn-save-rules");
+  const rules = collectRules();
+
+  if (btn) btn.disabled = true;
+
+  saveRulesData(rules);
+  loadRulesToUI(rules);
+  renderList();
+
+  if (btn) btn.disabled = false;
+
+  SC.toastSuccess("Regras de alertas salvas com sucesso. Clique em Gerar Alertas para atualizar a lista.");
+}
 
   // ── Wire tabs ─────────────────────────────────────────────────────────────
   function wireTabs() {
@@ -597,12 +676,17 @@ document.addEventListener("sc:ready", function () {
     document.getElementById("btn-mark-all-read")?.addEventListener("click", markAllRead);
     document.getElementById("btn-save-rules")?.addEventListener("click", saveRules);
     document.getElementById("btnScanAlerts")?.addEventListener("click", () => {
-      const n = scanForAlerts();
-      renderList();
-      SC.toastSuccess(n > 0
-        ? `${n} novo${n > 1 ? "s alertas gerados" : " alerta gerado"} com base nas regras ativas.`
-        : "Nenhum novo alerta detectado. Tudo em ordem.");
-    });
+  const n = scanForAlerts();
+
+  state.page = 1;
+  renderList();
+
+  SC.toastSuccess(
+    n > 0
+      ? `${n} alerta${n > 1 ? "s" : ""} gerado${n > 1 ? "s" : ""} com base nas regras ativas.`
+      : "Nenhum alerta foi gerado com as regras ativas."
+  );
+});
 
     // Toggle dimming
     const toggleIds = ["rule-low-stock","rule-discard","rule-request","rule-goal","rule-email"];
@@ -612,15 +696,14 @@ document.addEventListener("sc:ready", function () {
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  function init() {
-    const rules = getRules();
-    loadRulesToUI(rules);
-    seedIfNeeded();
-    scanForAlerts();
-    wireTabs();
-    wireActions();
-    renderList();
-  }
+  async function init() {
+  const rules = getRules();
+  loadRulesToUI(rules);
+  await seedIfNeeded();
+  wireTabs();
+  wireActions();
+  renderList();
+}
 
   init();
 });
