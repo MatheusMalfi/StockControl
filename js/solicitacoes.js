@@ -1,6 +1,6 @@
 ﻿"use strict";
 
-document.addEventListener("sc:ready", function () {
+function initSolicitacoes() {
   // ── Storage ───────────────────────────────────────────────────────────────
   const KEYS = { ITEMS: "sc_items", REQUESTS: "sc_requests" };
   function dbGet(k) {
@@ -68,18 +68,12 @@ document.addEventListener("sc:ready", function () {
     sortDir: "desc",
     filtered: [],
     editId: null,
-    selectedItem: null,
-    selectedItems: [],
-    reviewId: null,
-    reviewAction: null,
+    detailId: null,
   };
 
-  // ── DOM refs ──────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const $$ = (s) => document.querySelectorAll(s);
 
-  const reqBody = $("reqBody");
-  const reqPagination = $("reqPagination");
   const reqEmptyAll = $("reqEmptyAll");
   const reqEmptyFiltered = $("reqEmptyFiltered");
   const reqSearch = $("reqSearch");
@@ -88,6 +82,7 @@ document.addEventListener("sc:ready", function () {
   const reqDateFrom = $("reqDateFrom");
   const reqDateTo = $("reqDateTo");
   const reqPerPage = $("reqPerPage");
+  const reqBody = $("reqBody");
 
   const kpiTotal = $("kpiTotal");
   const kpiPending = $("kpiPending");
@@ -113,6 +108,7 @@ document.addEventListener("sc:ready", function () {
   const btnSaveRequest = $("btnSaveRequest");
   const reqEditId = $("reqEditId");
   const reqFormErr = $("reqFormErr");
+  const btnDetailEditRequest = $("btnDetailEditRequest");
 
   // modal: review
   const reviewSummary = $("reviewSummary");
@@ -222,13 +218,21 @@ document.addEventListener("sc:ready", function () {
         );
       case "aprovada":
         return (
+          b("edit", "Editar", "inherit", svgEdit) +
           b("complete", "Concluir", "#2563eb", svgCircleCheck) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "recusada":
+        return (
+          b("edit", "Editar", "inherit", svgEdit) +
+          b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("reopen", "Reabrir", "#64748b", svgRefresh) +
+          b("delete", "Excluir", "#dc2626", svgTrash)
+        );
       case "cancelada":
         return (
+          b("edit", "Editar", "inherit", svgEdit) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
           b("reopen", "Reabrir", "#64748b", svgRefresh) +
           b("delete", "Excluir", "#dc2626", svgTrash)
@@ -650,6 +654,14 @@ document.addEventListener("sc:ready", function () {
         if ($("errReqQty")) $("errReqQty").style.display = "none";
       });
 
+    btnDetailEditRequest &&
+      btnDetailEditRequest.addEventListener("click", () => {
+        if (state.detailId) {
+          SC.closeModal("modalDetail");
+          openEdit(state.detailId);
+        }
+      });
+
     btnSaveRequest && btnSaveRequest.addEventListener("click", saveRequest);
   }
 
@@ -967,6 +979,14 @@ document.addEventListener("sc:ready", function () {
           justificativa: just,
           necessario_ate: reqNeededBy ? reqNeededBy.value || null : existing.necessario_ate || null,
         };
+
+        const requiresReapproval = existing.status === "aprovada" || existing.status === "recusada";
+        if (requiresReapproval) {
+          updated.status = "pendente";
+          updated.revisor = null;
+          updated.revisao = null;
+        }
+
         reqs[idx] = updated;
         dbSet(KEYS.REQUESTS, reqs);
         if (user.organization_id) {
@@ -975,7 +995,11 @@ document.addEventListener("sc:ready", function () {
           );
         }
         SC.closeModal("modalNewRequest");
-        SC.toastSuccess("Solicitação atualizada.");
+        SC.toastSuccess(
+          requiresReapproval
+            ? "Solicitação modificada e retornou para pendente, aguardando nova revisão."
+            : "Solicitação atualizada.",
+        );
         render();
       }
       return;
@@ -1213,6 +1237,7 @@ document.addEventListener("sc:ready", function () {
       `
       : "";
 
+    state.detailId = id;
     modalDetailBody.innerHTML = `
       <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5);">
         ${staBadge(r.status)}
@@ -1242,6 +1267,10 @@ document.addEventListener("sc:ready", function () {
         ${r.revisao ? `<div style="grid-column:1/-1;">${dt("Comentário da revisão", `<em style="color:var(--color-text-secondary);">"${esc(r.revisao)}"</em>`)}</div>` : ""}
       </dl>`;
 
+    if (btnDetailEditRequest) {
+      btnDetailEditRequest.style.display =
+        r.status !== "concluida" ? "inline-flex" : "none";
+    }
     SC.openModal("modalDetail");
   }
 
@@ -1253,4 +1282,10 @@ document.addEventListener("sc:ready", function () {
   wireNewModal();
   wireReviewModal();
   render();
-});
+}
+
+if (window.SC && window.SC.ready) {
+  initSolicitacoes();
+} else {
+  document.addEventListener("sc:ready", initSolicitacoes);
+}
