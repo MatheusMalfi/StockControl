@@ -1049,12 +1049,21 @@ function initSolicitacoes() {
       return;
     }
 
+    // Salva todos os patrimônios e item_ids (arrays) para uso no log de auditoria
+    const allPatrimonios = selectedItems
+      .map((it) => it.patrimonio)
+      .filter(Boolean);
+    const allItemIds = selectedItems.map((it) => it.item_id).filter(Boolean);
     const newReq = {
       id: `req_${Date.now()}`,
       items: selectedItems,
-      item_id: selectedItems[0]?.item_id || null,
+      item_id:
+        selectedItems.length === 1 ? selectedItems[0].item_id : allItemIds,
       nome_item: requestSummary.nome_item,
-      patrimonio: requestSummary.patrimonio,
+      patrimonio:
+        selectedItems.length === 1
+          ? selectedItems[0].patrimonio
+          : allPatrimonios,
       quantidade: requestSummary.quantidade,
       urgencia: reqUrgency ? reqUrgency.value : "media",
       status: "pendente",
