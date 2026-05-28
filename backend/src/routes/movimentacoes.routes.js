@@ -54,12 +54,10 @@ router.post("/", async (req, res) => {
   try {
     await ensureTable();
     const orgId = getOrgId(req);
-    if (!orgId)
-      return res
-        .status(400)
-        .json({ message: "organization_id é obrigatório." });
     const {
       id,
+      item_id,
+      patrimonio,
       tipo,
       produto,
       quantidade,
@@ -72,11 +70,13 @@ router.post("/", async (req, res) => {
     const newId =
       id || `mov_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     await pool.execute(
-      `INSERT INTO movimentacoes (id, organization_id, tipo, produto, quantidade, responsavel, destino, origem, data, obs)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO movimentacoes (id, organization_id, item_id, patrimonio, tipo, produto, quantidade, responsavel, destino, origem, data, obs)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newId,
         orgId,
+        item_id || null,
+        patrimonio || null,
         tipo || "entrada",
         produto || null,
         quantidade || 1,
