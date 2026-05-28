@@ -1,301 +1,364 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>
-    (function() {
-      try {
-        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
-        var theme = 'light';
-        if (rawUser) {
-          var user = JSON.parse(rawUser);
-          var orgId = user && user.organization_id;
-          if (orgId) {
-            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
-            if (rawPrefs) {
-              theme = JSON.parse(rawPrefs).tema || theme;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var rawUser =
+            localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user");
+          var theme = "light";
+          if (rawUser) {
+            var user = JSON.parse(rawUser);
+            var orgId = user && user.organization_id;
+            if (orgId) {
+              var rawPrefs = localStorage.getItem("sc_preferencias_" + orgId);
+              if (rawPrefs) {
+                theme = JSON.parse(rawPrefs).tema || theme;
+              }
             }
           }
-        }
         if (theme === 'auto') {
           theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
-        }
+          }
         document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
         document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
         document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
-      } catch (error) {}
-    })();
-  </script>
-  <title>Estoque — StockControl</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        } catch (error) {}
+      })();
+    </script>
+    <title>Estoque — StockControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/main.css" />
-  <link rel="stylesheet" href="/styles/components.css" />
-  <style>
-    /* View toggle (table / grid) */
-    .view-toggle {
-      display: flex;
-      align-items: center;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
-    .view-toggle-btn {
-      width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--color-text-muted);
-      transition: background var(--transition-fast), color var(--transition-fast);
-    }
-    .view-toggle-btn:hover  { background: var(--color-surface-alt); color: var(--color-text-primary); }
-    .view-toggle-btn.active { background: var(--color-primary-light); color: var(--color-primary); }
-    .view-toggle-btn svg { width: 16px; height: 16px; }
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+    <style>
+      /* Efeito de salto para o botão Descartar no drawer */
+      .drawer-discard-btn {
+        box-shadow: var(--shadow-xs);
+        transition:
+          box-shadow var(--transition-fast),
+          transform var(--transition-fast),
+          background var(--transition-fast),
+          color var(--transition-fast);
+      }
+      .drawer-discard-btn:hover,
+      .drawer-discard-btn:focus {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px) scale(1.03);
+        background: var(--color-danger-dark);
+        color: #fff;
+      }
+      /* View toggle (table / grid) */
+      .view-toggle {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .view-toggle-btn {
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--color-text-muted);
+        transition:
+          background var(--transition-fast),
+          color var(--transition-fast);
+      }
+      .view-toggle-btn:hover {
+        background: var(--color-surface-alt);
+        color: var(--color-text-primary);
+      }
+      .view-toggle-btn.active {
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+      }
+      .view-toggle-btn svg {
+        width: 16px;
+        height: 16px;
+      }
 
-    /* Grid view cards */
-    .items-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: var(--space-4);
-    }
+      /* Grid view cards */
+      .items-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: var(--space-4);
+      }
 
-    .item-card {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-      transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
-      cursor: pointer;
-      text-decoration: none;
-      display: block;
-    }
-    .item-card:hover {
-      box-shadow: var(--shadow-md);
-      border-color: var(--color-border-strong);
-    }
+      .item-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        transition:
+          box-shadow var(--transition-fast),
+          border-color var(--transition-fast);
+        cursor: pointer;
+        text-decoration: none;
+        display: block;
+      }
+      .item-card:hover {
+        box-shadow: var(--shadow-md);
+        border-color: var(--color-border-strong);
+      }
 
-    .item-card-img {
-      width: 100%;
-      aspect-ratio: 16/9;
-      object-fit: cover;
-      background: var(--color-surface-alt);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--color-text-muted);
-    }
-    .item-card-img svg { width: 32px; height: 32px; }
+      .item-card-img {
+        width: 100%;
+        aspect-ratio: 16/9;
+        object-fit: cover;
+        background: var(--color-surface-alt);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-muted);
+      }
+      .item-card-img svg {
+        width: 32px;
+        height: 32px;
+      }
 
-    .item-card-body {
-      padding: var(--space-3) var(--space-4) var(--space-4);
-    }
+      .item-card-body {
+        padding: var(--space-3) var(--space-4) var(--space-4);
+      }
 
-    .item-card-name {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      margin-bottom: var(--space-1);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+      .item-card-name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-1);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-    .item-card-meta {
-      font-size: 0.8125rem;
-      color: var(--color-text-muted);
-      margin-bottom: var(--space-3);
-    }
+      .item-card-meta {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+        margin-bottom: var(--space-3);
+      }
 
-    .item-card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+      .item-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
 
-    .item-card-qty {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--color-text-secondary);
-    }
+      .item-card-qty {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+      }
 
-    /* Quantity input inline */
-    .qty-cell {
-      display: flex;
-      align-items: center;
-      gap: var(--space-1);
-    }
-    .qty-value {
-      min-width: 28px;
-      text-align: center;
-      font-weight: 600;
-    }
+      /* Quantity input inline */
+      .qty-cell {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+      }
+      .qty-value {
+        min-width: 28px;
+        text-align: center;
+        font-weight: 600;
+      }
 
-    /* Detail drawer (right slide-in panel) */
-    .detail-drawer {
-      position: fixed;
-      top: 0;
-      right: 0;
-      width: 420px;
-      max-width: 100vw;
-      height: 100vh;
-      background: var(--color-surface);
-      border-left: 1px solid var(--color-border);
-      box-shadow: var(--shadow-xl);
-      z-index: var(--z-modal);
-      display: flex;
-      flex-direction: column;
-      transform: translateX(100%);
-      transition: transform var(--transition-base);
-    }
-    .detail-drawer.is-open { transform: translateX(0); }
+      /* Detail drawer (right slide-in panel) */
+      .detail-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 420px;
+        max-width: 100vw;
+        height: 100vh;
+        background: var(--color-surface);
+        border-left: 1px solid var(--color-border);
+        box-shadow: var(--shadow-xl);
+        z-index: var(--z-modal);
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform var(--transition-base);
+      }
+      .detail-drawer.is-open {
+        transform: translateX(0);
+      }
 
-    .detail-drawer-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      flex-shrink: 0;
-    }
-    .detail-drawer-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-    }
-    .detail-drawer-close {
-      width: 32px; height: 32px;
-      display: flex; align-items: center; justify-content: center;
-      border: none; background: none;
-      border-radius: var(--radius-sm);
-      color: var(--color-text-muted);
-      cursor: pointer;
-      transition: background var(--transition-fast);
-    }
-    .detail-drawer-close:hover { background: var(--color-surface-alt); }
-    .detail-drawer-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: var(--space-5);
-    }
-    .detail-drawer-footer {
-      padding: var(--space-4) var(--space-5);
-      border-top: 1px solid var(--color-border);
-      display: flex;
-      gap: var(--space-2);
-      flex-shrink: 0;
-    }
+      .detail-drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+      }
+      .detail-drawer-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+      .detail-drawer-close {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: none;
+        border-radius: var(--radius-sm);
+        color: var(--color-text-muted);
+        cursor: pointer;
+        transition: background var(--transition-fast);
+      }
+      .detail-drawer-close:hover {
+        background: var(--color-surface-alt);
+      }
+      .detail-drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-5);
+      }
+      .detail-drawer-footer {
+        padding: var(--space-4) var(--space-5);
+        border-top: 1px solid var(--color-border);
+        display: flex;
+        gap: var(--space-2);
+        flex-shrink: 0;
+      }
 
-    .detail-photo {
-      width: 100%;
-      aspect-ratio: 4/3;
-      object-fit: cover;
-      border-radius: var(--radius-lg);
-      background: var(--color-surface-alt);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--color-text-muted);
-      margin-bottom: var(--space-5);
-      border: 1px solid var(--color-border);
-    }
-    .detail-photo svg { width: 48px; height: 48px; }
+      .detail-photo {
+        width: 100%;
+        aspect-ratio: 4/3;
+        object-fit: cover;
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-alt);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-muted);
+        margin-bottom: var(--space-5);
+        border: 1px solid var(--color-border);
+      }
+      .detail-photo svg {
+        width: 48px;
+        height: 48px;
+      }
 
-    .detail-field {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      margin-bottom: var(--space-4);
-    }
-    .detail-field-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--color-text-muted);
-    }
-    .detail-field-value {
-      font-size: 0.9375rem;
-      color: var(--color-text-primary);
-    }
+      .detail-field {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: var(--space-4);
+      }
+      .detail-field-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--color-text-muted);
+      }
+      .detail-field-value {
+        font-size: 0.9375rem;
+        color: var(--color-text-primary);
+      }
 
-    .detail-fields-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-4) var(--space-4);
-      margin-bottom: var(--space-4);
-    }
+      .detail-fields-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-4) var(--space-4);
+        margin-bottom: var(--space-4);
+      }
 
-    .qr-token-box {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-2-5) var(--space-3);
-      background: var(--color-surface-alt);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      font-family: monospace;
-      font-size: 0.8125rem;
-      color: var(--color-text-secondary);
-      word-break: break-all;
-    }
-    .qr-copy-btn {
-      flex-shrink: 0;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--color-text-muted);
-      padding: var(--space-1);
-      border-radius: var(--radius-sm);
-      transition: color var(--transition-fast);
-    }
-    .qr-copy-btn:hover { color: var(--color-primary); }
-    .qr-copy-btn svg { width: 14px; height: 14px; }
+      .qr-token-box {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2-5) var(--space-3);
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-family: monospace;
+        font-size: 0.8125rem;
+        color: var(--color-text-secondary);
+        word-break: break-all;
+      }
+      .qr-copy-btn {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--color-text-muted);
+        padding: var(--space-1);
+        border-radius: var(--radius-sm);
+        transition: color var(--transition-fast);
+      }
+      .qr-copy-btn:hover {
+        color: var(--color-primary);
+      }
+      .qr-copy-btn svg {
+        width: 14px;
+        height: 14px;
+      }
 
-    /* Discard modal fields */
-    .discard-info {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      padding: var(--space-3);
-      background: var(--color-surface-alt);
-      border-radius: var(--radius-md);
-      margin-bottom: var(--space-4);
-    }
-    .discard-info-name {
-      font-weight: 600;
-      font-size: 0.9375rem;
-      color: var(--color-text-primary);
-    }
-    .discard-info-meta {
-      font-size: 0.8125rem;
-      color: var(--color-text-muted);
-    }
+      /* Discard modal fields */
+      .discard-info {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3);
+        background: var(--color-surface-alt);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-4);
+      }
+      .discard-info-name {
+        font-weight: 600;
+        font-size: 0.9375rem;
+        color: var(--color-text-primary);
+      }
+      .discard-info-meta {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+      }
 
-    @media (max-width: 768px) {
-      .detail-drawer { width: 100vw; }
-    }
-  </style>
-</head>
-<body>
-
-  <main class="page-content">
-
+      @media (max-width: 768px) {
+        .detail-drawer {
+          width: 100vw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-content">
       <div class="page-header">
         <div>
           <h1 class="page-title">Estoque</h1>
           <p class="page-subtitle" id="stockSubtitle">Carregando itens…</p>
         </div>
-        <div style="display:flex; gap:var(--space-2);">
-          <button class="btn btn-primary" onclick="window.location.href='form-item.html'" type="button">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
+        <div style="display: flex; gap: var(--space-2)">
+          <button
+            class="btn btn-primary"
+            onclick="window.location.href = 'form-item.html'"
+            type="button"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Novo Item
           </button>
@@ -305,44 +368,94 @@
       <!-- Toolbar: search + filters + view toggle -->
       <div class="page-toolbar">
         <div class="page-toolbar-left">
-          <div class="search-input-wrap" style="max-width:320px;">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <div class="search-input-wrap" style="max-width: 320px">
+            <svg
+              class="search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <input type="search" id="searchInput" placeholder="Buscar por nome, patrimônio…" />
+            <input
+              type="search"
+              id="searchInput"
+              placeholder="Buscar por nome, patrimônio…"
+            />
           </div>
 
           <!-- Condition filter -->
-          <div class="filters-bar" style="padding: var(--space-1-5) var(--space-3);">
+          <div
+            class="filters-bar"
+            style="padding: var(--space-1-5) var(--space-3)"
+          >
             <span class="filter-label">Condição</span>
-            <button class="filter-chip active" data-condition="ALL">Todos</button>
+            <button class="filter-chip active" data-condition="ALL">
+              Todos
+            </button>
             <button class="filter-chip" data-condition="OTIMO">Ótimo</button>
             <button class="filter-chip" data-condition="REPARO">Reparo</button>
-            <button class="filter-chip" data-condition="DESCARTAR">Descartar</button>
+            <button class="filter-chip" data-condition="DESCARTAR">
+              Descartar
+            </button>
           </div>
 
           <!-- Category select -->
-          <select class="form-control" id="categoryFilter" style="width:auto; height:38px;">
+          <select
+            class="form-control"
+            id="categoryFilter"
+            style="width: auto; height: 38px"
+          >
             <option value="">Todas as categorias</option>
           </select>
         </div>
 
         <div class="page-toolbar-right">
           <div class="view-toggle">
-            <button class="view-toggle-btn active" id="viewTable" data-tooltip="Tabela" aria-label="Visualização em tabela">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-                <line x1="8" y1="18" x2="21" y2="18"/>
-                <line x1="3" y1="6"  x2="3.01" y2="6"/>
-                <line x1="3" y1="12" x2="3.01" y2="12"/>
-                <line x1="3" y1="18" x2="3.01" y2="18"/>
+            <button
+              class="view-toggle-btn active"
+              id="viewTable"
+              data-tooltip="Tabela"
+              aria-label="Visualização em tabela"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
             </button>
-            <button class="view-toggle-btn" id="viewGrid" data-tooltip="Grade" aria-label="Visualização em grade">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            <button
+              class="view-toggle-btn"
+              id="viewGrid"
+              data-tooltip="Grade"
+              aria-label="Visualização em grade"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
               </svg>
             </button>
           </div>
@@ -353,17 +466,21 @@
       <div class="bulk-bar" id="bulkBar">
         <span class="bulk-bar-count" id="bulkCount">0 selecionados</span>
         <div class="bulk-bar-actions">
-          <button class="btn btn-secondary btn-sm" id="bulkMove">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-            </svg>
-            Movimentar
-          </button>
           <button class="btn btn-danger btn-sm" id="bulkDiscard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6"/><path d="M14 11v6"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
             </svg>
             Descartar
           </button>
@@ -377,32 +494,63 @@
             <thead>
               <tr>
                 <th class="col-check">
-                  <input type="checkbox" id="selectAll" aria-label="Selecionar todos" />
+                  <input
+                    type="checkbox"
+                    id="selectAll"
+                    aria-label="Selecionar todos"
+                  />
                 </th>
                 <th data-sort="product_name">
-                  <span class="th-sort">Nome
-                    <svg class="th-sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="6 9 12 3 18 9"/><polyline points="6 15 12 21 18 15"/>
+                  <span class="th-sort"
+                    >Nome
+                    <svg
+                      class="th-sort-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="6 9 12 3 18 9" />
+                      <polyline points="6 15 12 21 18 15" />
                     </svg>
                   </span>
                 </th>
                 <th data-sort="category">Categoria</th>
                 <th data-sort="condition">Condição</th>
-                <th data-sort="quantity_available" style="text-align:right;">Disponível</th>
-                <th data-sort="quantity" style="text-align:right;">Total</th>
+                <th data-sort="quantity_available" style="text-align: right">
+                  Disponível
+                </th>
+                <th data-sort="quantity" style="text-align: right">Total</th>
                 <th>Patrimônio</th>
                 <th class="col-actions"></th>
               </tr>
             </thead>
             <tbody id="stockBody">
-              <tr><td colspan="8" style="text-align:center; padding:var(--space-10);">
-                <div class="skeleton" style="height:14px; width:200px; margin:0 auto var(--space-2);"></div>
-                <div class="skeleton" style="height:14px; width:140px; margin:0 auto;"></div>
-              </td></tr>
+              <tr>
+                <td
+                  colspan="8"
+                  style="text-align: center; padding: var(--space-10)"
+                >
+                  <div
+                    class="skeleton"
+                    style="
+                      height: 14px;
+                      width: 200px;
+                      margin: 0 auto var(--space-2);
+                    "
+                  ></div>
+                  <div
+                    class="skeleton"
+                    style="height: 14px; width: 140px; margin: 0 auto"
+                  ></div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
-        <div class="pagination" id="tablePagination" style="display:none;">
+        <div class="pagination" id="tablePagination" style="display: none">
           <span class="pagination-info" id="paginationInfo">—</span>
           <div class="pagination-controls" id="paginationControls"></div>
           <div class="pagination-per-page">
@@ -417,102 +565,190 @@
       </div>
 
       <!-- GRID VIEW (hidden by default) -->
-      <div id="gridView" style="display:none;">
+      <div id="gridView" style="display: none">
         <div class="items-grid" id="stockGrid"></div>
-        <div class="pagination" id="gridPagination" style="display:none;">
+        <div class="pagination" id="gridPagination" style="display: none">
           <span class="pagination-info" id="gridPaginationInfo">—</span>
           <div class="pagination-controls" id="gridPaginationControls"></div>
         </div>
       </div>
 
       <!-- Empty state -->
-      <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-state" id="emptyState" style="display: none">
         <div class="empty-state-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-            <line x1="8" y1="18" x2="21" y2="18"/>
-            <line x1="3" y1="6" x2="3.01" y2="6"/>
-            <line x1="3" y1="12" x2="3.01" y2="12"/>
-            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" />
+            <line x1="3" y1="12" x2="3.01" y2="12" />
+            <line x1="3" y1="18" x2="3.01" y2="18" />
           </svg>
         </div>
         <h3 class="empty-state-title">Nenhum item encontrado</h3>
-        <p class="empty-state-desc">Tente ajustar os filtros ou cadastre um novo item.</p>
+        <p class="empty-state-desc">
+          Tente ajustar os filtros ou cadastre um novo item.
+        </p>
         <a href="form-item.html" class="btn btn-primary">Cadastrar Item</a>
       </div>
-
     </main>
-  
 
-  <!-- Toast -->
-  <div class="toast-container" id="toastContainer"></div>
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Detail Drawer -->
-  <div class="detail-drawer" id="detailDrawer" role="dialog" aria-modal="true" aria-label="Detalhes do item">
-    <div class="detail-drawer-header">
-      <span class="detail-drawer-title" id="drawerTitle">Detalhes do Item</span>
-      <button class="detail-drawer-close" id="drawerClose" aria-label="Fechar">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-    <div class="detail-drawer-body" id="drawerBody">
-      <!-- Filled by JS -->
-    </div>
-    <div class="detail-drawer-footer">
-      <a href="#" class="btn btn-primary" id="drawerEditBtn">Editar</a>
-      <button class="btn btn-secondary" id="drawerMoveBtn">Movimentar</button>
-      <button class="btn btn-ghost btn-danger" id="drawerDiscardBtn" style="margin-left:auto; color:var(--color-danger);">Descartar</button>
-    </div>
-  </div>
-  <div class="sidebar-overlay" id="drawerOverlay" style="z-index:calc(var(--z-modal) - 1);"></div>
-
-  <!-- Discard confirm modal -->
-  <div class="modal-backdrop" id="discardModal">
-    <div class="modal modal-sm modal-confirm">
-      <div class="modal-header">
-        <h3 class="modal-title">Confirmar Descarte</h3>
-        <button class="modal-close" data-close-modal="discardModal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    <!-- Detail Drawer -->
+    <div
+      class="detail-drawer"
+      id="detailDrawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Detalhes do item"
+    >
+      <div class="detail-drawer-header">
+        <span class="detail-drawer-title" id="drawerTitle"
+          >Detalhes do Item</span
+        >
+        <button
+          class="detail-drawer-close"
+          id="drawerClose"
+          aria-label="Fechar"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
-      <div class="modal-body">
-        <div class="modal-confirm-icon danger">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          </svg>
-        </div>
-        <p class="modal-confirm-title">Descartar item?</p>
-        <p class="modal-confirm-desc" id="discardDesc">Esta ação registrará o descarte e reduzirá o estoque. Não pode ser desfeita.</p>
-        <div class="form-group" style="margin-top:var(--space-4); text-align:left;">
-          <label class="form-label" for="discardReason">Motivo do descarte</label>
-          <select class="form-control" id="discardReason">
-            <option value="">Selecione…</option>
-            <option value="Defeito irreparável">Defeito irreparável</option>
-            <option value="Fim de vida útil">Fim de vida útil</option>
-            <option value="Dano físico">Dano físico</option>
-            <option value="Obsolescência">Obsolescência</option>
-            <option value="Outro">Outro</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-top:var(--space-3); text-align:left;">
-          <label class="form-label" for="discardNotes">Observações (Opcional)</label>
-          <textarea class="form-control" id="discardNotes" rows="2" placeholder="Digite a observação…"></textarea>
-        </div>
+      <div class="detail-drawer-body" id="drawerBody">
+        <!-- Filled by JS -->
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-close-modal="discardModal">Cancelar</button>
-        <button class="btn btn-danger" id="discardConfirmBtn">Descartar</button>
+      <div class="detail-drawer-footer">
+        <button type="button" class="btn btn-primary" id="drawerEditBtn">
+          Editar
+        </button>
+        <button
+          class="btn btn-danger drawer-discard-btn"
+          id="drawerDiscardBtn"
+          style="
+            margin-left: auto;
+            background: var(--color-danger);
+            color: #fff;
+          "
+        >
+          Descartar
+        </button>
       </div>
     </div>
-  </div>
+    <div
+      class="sidebar-overlay"
+      id="drawerOverlay"
+      style="z-index: calc(var(--z-modal) - 1)"
+    ></div>
 
-  <script src="/js/layout.js"></script>
-  <script src="/js/main.js"></script>
-  <script src="/js/estoque.js"></script>
-</body>
+    <!-- Discard confirm modal -->
+    <div class="modal-backdrop" id="discardModal">
+      <div class="modal modal-sm modal-confirm">
+        <div class="modal-header">
+          <h3 class="modal-title">Confirmar Descarte</h3>
+          <button class="modal-close" data-close-modal="discardModal">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-confirm-icon danger">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            </svg>
+          </div>
+          <p class="modal-confirm-title">Descartar item?</p>
+          <p class="modal-confirm-desc" id="discardDesc">
+            Esta ação registrará o descarte e reduzirá o estoque. Não pode ser
+            desfeita.
+          </p>
+          <div
+            class="form-group"
+            style="margin-top: var(--space-4); text-align: left"
+          >
+            <label class="form-label" for="discardReason"
+              >Motivo do descarte</label
+            >
+            <select class="form-control" id="discardReason">
+              <option value="">Selecione…</option>
+              <option value="Defeito irreparável">Defeito irreparável</option>
+              <option value="Fim de vida útil">Fim de vida útil</option>
+              <option value="Dano físico">Dano físico</option>
+              <option value="Obsolescência">Obsolescência</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div
+            class="form-group"
+            style="margin-top: var(--space-3); text-align: left"
+          >
+            <label class="form-label" for="discardNotes"
+              >Observações (Opcional)</label
+            >
+            <textarea
+              class="form-control"
+              id="discardNotes"
+              rows="2"
+              placeholder="Digite a observação…"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="discardModal">
+            Cancelar
+          </button>
+          <button class="btn btn-danger" id="discardConfirmBtn">
+            Descartar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/layout.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/estoque.js"></script>
+  </body>
 </html>
