@@ -603,4 +603,15 @@
       }, 1000);
     });
   }
+
+  function initCadastroVerificationPanel() {
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get("email");
+    const verify = params.get("verify");
+    if (verify === "1" && email) {
+      mostrarPainelVerificacao(email);
+    }
+  }
+
+  initCadastroVerificationPanel();
 })();
