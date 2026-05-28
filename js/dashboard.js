@@ -49,9 +49,10 @@
   function mergeMovements(localMovs, serverMovs) {
     const map = new Map();
     const deleted = new Set(
-      (JSON.parse(localStorage.getItem(SC.storageKey(KEYS.DELETED)) || "[]") || []).map(
-        String,
-      ),
+      (
+        JSON.parse(localStorage.getItem(SC.storageKey(KEYS.DELETED)) || "[]") ||
+        []
+      ).map(String),
     );
     (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
       map.set(String(m.id), m);
@@ -94,7 +95,11 @@
 
     _dashApi(`/api/home${qs}`)
       .then((data) => {
-        const COND = { OTIMO: "otimo", REPARO: "reparo", DESCARTAR: "inativo" };
+        const COND = {
+          OTIMO: "otimo",
+          REPARO: "reparo",
+          DESCARTAR: "descartar",
+        };
         if (Array.isArray(data.itens) && data.itens.length) {
           const mapped = data.itens.map((i) => ({
             id: i.id,
@@ -169,7 +174,7 @@
     const emReparo = items.filter(
       (i) => i.condicao === "reparo" || i.condicao === "ruim",
     ).length;
-    const inativos = items.filter((i) => i.condicao === "inativo").length;
+    const descartados = items.filter((i) => i.condicao === "descartar").length;
 
     const kpis = [
       {
@@ -214,8 +219,8 @@
         href: "estoque.html",
       },
       {
-        label: "Inativos",
-        value: fmt(inativos),
+        label: "Descartar",
+        value: fmt(descartados),
         sub: "aguardando descarte",
         iconClass: "red",
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -259,7 +264,7 @@
       bom: { label: "Bom", color: "#3B82F6" },
       reparo: { label: "Reparo", color: "#F59E0B" },
       ruim: { label: "Ruim", color: "#F97316" },
-      inativo: { label: "Inativo", color: "#EF4444" },
+      descartar: { label: "Descartar", color: "#EF4444" },
     };
 
     const segments = Object.entries(condMap)

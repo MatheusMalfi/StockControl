@@ -210,30 +210,30 @@ function initSolicitacoes() {
     switch (r.status) {
       case "pendente":
         return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("approve", "Aprovar", "#16a34a", svgCheck) +
           b("reject", "Recusar", "#dc2626", svgX) +
-          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("edit", "Editar", "inherit", svgEdit) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "aprovada":
         return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("edit", "Editar", "inherit", svgEdit) +
           b("complete", "Concluir", "#2563eb", svgCircleCheck) +
-          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "recusada":
         return (
-          b("edit", "Editar", "inherit", svgEdit) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
           b("reopen", "Reabrir", "#64748b", svgRefresh) +
           b("delete", "Excluir", "#dc2626", svgTrash)
         );
       case "cancelada":
         return (
-          b("edit", "Editar", "inherit", svgEdit) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
           b("reopen", "Reabrir", "#64748b", svgRefresh) +
           b("delete", "Excluir", "#dc2626", svgTrash)
         );
@@ -406,11 +406,15 @@ function initSolicitacoes() {
         const color = avatarColor(r.solicitante);
         const rowCls = r.urgencia === "urgente" ? "row-urg" : "";
         const dateStr = SC.fmtDateTime(r.created_at);
-        const itemLabel = r.items && r.items.length > 1
-          ? `${esc(r.items[0].nome_item)} +${r.items.length - 1} itens`
-          : esc(r.nome_item);
+        const itemLabel =
+          r.items && r.items.length > 1
+            ? `${esc(r.items[0].nome_item)} +${r.items.length - 1} itens`
+            : esc(r.nome_item);
         const totalQty = r.items
-          ? r.items.reduce((sum, it) => sum + (parseInt(it.quantidade, 10) || 0), 0)
+          ? r.items.reduce(
+              (sum, it) => sum + (parseInt(it.quantidade, 10) || 0),
+              0,
+            )
           : r.quantidade;
 
         return `
@@ -647,7 +651,8 @@ function initSolicitacoes() {
         if (btnAddReqItem) btnAddReqItem.style.display = "none";
       });
 
-    btnAddReqItem && btnAddReqItem.addEventListener("click", addCurrentItemToList);
+    btnAddReqItem &&
+      btnAddReqItem.addEventListener("click", addCurrentItemToList);
 
     reqQty &&
       reqQty.addEventListener("input", () => {
@@ -668,6 +673,7 @@ function initSolicitacoes() {
   function openNew() {
     state.editId = null;
     state.selectedItem = null;
+    state.selectedItems = [];
     resetReqForm();
     if ($("modalReqTitle")) $("modalReqTitle").textContent = "Nova Solicitação";
     if (btnSaveRequest) btnSaveRequest.textContent = "Enviar Solicitação";
@@ -688,7 +694,10 @@ function initSolicitacoes() {
     if (reqEditId) reqEditId.value = id;
 
     state.selectedItem = null;
-    state.selectedItems = r.items && Array.isArray(r.items) ? r.items.slice() : parseRequestItems(r);
+    state.selectedItems =
+      r.items && Array.isArray(r.items)
+        ? r.items.slice()
+        : parseRequestItems(r);
     renderSelectedItems();
     if (reqItemChip) reqItemChip.style.display = "none";
     if (reqItemSearchWrap) reqItemSearchWrap.style.display = "";
@@ -749,7 +758,9 @@ function initSolicitacoes() {
 
     reqItemDrop.querySelectorAll(".req-drop-row[data-id]").forEach((row) => {
       row.addEventListener("click", () => {
-        const found = items.find((i) => String(i.id) === String(row.dataset.id));
+        const found = items.find(
+          (i) => String(i.id) === String(row.dataset.id),
+        );
         if (found) selectItem(found);
       });
     });
@@ -791,13 +802,20 @@ function initSolicitacoes() {
         patrimonio: row.patrimonio || "",
         quantidade: row.quantidade != null ? row.quantidade : 1,
         disponivel:
-          row.disponivel ?? row.quantity_available ?? row.quantity ?? row.total ?? 0,
+          row.disponivel ??
+          row.quantity_available ??
+          row.quantity ??
+          row.total ??
+          0,
       },
     ];
   }
 
   function summarizeRequestItems(items) {
-    const allQty = items.reduce((sum, it) => sum + (parseInt(it.quantidade, 10) || 0), 0);
+    const allQty = items.reduce(
+      (sum, it) => sum + (parseInt(it.quantidade, 10) || 0),
+      0,
+    );
     if (items.length === 1) {
       return {
         nome_item: items[0].nome_item,
@@ -879,15 +897,22 @@ function initSolicitacoes() {
     }
     const qty = parseInt(reqQty ? reqQty.value : "0", 10) || 0;
     const available =
-      state.selectedItem.disponivel ?? state.selectedItem.quantity_available ?? state.selectedItem.quantity ?? state.selectedItem.total ?? 0;
+      state.selectedItem.disponivel ??
+      state.selectedItem.quantity_available ??
+      state.selectedItem.quantity ??
+      state.selectedItem.total ??
+      0;
     if (qty < 1 || qty > available) {
       if ($("errReqQty")) {
-        $("errReqQty").textContent = `Quantidade inválida. Disponível: ${available}`;
+        $("errReqQty").textContent =
+          `Quantidade inválida. Disponível: ${available}`;
         $("errReqQty").style.display = "";
       }
       return;
     }
-    const existing = state.selectedItems.find((it) => it.item_id === state.selectedItem.id);
+    const existing = state.selectedItems.find(
+      (it) => it.item_id === state.selectedItem.id,
+    );
     if (existing) {
       existing.quantidade = Math.min(existing.quantidade + qty, available);
     } else {
@@ -927,22 +952,34 @@ function initSolicitacoes() {
     const currentItem = state.selectedItem;
     const hasCurrent = !!currentItem;
     const currentAvailable = hasCurrent
-      ? currentItem.disponivel ?? currentItem.quantity_available ?? currentItem.quantity ?? currentItem.total ?? 0
+      ? (currentItem.disponivel ??
+        currentItem.quantity_available ??
+        currentItem.quantity ??
+        currentItem.total ??
+        0)
       : 0;
 
     if (!hasCurrent && !selectedItems.length) {
       showErr("errReqItem", "Selecione ao menos um item.");
     }
     if (hasCurrent && (!qty || qty < 1 || qty > currentAvailable)) {
-      showErr("errReqQty", `Quantidade inválida. Disponível: ${currentAvailable}`);
+      showErr(
+        "errReqQty",
+        `Quantidade inválida. Disponível: ${currentAvailable}`,
+      );
     }
     if (!just) showErr("errReqJustification", "Justificativa é obrigatória.");
     if (!ok) return;
 
     if (hasCurrent) {
-      const existing = selectedItems.find((it) => it.item_id === currentItem.id);
+      const existing = selectedItems.find(
+        (it) => it.item_id === currentItem.id,
+      );
       if (existing) {
-        existing.quantidade = Math.min(existing.quantidade + qty, currentAvailable);
+        existing.quantidade = Math.min(
+          existing.quantidade + qty,
+          currentAvailable,
+        );
       } else {
         selectedItems.push({
           item_id: currentItem.id,
@@ -975,12 +1012,17 @@ function initSolicitacoes() {
           nome_item: requestSummary.nome_item,
           patrimonio: requestSummary.patrimonio,
           quantidade: requestSummary.quantidade,
-          urgencia: reqUrgency ? reqUrgency.value : existing.urgencia || "media",
+          urgencia: reqUrgency
+            ? reqUrgency.value
+            : existing.urgencia || "media",
           justificativa: just,
-          necessario_ate: reqNeededBy ? reqNeededBy.value || null : existing.necessario_ate || null,
+          necessario_ate: reqNeededBy
+            ? reqNeededBy.value || null
+            : existing.necessario_ate || null,
         };
 
-        const requiresReapproval = existing.status === "aprovada" || existing.status === "recusada";
+        const requiresReapproval =
+          existing.status === "aprovada" || existing.status === "recusada";
         if (requiresReapproval) {
           updated.status = "pendente";
           updated.revisor = null;
@@ -990,9 +1032,11 @@ function initSolicitacoes() {
         reqs[idx] = updated;
         dbSet(KEYS.REQUESTS, reqs);
         if (user.organization_id) {
-          _solApi("PUT", `/api/solicitacoes/${state.editId}`, requestPayloadFromLocal(updated)).catch(
-            () => {},
-          );
+          _solApi(
+            "PUT",
+            `/api/solicitacoes/${state.editId}`,
+            requestPayloadFromLocal(updated),
+          ).catch(() => {});
         }
         SC.closeModal("modalNewRequest");
         SC.toastSuccess(
@@ -1005,12 +1049,21 @@ function initSolicitacoes() {
       return;
     }
 
+    // Salva todos os patrimônios e item_ids (arrays) para uso no log de auditoria
+    const allPatrimonios = selectedItems
+      .map((it) => it.patrimonio)
+      .filter(Boolean);
+    const allItemIds = selectedItems.map((it) => it.item_id).filter(Boolean);
     const newReq = {
       id: `req_${Date.now()}`,
       items: selectedItems,
-      item_id: selectedItems[0]?.item_id || null,
+      item_id:
+        selectedItems.length === 1 ? selectedItems[0].item_id : allItemIds,
       nome_item: requestSummary.nome_item,
-      patrimonio: requestSummary.patrimonio,
+      patrimonio:
+        selectedItems.length === 1
+          ? selectedItems[0].patrimonio
+          : allPatrimonios,
       quantidade: requestSummary.quantidade,
       urgencia: reqUrgency ? reqUrgency.value : "media",
       status: "pendente",
@@ -1026,9 +1079,11 @@ function initSolicitacoes() {
     reqs.unshift(newReq);
     dbSet(KEYS.REQUESTS, reqs);
     if (user.organization_id) {
-      _solApi("POST", "/api/solicitacoes", requestPayloadFromLocal(newReq)).catch(
-        () => {},
-      );
+      _solApi(
+        "POST",
+        "/api/solicitacoes",
+        requestPayloadFromLocal(newReq),
+      ).catch(() => {});
     }
     SC.closeModal("modalNewRequest");
     SC.toastSuccess("Solicitação enviada com sucesso!");
@@ -1216,8 +1271,9 @@ function initSolicitacoes() {
 
     const color = avatarColor(r.solicitante);
     const ini = initials(r.solicitante);
-    const itemDetails = r.items && Array.isArray(r.items) && r.items.length > 0
-      ? `
+    const itemDetails =
+      r.items && Array.isArray(r.items) && r.items.length > 0
+        ? `
         <div style="grid-column:1/-1;">
           <dt style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-muted); margin-bottom:3px;">Itens</dt>
           <dd style="margin:0; font-size:.875rem;">
@@ -1235,7 +1291,7 @@ function initSolicitacoes() {
           </dd>
         </div>
       `
-      : "";
+        : "";
 
     state.detailId = id;
     modalDetailBody.innerHTML = `

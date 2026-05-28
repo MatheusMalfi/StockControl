@@ -82,13 +82,13 @@
     Outros: {},
   };
 
-  const COND_MAP = { OTIMO: "otimo", REPARO: "reparo", DESCARTAR: "inativo" };
+  const COND_MAP = { OTIMO: "otimo", REPARO: "reparo", DESCARTAR: "descartar" };
   const COND_REVERSE = {
     otimo: "OTIMO",
     bom: "OTIMO",
     reparo: "REPARO",
     ruim: "REPARO",
-    inativo: "DESCARTAR",
+    descartar: "DESCARTAR",
   };
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -142,7 +142,9 @@
   // ── Storage ───────────────────────────────────────────────────────────────
   function getItems() {
     try {
-      return JSON.parse(localStorage.getItem(SC.storageKey("sc_items")) || "[]");
+      return JSON.parse(
+        localStorage.getItem(SC.storageKey("sc_items")) || "[]",
+      );
     } catch {
       return [];
     }
@@ -167,7 +169,7 @@
       bom: "OTIMO",
       reparo: "REPARO",
       ruim: "REPARO",
-      inativo: "DESCARTAR",
+      descartar: "DESCARTAR",
     };
 
     if (isEdit && item._backend_id) {
@@ -359,7 +361,7 @@
         const condCodeToLegacy = {
           OTIMO: "otimo",
           REPARO: "reparo",
-          DESCARTAR: "inativo",
+          DESCARTAR: "descartar",
         };
         const item = {
           id: a.id,
@@ -867,10 +869,14 @@
     fetch("/api/categories", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data) => {
-        const apiCats = (data.categories || []).map((c) => c.name).filter(Boolean);
+        const apiCats = (data.categories || [])
+          .map((c) => c.name)
+          .filter(Boolean);
         const storedCats = readStoredCategories();
         const cats = mergeUniqueStrings([...storedCats, ...apiCats]);
-        populateCategories(cats.length ? cats : storedCats.length ? storedCats : ["Outros"]);
+        populateCategories(
+          cats.length ? cats : storedCats.length ? storedCats : ["Outros"],
+        );
         // Se já carregou o item (edição), re-aplica a categoria
         if (IS_EDIT && categoryId && categoryId.dataset.pendingValue) {
           categoryId.value = categoryId.dataset.pendingValue;

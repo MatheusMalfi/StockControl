@@ -203,7 +203,7 @@
         <td style="text-align:right; color:var(--color-text-muted);">${item.quantity ?? "—"}</td>
         <td style="font-size:0.8125rem; color:var(--color-text-muted);">${SC.escHtml(item.asset_tag || "—")}</td>
         <td class="col-actions">
-          <div class="table-actions">
+          <div class="table-actions" style="display: flex; gap: 2px; align-items: center; justify-content: flex-end;">
             <button class="btn btn-ghost btn-icon btn-sm btn-view" data-id="${item.id}" data-tooltip="Ver detalhes" aria-label="Ver detalhes">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -577,7 +577,11 @@
 
       state.activeItemId = item.id;
       if (title) title.textContent = item.product_name || "Item";
-      if (editBtn) editBtn.href = `form-item.html?id=${item.id}`;
+      if (editBtn) {
+        editBtn.onclick = () => {
+          window.location.href = `form-item.html?id=${item.id}`;
+        };
+      }
 
       if (discardBtn) {
         discardBtn.onclick = () => openDiscardModal(item.id, item.product_name);
