@@ -139,6 +139,32 @@
         const storage = document.getElementById("rememberMe").checked
           ? localStorage
           : sessionStorage;
+
+        const previousUser =
+          JSON.parse(
+            localStorage.getItem("sc_user") ||
+              sessionStorage.getItem("sc_user") ||
+              "{}",
+          ) || {};
+        const previousOrg = previousUser.organization_id;
+        const currentOrg = data.user?.organization_id;
+
+        const shouldClearCache =
+          !previousOrg ||
+          !currentOrg ||
+          String(previousOrg) !== String(currentOrg);
+
+        if (shouldClearCache) {
+          [
+            "sc_items",
+            "sc_movements",
+            "sc_movements_deleted",
+            "sc_goal",
+            "sc_requests",
+            "sc_usuario",
+          ].forEach((key) => localStorage.removeItem(key));
+        }
+
         storage.setItem("sc_token", data.token);
         storage.setItem("sc_user", JSON.stringify(data.user ?? {}));
 
