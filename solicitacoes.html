@@ -3,6 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var rawUser =
+            localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user");
+          var theme = "light";
+          if (rawUser) {
+            var user = JSON.parse(rawUser);
+            var orgId = user && user.organization_id;
+            if (orgId) {
+              var rawPrefs = localStorage.getItem("sc_preferencias_" + orgId);
+              if (rawPrefs) {
+                theme = JSON.parse(rawPrefs).tema || theme;
+              }
+            }
+          }
+          if (theme === "auto") {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "escuro"
+              : "claro";
+          }
+          document.documentElement.setAttribute(
+            "data-theme",
+            theme === "escuro" ? "dark" : "light",
+          );
+          document.documentElement.style.backgroundColor =
+            theme === "escuro" ? "#0f172a" : "#f8fafc";
+          document.documentElement.style.color =
+            theme === "escuro" ? "#f8fafc" : "#1e293b";
+        } catch (error) {}
+      })();
+    </script>
     <title>Solicitações — StockControl</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,13 +52,13 @@
         border: 1px solid var(--color-border);
         border-radius: var(--radius-xl);
         overflow: hidden;
-        margin-bottom: var(--space-5);
+        margin-bottom: var(--space-4);
       }
       .req-kpi-row {
         display: flex;
         align-items: center;
         gap: var(--space-4);
-        padding: var(--space-3) var(--space-5);
+        padding: var(--space-3) var(--space-4);
         cursor: pointer;
         transition:
           background var(--transition-fast),
@@ -562,7 +595,10 @@
             >
             <!-- search wrap -->
             <div id="reqItemSearchWrap" style="position: relative">
-              <div class="search-input-wrap">
+              <div
+                class="search-input-wrap"
+                style="margin-bottom: var(--space-4)"
+              >
                 <svg
                   class="search-icon"
                   viewBox="0 0 24 24"
@@ -624,6 +660,23 @@
                 Trocar
               </button>
             </div>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              id="btnAddReqItem"
+              style="display: none; margin-top: var(--space-2)"
+            >
+              Adicionar item à solicitação
+            </button>
+            <div
+              id="reqItemsList"
+              style="
+                display: none;
+                margin-top: var(--space-3);
+                gap: var(--space-2);
+                flex-direction: column;
+              "
+            ></div>
             <span id="errReqItem" class="form-error" style="display: none"
               >Selecione um item.</span
             >
@@ -669,6 +722,7 @@
               rows="3"
               placeholder="Descreva o motivo da solicitação…"
               maxlength="500"
+              style="margin-bottom: var(--space-4)"
             ></textarea>
             <span
               id="errReqJustification"
@@ -680,7 +734,12 @@
 
           <div class="form-group">
             <label class="form-label" for="reqNeededBy">Necessário até</label>
-            <input type="date" class="form-control" id="reqNeededBy" />
+            <input
+              type="date"
+              class="form-control"
+              id="reqNeededBy"
+              style="margin-bottom: var(--space-4)"
+            />
           </div>
         </div>
         <div class="modal-footer">
@@ -798,6 +857,13 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" data-close-modal="modalDetail">
             Fechar
+          </button>
+          <button
+            class="btn btn-primary"
+            id="btnDetailEditRequest"
+            style="display: none"
+          >
+            Editar Solicitação
           </button>
         </div>
       </div>

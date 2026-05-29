@@ -8,11 +8,23 @@ const CREATE_NOTIF = `
   CREATE TABLE IF NOT EXISTS notificacoes (
     id              VARCHAR(36)  NOT NULL PRIMARY KEY,
     organization_id INT          NOT NULL,
+
     titulo          VARCHAR(255) DEFAULT NULL,
-    mensagem        TEXT         DEFAULT NULL,
-    tipo            VARCHAR(50)  DEFAULT 'info',
-    lida            TINYINT(1)   NOT NULL DEFAULT 0,
-    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    mensagem        TEXT DEFAULT NULL,
+
+    tipo            VARCHAR(50) DEFAULT 'info',
+    subtipo         VARCHAR(100) DEFAULT NULL,
+
+    item_id         VARCHAR(100) DEFAULT NULL,
+    item_nome       VARCHAR(255) DEFAULT NULL,
+
+    prioridade      VARCHAR(50) DEFAULT NULL,
+
+    lida            TINYINT(1) NOT NULL DEFAULT 0,
+    arquivada       TINYINT(1) NOT NULL DEFAULT 0,
+
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
     INDEX idx_org (organization_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 `;
@@ -32,6 +44,7 @@ const CREATE_RULES = `
 async function ensureTables() {
   await pool.query(CREATE_NOTIF);
   await pool.query(CREATE_RULES);
+  await pool.query("ALTER TABLE notificacoes ADD COLUMN IF NOT EXISTS arquivada TINYINT(1) NOT NULL DEFAULT 0");
 }
 
 function getOrgId(req) {
@@ -45,7 +58,7 @@ router.get("/", async (req, res) => {
     const orgId = getOrgId(req);
     if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
     const [notifs] = await pool.query(
-      "SELECT * FROM notificacoes WHERE organization_id = ? ORDER BY created_at DESC LIMIT 200",
+      "SELECT * FROM notificacoes WHERE organization_id = ? AND arquivada = 0 ORDER BY created_at DESC LIMIT 200",
       [orgId],
     );
     const [rules] = await pool.query(
@@ -65,7 +78,12 @@ router.post("/sync", async (req, res) => {
     await ensureTables();
     const orgId = getOrgId(req);
     if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
-    const notifs = Array.isArray(req.body.notificacoes) ? req.body.notificacoes : [];
+    const rawNotifs = Array.isArray(req.body)
+      ? req.body
+      : Array.isArray(req.body?.notificacoes)
+        ? req.body.notificacoes
+        : [];
+    const notifs = Array.isArray(rawNotifs) ? rawNotifs : [];
 
     const conn = await pool.getConnection();
     try {
@@ -74,9 +92,41 @@ router.post("/sync", async (req, res) => {
       for (const n of notifs) {
         const id = n.id || `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         await conn.execute(
-          `INSERT INTO notificacoes (id, organization_id, titulo, mensagem, tipo, lida)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [id, orgId, n.titulo || null, n.mensagem || null, n.tipo || "info", n.lida ? 1 : 0],
+  `INSERT INTO notificacoes (
+      id,
+      organization_id,
+      titulo,
+      mensagem,
+      tipo,
+      subtipo,
+      item_id,
+      item_nome,
+      prioridade,
+      lida,
+      arquivada,
+      created_at
+   )
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+  id,
+  orgId,
+
+  n.titulo || null,
+  n.mensagem || null,
+
+  n.tipo || "info",
+  n.subtipo || null,
+
+  n.itemId || null,
+  n.itemNome || null,
+
+  n.prioridade || null,
+
+  n.lida ? 1 : 0,
+  n.arquivada ? 1 : 0,
+
+  n.criadaEm || n.created_at || new Date().toISOString(),
+],
         );
       }
       await conn.commit();

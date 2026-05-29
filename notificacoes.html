@@ -3,6 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function() {
+      try {
+        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
+        var theme = 'light';
+        if (rawUser) {
+          var user = JSON.parse(rawUser);
+          var orgId = user && user.organization_id;
+          if (orgId) {
+            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
+            if (rawPrefs) {
+              theme = JSON.parse(rawPrefs).tema || theme;
+            }
+          }
+        }
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+        }
+        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
+        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
+        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
+      } catch (error) {}
+    })();
+  </script>
   <title>Notificações — StockControl</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -213,13 +237,18 @@
 
         <!-- ── Left: notification feed ──────────────────────────── -->
         <div>
-          <!-- Tabs -->
-          <div class="tabs" style="margin-bottom:var(--space-4);">
-            <button class="tab active" data-tab="all">Todas <span class="badge" id="tab-badge-all">0</span></button>
-            <button class="tab" data-tab="unread">Não lidas <span class="badge badge-primary" id="tab-badge-unread">0</span></button>
-            <button class="tab" data-tab="stock">Estoque</button>
-            <button class="tab" data-tab="request">Solicitações</button>
-            <button class="tab" data-tab="system">Sistema</button>
+          <!-- Filters -->
+          <div class="filters-bar" style="margin-bottom:var(--space-4);">
+            <span class="filter-label">Filtrar por</span>
+            <button type="button" class="tab filter-chip active" data-tab="all">
+              Todas <span class="badge" id="tab-badge-all">0</span>
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="unread">
+              Não lidas <span class="badge badge-primary" id="tab-badge-unread">0</span>
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="stock">Estoque</button>
+            <button type="button" class="tab filter-chip" data-tab="request">Solicitações</button>
+            <button type="button" class="tab filter-chip" data-tab="system">Sistema</button>
           </div>
 
           <!-- List panel -->

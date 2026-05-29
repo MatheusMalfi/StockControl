@@ -1,17 +1,17 @@
 ﻿"use strict";
 
-document.addEventListener("sc:ready", function () {
+function initSolicitacoes() {
   // ── Storage ───────────────────────────────────────────────────────────────
   const KEYS = { ITEMS: "sc_items", REQUESTS: "sc_requests" };
   function dbGet(k) {
     try {
-      return JSON.parse(localStorage.getItem(k)) || [];
+      return JSON.parse(localStorage.getItem(SC.storageKey(k)) || "[]") || [];
     } catch {
       return [];
     }
   }
   function dbSet(k, v) {
-    localStorage.setItem(k, JSON.stringify(v));
+    localStorage.setItem(SC.storageKey(k), JSON.stringify(v));
   }
 
   // ── API helpers ───────────────────────────────────────────────────────────
@@ -45,7 +45,8 @@ document.addEventListener("sc:ready", function () {
     )
       .then((data) => {
         const reqs = Array.isArray(data) ? data : data.solicitacoes || [];
-        dbSet(KEYS.REQUESTS, reqs);
+        const normalized = reqs.map(normalizeRequestRow);
+        dbSet(KEYS.REQUESTS, normalized);
         render();
       })
       .catch(() => {
@@ -67,17 +68,12 @@ document.addEventListener("sc:ready", function () {
     sortDir: "desc",
     filtered: [],
     editId: null,
-    selectedItem: null,
-    reviewId: null,
-    reviewAction: null,
+    detailId: null,
   };
 
-  // ── DOM refs ──────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const $$ = (s) => document.querySelectorAll(s);
 
-  const reqBody = $("reqBody");
-  const reqPagination = $("reqPagination");
   const reqEmptyAll = $("reqEmptyAll");
   const reqEmptyFiltered = $("reqEmptyFiltered");
   const reqSearch = $("reqSearch");
@@ -86,6 +82,7 @@ document.addEventListener("sc:ready", function () {
   const reqDateFrom = $("reqDateFrom");
   const reqDateTo = $("reqDateTo");
   const reqPerPage = $("reqPerPage");
+  const reqBody = $("reqBody");
 
   const kpiTotal = $("kpiTotal");
   const kpiPending = $("kpiPending");
@@ -106,9 +103,12 @@ document.addEventListener("sc:ready", function () {
   const reqUrgency = $("reqUrgency");
   const reqJustification = $("reqJustification");
   const reqNeededBy = $("reqNeededBy");
+  const btnAddReqItem = $("btnAddReqItem");
+  const reqItemsList = $("reqItemsList");
   const btnSaveRequest = $("btnSaveRequest");
   const reqEditId = $("reqEditId");
   const reqFormErr = $("reqFormErr");
+  const btnDetailEditRequest = $("btnDetailEditRequest");
 
   // modal: review
   const reviewSummary = $("reviewSummary");
@@ -210,22 +210,30 @@ document.addEventListener("sc:ready", function () {
     switch (r.status) {
       case "pendente":
         return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("approve", "Aprovar", "#16a34a", svgCheck) +
           b("reject", "Recusar", "#dc2626", svgX) +
-          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("edit", "Editar", "inherit", svgEdit) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "aprovada":
         return (
-          b("complete", "Concluir", "#2563eb", svgCircleCheck) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
+          b("complete", "Concluir", "#2563eb", svgCircleCheck) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "recusada":
+        return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
+          b("reopen", "Reabrir", "#64748b", svgRefresh) +
+          b("delete", "Excluir", "#dc2626", svgTrash)
+        );
       case "cancelada":
         return (
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
           b("reopen", "Reabrir", "#64748b", svgRefresh) +
           b("delete", "Excluir", "#dc2626", svgTrash)
         );
@@ -245,6 +253,33 @@ document.addEventListener("sc:ready", function () {
     } catch {
       return "Admin";
     }
+  }
+
+  function currentUser() {
+    try {
+      const raw =
+        localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function requestPayloadFromLocal(req) {
+    const user = currentUser();
+    return {
+      id: req.id,
+      organization_id: user.organization_id,
+      tipo: req.tipo || null,
+      item: req.nome_item || req.patrimonio || req.tipo || "",
+      quantidade: req.quantidade || 1,
+      solicitante: req.solicitante || currentUserName(),
+      email: user.email || null,
+      status: req.status || "pendente",
+      prioridade: req.urgencia || "media",
+      data_solicitacao: req.necessario_ate || null,
+      obs: req.justificativa || "",
+    };
   }
 
   // ── Date filtering ────────────────────────────────────────────────────────
@@ -371,15 +406,25 @@ document.addEventListener("sc:ready", function () {
         const color = avatarColor(r.solicitante);
         const rowCls = r.urgencia === "urgente" ? "row-urg" : "";
         const dateStr = SC.fmtDateTime(r.created_at);
+        const itemLabel =
+          r.items && r.items.length > 1
+            ? `${esc(r.items[0].nome_item)} +${r.items.length - 1} itens`
+            : esc(r.nome_item);
+        const totalQty = r.items
+          ? r.items.reduce(
+              (sum, it) => sum + (parseInt(it.quantidade, 10) || 0),
+              0,
+            )
+          : r.quantidade;
 
         return `
         <tr class="${rowCls}" data-id="${r.id}" style="cursor:pointer; animation:fadeIn .2s ease-out;">
           <td style="white-space:nowrap; font-size:.8125rem; color:var(--color-text-secondary);">${esc(dateStr)}</td>
           <td>
-            <div style="font-weight:500; font-size:.875rem; color:var(--color-text-primary);">${highlight(r.nome_item, q)}</div>
+            <div style="font-weight:500; font-size:.875rem; color:var(--color-text-primary);">${highlight(itemLabel, q)}</div>
             <div style="font-size:.8125rem; color:var(--color-text-muted);">${esc(r.patrimonio || "")}</div>
           </td>
-          <td style="text-align:center; font-weight:600; font-size:.875rem;">${r.quantidade} <span style="font-weight:400; color:var(--color-text-muted); font-size:.75rem;">un.</span></td>
+          <td style="text-align:center; font-weight:600; font-size:.875rem;">${totalQty} <span style="font-weight:400; color:var(--color-text-muted); font-size:.75rem;">un.</span></td>
           <td>
             <div style="display:flex; align-items:center; gap:var(--space-2);">
               <div class="req-av" style="background:${color};">${esc(ini)}</div>
@@ -603,11 +648,23 @@ document.addEventListener("sc:ready", function () {
           reqItemSearch.focus();
         }
         if (reqQtyHint) reqQtyHint.textContent = "Disponível: —";
+        if (btnAddReqItem) btnAddReqItem.style.display = "none";
       });
+
+    btnAddReqItem &&
+      btnAddReqItem.addEventListener("click", addCurrentItemToList);
 
     reqQty &&
       reqQty.addEventListener("input", () => {
         if ($("errReqQty")) $("errReqQty").style.display = "none";
+      });
+
+    btnDetailEditRequest &&
+      btnDetailEditRequest.addEventListener("click", () => {
+        if (state.detailId) {
+          SC.closeModal("modalDetail");
+          openEdit(state.detailId);
+        }
       });
 
     btnSaveRequest && btnSaveRequest.addEventListener("click", saveRequest);
@@ -616,6 +673,7 @@ document.addEventListener("sc:ready", function () {
   function openNew() {
     state.editId = null;
     state.selectedItem = null;
+    state.selectedItems = [];
     resetReqForm();
     if ($("modalReqTitle")) $("modalReqTitle").textContent = "Nova Solicitação";
     if (btnSaveRequest) btnSaveRequest.textContent = "Enviar Solicitação";
@@ -635,19 +693,17 @@ document.addEventListener("sc:ready", function () {
     if (btnSaveRequest) btnSaveRequest.textContent = "Salvar Alterações";
     if (reqEditId) reqEditId.value = id;
 
-    // pre-select item
-    state.selectedItem = {
-      id: r.item_id,
-      nome: r.nome_item,
-      patrimonio: r.patrimonio,
-      disponivel: null,
-    };
-    if (reqChipName) reqChipName.textContent = r.nome_item;
-    if (reqChipMeta) reqChipMeta.textContent = r.patrimonio;
-    if (reqItemChip) reqItemChip.style.display = "flex";
-    if (reqItemSearchWrap) reqItemSearchWrap.style.display = "none";
+    state.selectedItem = null;
+    state.selectedItems =
+      r.items && Array.isArray(r.items)
+        ? r.items.slice()
+        : parseRequestItems(r);
+    renderSelectedItems();
+    if (reqItemChip) reqItemChip.style.display = "none";
+    if (reqItemSearchWrap) reqItemSearchWrap.style.display = "";
+    if (btnAddReqItem) btnAddReqItem.style.display = "none";
 
-    if (reqQty) reqQty.value = r.quantidade;
+    if (reqQty) reqQty.value = "1";
     if (reqUrgency) reqUrgency.value = r.urgencia;
     if (reqJustification) reqJustification.value = r.justificativa;
     if (reqNeededBy) reqNeededBy.value = r.necessario_ate || "";
@@ -657,6 +713,7 @@ document.addEventListener("sc:ready", function () {
 
   function resetReqForm() {
     state.selectedItem = null;
+    state.selectedItems = [];
     if (reqEditId) reqEditId.value = "";
     if (reqItemSearch) reqItemSearch.value = "";
     if (reqItemDrop) {
@@ -665,6 +722,11 @@ document.addEventListener("sc:ready", function () {
     }
     if (reqItemChip) reqItemChip.style.display = "none";
     if (reqItemSearchWrap) reqItemSearchWrap.style.display = "";
+    if (btnAddReqItem) btnAddReqItem.style.display = "none";
+    if (reqItemsList) {
+      reqItemsList.innerHTML = "";
+      reqItemsList.style.display = "none";
+    }
     if (reqQty) reqQty.value = "1";
     if (reqQtyHint) reqQtyHint.textContent = "Disponível: —";
     if (reqUrgency) reqUrgency.value = "media";
@@ -696,7 +758,9 @@ document.addEventListener("sc:ready", function () {
 
     reqItemDrop.querySelectorAll(".req-drop-row[data-id]").forEach((row) => {
       row.addEventListener("click", () => {
-        const found = items.find((i) => String(i.id) === String(row.dataset.id));
+        const found = items.find(
+          (i) => String(i.id) === String(row.dataset.id),
+        );
         if (found) selectItem(found);
       });
     });
@@ -711,11 +775,162 @@ document.addEventListener("sc:ready", function () {
       reqQtyHint.textContent = `Disponível: ${item.disponivel ?? "?"}`;
     if (reqItemChip) reqItemChip.style.display = "flex";
     if (reqItemSearchWrap) reqItemSearchWrap.style.display = "none";
+    if (btnAddReqItem) btnAddReqItem.style.display = "inline-flex";
     if (reqItemDrop) {
       reqItemDrop.innerHTML = "";
       reqItemDrop.classList.remove("is-open");
     }
     if ($("errReqItem")) $("errReqItem").style.display = "none";
+    renderSelectedItems();
+  }
+
+  function parseRequestItems(row) {
+    if (Array.isArray(row.items)) return row.items;
+    if (typeof row.items === "string") {
+      try {
+        const parsed = JSON.parse(row.items);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // ignore
+      }
+    }
+
+    return [
+      {
+        item_id: row.item_id || null,
+        nome_item: row.nome_item || row.item || row.tipo || "–",
+        patrimonio: row.patrimonio || "",
+        quantidade: row.quantidade != null ? row.quantidade : 1,
+        disponivel:
+          row.disponivel ??
+          row.quantity_available ??
+          row.quantity ??
+          row.total ??
+          0,
+      },
+    ];
+  }
+
+  function summarizeRequestItems(items) {
+    const allQty = items.reduce(
+      (sum, it) => sum + (parseInt(it.quantidade, 10) || 0),
+      0,
+    );
+    if (items.length === 1) {
+      return {
+        nome_item: items[0].nome_item,
+        patrimonio: items[0].patrimonio || "",
+        quantidade: allQty,
+      };
+    }
+    return {
+      nome_item: `${items[0].nome_item} +${items.length - 1} itens`,
+      patrimonio: items[0].patrimonio
+        ? `${items[0].patrimonio} +${items.length - 1}`
+        : `+${items.length - 1} itens`,
+      quantidade: allQty,
+    };
+  }
+
+  function normalizeRequestRow(row) {
+    const items = parseRequestItems(row);
+    const summary = summarizeRequestItems(items);
+
+    return {
+      id: row.id,
+      item_id: row.item_id || null,
+      nome_item: summary.nome_item,
+      patrimonio: summary.patrimonio,
+      quantidade: summary.quantidade,
+      items,
+      urgencia: row.urgencia || row.prioridade || "media",
+      status: row.status || "pendente",
+      solicitante: row.solicitante || row.email || "Usuário",
+      setor: row.setor || "",
+      justificativa: row.justificativa || row.obs || "",
+      necessario_ate: row.necessario_ate || row.data_solicitacao || null,
+      created_at: row.created_at || new Date().toISOString(),
+      revisao: row.revisao || row.data_revisao || null,
+      revisor: row.revisor || null,
+    };
+  }
+
+  function renderSelectedItems() {
+    if (!reqItemsList) return;
+    if (!state.selectedItems || !state.selectedItems.length) {
+      reqItemsList.innerHTML = "";
+      reqItemsList.style.display = "none";
+      return;
+    }
+    reqItemsList.style.display = "flex";
+    reqItemsList.innerHTML = state.selectedItems
+      .map(
+        (item, idx) => `
+          <div class="req-selected-item" style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); padding:var(--space-2) var(--space-3); background:var(--color-surface-alt); border:1px solid var(--color-border); border-radius:var(--radius-sm);">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; color:var(--color-text-primary);">${esc(item.nome_item)}</div>
+              <div style="font-size:.8125rem; color:var(--color-text-muted);">${esc(item.patrimonio || "")} · ${item.quantidade} unidade(s) · Disponível: ${item.disponivel ?? "?"}</div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" data-req-item-remove="${idx}">Remover</button>
+          </div>
+        `,
+      )
+      .join("");
+    reqItemsList.querySelectorAll("[data-req-item-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.reqItemRemove);
+        if (!Number.isNaN(idx) && state.selectedItems[idx]) {
+          state.selectedItems.splice(idx, 1);
+          renderSelectedItems();
+        }
+      });
+    });
+  }
+
+  function addCurrentItemToList() {
+    if (!state.selectedItem) {
+      if ($("errReqItem")) {
+        $("errReqItem").textContent = "Selecione um item.";
+        $("errReqItem").style.display = "";
+      }
+      return;
+    }
+    const qty = parseInt(reqQty ? reqQty.value : "0", 10) || 0;
+    const available =
+      state.selectedItem.disponivel ??
+      state.selectedItem.quantity_available ??
+      state.selectedItem.quantity ??
+      state.selectedItem.total ??
+      0;
+    if (qty < 1 || qty > available) {
+      if ($("errReqQty")) {
+        $("errReqQty").textContent =
+          `Quantidade inválida. Disponível: ${available}`;
+        $("errReqQty").style.display = "";
+      }
+      return;
+    }
+    const existing = state.selectedItems.find(
+      (it) => it.item_id === state.selectedItem.id,
+    );
+    if (existing) {
+      existing.quantidade = Math.min(existing.quantidade + qty, available);
+    } else {
+      state.selectedItems.push({
+        item_id: state.selectedItem.id,
+        nome_item: state.selectedItem.nome,
+        patrimonio: state.selectedItem.patrimonio || "",
+        quantidade: qty,
+        disponivel: available,
+      });
+    }
+    if (reqQty) reqQty.value = "1";
+    state.selectedItem = null;
+    if (reqItemChip) reqItemChip.style.display = "none";
+    if (reqItemSearchWrap) reqItemSearchWrap.style.display = "";
+    if (reqItemSearch) reqItemSearch.value = "";
+    if (btnAddReqItem) btnAddReqItem.style.display = "none";
+    renderSelectedItems();
   }
 
   function saveRequest() {
@@ -729,61 +944,150 @@ document.addEventListener("sc:ready", function () {
       ok = false;
     };
 
-    if (!state.selectedItem) showErr("errReqItem", "Selecione um item.");
-    const qty = parseInt(reqQty ? reqQty.value : 0);
-    if (!qty || qty < 1) showErr("errReqQty", "Quantidade inválida.");
+    const qty = parseInt(reqQty ? reqQty.value : "0", 10) || 0;
     const just = reqJustification ? reqJustification.value.trim() : "";
+    const selectedItems = Array.isArray(state.selectedItems)
+      ? state.selectedItems.slice()
+      : [];
+    const currentItem = state.selectedItem;
+    const hasCurrent = !!currentItem;
+    const currentAvailable = hasCurrent
+      ? (currentItem.disponivel ??
+        currentItem.quantity_available ??
+        currentItem.quantity ??
+        currentItem.total ??
+        0)
+      : 0;
+
+    if (!hasCurrent && !selectedItems.length) {
+      showErr("errReqItem", "Selecione ao menos um item.");
+    }
+    if (hasCurrent && (!qty || qty < 1 || qty > currentAvailable)) {
+      showErr(
+        "errReqQty",
+        `Quantidade inválida. Disponível: ${currentAvailable}`,
+      );
+    }
     if (!just) showErr("errReqJustification", "Justificativa é obrigatória.");
     if (!ok) return;
 
+    if (hasCurrent) {
+      const existing = selectedItems.find(
+        (it) => it.item_id === currentItem.id,
+      );
+      if (existing) {
+        existing.quantidade = Math.min(
+          existing.quantidade + qty,
+          currentAvailable,
+        );
+      } else {
+        selectedItems.push({
+          item_id: currentItem.id,
+          nome_item: currentItem.nome,
+          patrimonio: currentItem.patrimonio || "",
+          quantidade: qty,
+          disponivel: currentAvailable,
+        });
+      }
+    }
+
+    if (!selectedItems.length) {
+      showErr("errReqItem", "Selecione ao menos um item.");
+      return;
+    }
+
+    const requestSummary = summarizeRequestItems(selectedItems);
     const reqs = dbGet(KEYS.REQUESTS);
-    const user = currentUserName();
+    const user = currentUser();
+    const userName = currentUserName();
 
     if (state.editId) {
       const idx = reqs.findIndex((r) => r.id === state.editId);
       if (idx !== -1) {
-        reqs[idx] = {
-          ...reqs[idx],
-          item_id: state.selectedItem.id,
-          nome_item: state.selectedItem.nome,
-          patrimonio: state.selectedItem.patrimonio || "",
-          quantidade: qty,
-          urgencia: reqUrgency ? reqUrgency.value : "media",
+        const existing = reqs[idx];
+        const updated = {
+          ...existing,
+          items: selectedItems,
+          item_id: selectedItems[0]?.item_id || existing.item_id,
+          nome_item: requestSummary.nome_item,
+          patrimonio: requestSummary.patrimonio,
+          quantidade: requestSummary.quantidade,
+          urgencia: reqUrgency
+            ? reqUrgency.value
+            : existing.urgencia || "media",
           justificativa: just,
-          necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
+          necessario_ate: reqNeededBy
+            ? reqNeededBy.value || null
+            : existing.necessario_ate || null,
         };
+
+        const requiresReapproval =
+          existing.status === "aprovada" || existing.status === "recusada";
+        if (requiresReapproval) {
+          updated.status = "pendente";
+          updated.revisor = null;
+          updated.revisao = null;
+        }
+
+        reqs[idx] = updated;
         dbSet(KEYS.REQUESTS, reqs);
-        _solApi("PUT", `/api/solicitacoes/${state.editId}`, reqs[idx]).catch(
-          () => {},
-        );
+        if (user.organization_id) {
+          _solApi(
+            "PUT",
+            `/api/solicitacoes/${state.editId}`,
+            requestPayloadFromLocal(updated),
+          ).catch(() => {});
+        }
         SC.closeModal("modalNewRequest");
-        SC.toastSuccess("Solicitação atualizada.");
+        SC.toastSuccess(
+          requiresReapproval
+            ? "Solicitação modificada e retornou para pendente, aguardando nova revisão."
+            : "Solicitação atualizada.",
+        );
         render();
       }
-    } else {
-      const newReq = {
-        id: "req_" + Date.now(),
-        item_id: state.selectedItem.id,
-        nome_item: state.selectedItem.nome,
-        patrimonio: state.selectedItem.patrimonio || "",
-        quantidade: qty,
-        urgencia: reqUrgency ? reqUrgency.value : "media",
-        status: "pendente",
-        solicitante: user,
-        setor: "—",
-        justificativa: just,
-        necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
-        created_at: new Date().toISOString(),
-        revisao: null,
-        revisor: null,
-      };
-      reqs.unshift(newReq);
-      dbSet(KEYS.REQUESTS, reqs);
-      _solApi("POST", "/api/solicitacoes", newReq).catch(() => {});
-      SC.closeModal("modalNewRequest");
-      SC.toastSuccess("Solicitação enviada com sucesso!");
-      render();
+      return;
     }
+
+    // Salva todos os patrimônios e item_ids (arrays) para uso no log de auditoria
+    const allPatrimonios = selectedItems
+      .map((it) => it.patrimonio)
+      .filter(Boolean);
+    const allItemIds = selectedItems.map((it) => it.item_id).filter(Boolean);
+    const newReq = {
+      id: `req_${Date.now()}`,
+      items: selectedItems,
+      item_id:
+        selectedItems.length === 1 ? selectedItems[0].item_id : allItemIds,
+      nome_item: requestSummary.nome_item,
+      patrimonio:
+        selectedItems.length === 1
+          ? selectedItems[0].patrimonio
+          : allPatrimonios,
+      quantidade: requestSummary.quantidade,
+      urgencia: reqUrgency ? reqUrgency.value : "media",
+      status: "pendente",
+      solicitante: userName,
+      setor: "—",
+      justificativa: just,
+      necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
+      created_at: new Date().toISOString(),
+      revisao: null,
+      revisor: null,
+    };
+
+    reqs.unshift(newReq);
+    dbSet(KEYS.REQUESTS, reqs);
+    if (user.organization_id) {
+      _solApi(
+        "POST",
+        "/api/solicitacoes",
+        requestPayloadFromLocal(newReq),
+      ).catch(() => {});
+    }
+    SC.closeModal("modalNewRequest");
+    SC.toastSuccess("Solicitação enviada com sucesso!");
+    render();
   }
 
   // ── Review modal (Approve / Reject) ───────────────────────────────────────
@@ -851,8 +1155,9 @@ document.addEventListener("sc:ready", function () {
     reqs[idx].revisor = currentUserName();
     dbSet(KEYS.REQUESTS, reqs);
     _solApi("PATCH", `/api/solicitacoes/${state.reviewId}/revisar`, {
-      action,
-      revisao: comment,
+      status: reqs[idx].status,
+      revisor: reqs[idx].revisor,
+      obs: comment,
     }).catch(() => {});
 
     SC.closeModal("modalReview");
@@ -966,7 +1271,29 @@ document.addEventListener("sc:ready", function () {
 
     const color = avatarColor(r.solicitante);
     const ini = initials(r.solicitante);
+    const itemDetails =
+      r.items && Array.isArray(r.items) && r.items.length > 0
+        ? `
+        <div style="grid-column:1/-1;">
+          <dt style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-muted); margin-bottom:3px;">Itens</dt>
+          <dd style="margin:0; font-size:.875rem;">
+            <ul style="margin:0; padding-left:1rem; color:var(--color-text-secondary);">
+              ${r.items
+                .map(
+                  (it) => `
+                    <li style="margin-bottom:.35rem;">
+                      <strong>${esc(it.nome_item)}</strong> ${esc(it.patrimonio || "")} — ${parseInt(it.quantidade, 10) || 0} un.
+                    </li>
+                  `,
+                )
+                .join("")}
+            </ul>
+          </dd>
+        </div>
+      `
+        : "";
 
+    state.detailId = id;
     modalDetailBody.innerHTML = `
       <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5);">
         ${staBadge(r.status)}
@@ -991,10 +1318,15 @@ document.addEventListener("sc:ready", function () {
         )}
         ${r.necessario_ate ? dt("Necessário até", SC.fmtDate(r.necessario_ate)) : ""}
         <div style="grid-column:1/-1;">${dt("Justificativa", `<em style="color:var(--color-text-secondary);">"${esc(r.justificativa)}"</em>`)}</div>
+        ${itemDetails}
         ${r.revisor ? dt("Revisado por", esc(r.revisor)) : ""}
         ${r.revisao ? `<div style="grid-column:1/-1;">${dt("Comentário da revisão", `<em style="color:var(--color-text-secondary);">"${esc(r.revisao)}"</em>`)}</div>` : ""}
       </dl>`;
 
+    if (btnDetailEditRequest) {
+      btnDetailEditRequest.style.display =
+        r.status !== "concluida" ? "inline-flex" : "none";
+    }
     SC.openModal("modalDetail");
   }
 
@@ -1006,4 +1338,10 @@ document.addEventListener("sc:ready", function () {
   wireNewModal();
   wireReviewModal();
   render();
-});
+}
+
+if (window.SC && window.SC.ready) {
+  initSolicitacoes();
+} else {
+  document.addEventListener("sc:ready", initSolicitacoes);
+}

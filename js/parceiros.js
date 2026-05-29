@@ -115,10 +115,10 @@
   function savePartners(list) { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
 
   function getMovements() {
-    try { return JSON.parse(localStorage.getItem(MOVS_KEY) || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(SC.storageKey(MOVS_KEY)) || "[]") || []; } catch { return []; }
   }
   function getItems() {
-    try { return JSON.parse(localStorage.getItem(ITEMS_KEY) || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(SC.storageKey(ITEMS_KEY)) || "[]") || []; } catch { return []; }
   }
 
   function addAuditLog(acao, tipo, entidadeId) {
@@ -669,7 +669,7 @@
   // ── Notification badge ────────────────────────────────────────────────────
   function updateNotifBadge() {
     try {
-      const notifs = JSON.parse(localStorage.getItem(NOTIF_KEY) || "[]");
+      const notifs = JSON.parse(localStorage.getItem(SC.storageKey(NOTIF_KEY)) || "[]");
       const unread = notifs.filter(n => !n.lida && !n.arquivada).length;
       const badge  = document.getElementById("notifBadge");
       if (badge) {

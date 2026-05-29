@@ -3,6 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function() {
+      try {
+        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
+        var theme = 'light';
+        if (rawUser) {
+          var user = JSON.parse(rawUser);
+          var orgId = user && user.organization_id;
+          if (orgId) {
+            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
+            if (rawPrefs) {
+              theme = JSON.parse(rawPrefs).tema || theme;
+            }
+          }
+        }
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+        }
+        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
+        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
+        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
+      } catch (error) {}
+    })();
+  </script>
   <title>Configurações — StockControl</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -118,7 +142,7 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="profileEmail">E-mail</label>
-                    <input type="email" id="profileEmail" class="form-control" placeholder="seu@email.com" />
+                    <input type="email" id="profileEmail" class="form-control" placeholder="seu@email.com" readonly />
                   </div>
                 </div>
 
@@ -209,7 +233,7 @@
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label" for="orgEmail">E-mail institucional</label>
-                    <input type="email" id="orgEmail" class="form-control" placeholder="contato@org.com" />
+                    <input type="email" id="orgEmail" class="form-control" placeholder="contato@org.com" readonly />
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="orgPhone">Telefone</label>
@@ -282,7 +306,7 @@
           <div class="settings-panel" id="panel-usuarios">
 
             <div class="settings-section">
-              <div class="settings-section-body" style="padding-bottom:0;">
+              <div class="settings-section-body" style="padding: bottom 5px;;">
                 <div style="display:flex;gap:var(--space-3);align-items:center;">
                   <input type="search" id="buscaUsuarios" class="form-control"
                     placeholder="Buscar por nome ou e-mail…" style="flex:1;"

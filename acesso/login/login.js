@@ -139,6 +139,7 @@
         const storage = document.getElementById("rememberMe").checked
           ? localStorage
           : sessionStorage;
+
         storage.setItem("sc_token", data.token);
         storage.setItem("sc_user", JSON.stringify(data.user ?? {}));
 
@@ -188,6 +189,10 @@
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ email: data.email || emailVal }),
                 });
+                window.location.href =
+                  "/cadastro.html?verify=1&email=" +
+                  encodeURIComponent(data.email || emailVal);
+                return;
               } catch {
                 /* silencia */
               }
