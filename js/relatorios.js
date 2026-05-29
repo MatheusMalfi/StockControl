@@ -119,12 +119,44 @@ document.addEventListener("sc:ready", function () {
       localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token")
     );
   }
+  function _relOrgId() {
+    try {
+      const raw =
+        localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user");
+      const user = raw ? JSON.parse(raw) : {};
+      return (
+        user.organization_id || user.organizationId || user.org || user.orgId || ""
+      );
+    } catch {
+      return "";
+    }
+  }
   function _relApi(params) {
     const token = _relToken();
-    const qs = new URLSearchParams(params).toString();
+    const orgId = _relOrgId();
+    const qs = new URLSearchParams({ ...params, organization_id: orgId }).toString();
     return fetch(`/api/relatorios?${qs}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+  }
+
+  function normalizeItemFromServer(it) {
+    return {
+      id: String(it.id),
+      nome: it.product_name || it.nome || "",
+      patrimonio: it.serial_number || it.patrimonio || "",
+      categoria: it.category_name || it.categoria || "",
+      condicao: (it.condition_code || it.condicao || "").toLowerCase(),
+      total: it.quantity ?? it.total ?? 0,
+      disponivel: it.quantity_available ?? it.disponivel ?? 0,
+      localizacao: it.localizacao || "",
+      responsavel: it.responsavel || "",
+      valor: it.estimated_value ?? it.valor ?? 0,
+      dataAquisicao:
+        it.dataAquisicao ||
+        (it.created_at ? it.created_at.slice(0, 10) : ""),
+      created_at: it.created_at || new Date().toISOString(),
+    };
   }
 
   // ── Seed data if missing ──────────────────────────────────────────────────
@@ -511,12 +543,25 @@ document.addEventListener("sc:ready", function () {
 
     _relApi({ tipo: state.reportType, from, to, cond, cat, movType })
       .then((data) => {
-        if (data.items?.length) dbSet(KEYS.ITEMS, data.items);
-        if (data.movements?.length) {
+        if (!Array.isArray(data.dados) || !data.dados.length) return;
+        if (data.tipo === "estoque" || data.tipo === "condicao") {
+          dbSet(KEYS.ITEMS, data.dados.map(normalizeItemFromServer));
+        } else if (data.tipo === "movimentacoes") {
           dbSet(
             KEYS.MOVEMENTS,
-            mergeMovements(dbGet(KEYS.MOVEMENTS), data.movements),
+            mergeMovements(dbGet(KEYS.MOVEMENTS), data.dados),
           );
+        } else if (data.tipo === "descarte") {
+          const existing = dbGet(KEYS.MOVEMENTS);
+          const descartes = data.dados.map((d) => normalizeMovement({
+            id: d.id,
+            item_id: d.item_id,
+            nome_item: d.product_name,
+            tipo: "DESCARTE",
+            quantidade: d.quantity,
+            created_at: d.created_at,
+          }));
+          dbSet(KEYS.MOVEMENTS, mergeMovements(existing, descartes));
         }
       })
       .catch(() => {})
@@ -621,7 +666,7 @@ document.addEventListener("sc:ready", function () {
           dateInRange(m.created_at, from, to) &&
           (!typeFilter || m.tipo === typeFilter),
       )
-      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 
     const entradas = movs.filter((m) => m.tipo === "ENTRADA").length;
     const saidas = movs.filter((m) => m.tipo === "SAIDA").length;
@@ -729,14 +774,14 @@ document.addEventListener("sc:ready", function () {
       bom: "#4ade80",
       reparo: "var(--color-warning)",
       ruim: "#fbbf24",
-      inativo: "var(--color-danger)",
+      descartar: "var(--color-danger)",
     };
     const condCounts = {};
     items.forEach((it) => {
       const k = it.condicao || "desconhecido";
       condCounts[k] = (condCounts[k] || 0) + 1;
     });
-    const ORDER = ["otimo", "bom", "reparo", "ruim", "inativo"];
+    const ORDER = ["otimo", "bom", "reparo", "ruim", "descartar"];
     renderBarChart(
       ORDER.filter((k) => condCounts[k]).map((k) => ({
         label: COND_LABEL[k] || k,
@@ -755,7 +800,7 @@ document.addEventListener("sc:ready", function () {
       { key: "responsavel", label: "Responsável" },
     ];
     setTableHead(cols);
-    const condOrder = { inativo: 0, ruim: 1, reparo: 2, bom: 3, otimo: 4 };
+    const condOrder = { descartar: 0, ruim: 1, reparo: 2, bom: 3, otimo: 4 };
     state.filtered = [...items].sort(
       (a, b) => (condOrder[a.condicao] ?? 5) - (condOrder[b.condicao] ?? 5),
     );
@@ -769,7 +814,7 @@ document.addEventListener("sc:ready", function () {
   function genDoacoes(from, to) {
     const movs = dbGet(KEYS.MOVEMENTS)
       .filter((m) => m.tipo === "DOACAO" && dateInRange(m.created_at, from, to))
-      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 
     const qtdTotal = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
     const itemMap = {};
@@ -810,7 +855,7 @@ document.addEventListener("sc:ready", function () {
     const destCounts = {};
     movs.forEach((m) => {
       const d = m.destino || "Não informado";
-      destCounts[d] = (destCounts[d] || 0) + m.quantidade;
+      destCounts[d] = (destCounts[d] || 0) + (m.quantidade || 0);
     });
     renderBarChart(
       Object.entries(destCounts)
@@ -842,7 +887,7 @@ document.addEventListener("sc:ready", function () {
       .filter(
         (m) => m.tipo === "DESCARTE" && dateInRange(m.created_at, from, to),
       )
-      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 
     const qtdTotal = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
     const itemsDiscard = dbGet(KEYS.ITEMS).filter((it) =>
@@ -979,7 +1024,7 @@ document.addEventListener("sc:ready", function () {
         detalhes,
       });
     });
-    rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    rows.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 
     const movCount = rows.filter((r) => r.tipo === "MOVIMENTACAO").length;
     const reqCount = rows.filter((r) => r.tipo === "SOLICITACAO").length;
