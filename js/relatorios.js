@@ -94,6 +94,24 @@ document.addEventListener("sc:ready", function () {
     };
   }
 
+  function normalizeLocalItem(it) {
+    return {
+      id: it.id,
+      nome: it.nome || it.product_name || "—",
+      patrimonio: it.patrimonio || it.serial_number || "",
+      categoria: it.categoria || it.category_name || "",
+      condicao: (it.condicao || it.condition_code || "").toLowerCase() || "otimo",
+      total: it.total ?? it.quantity ?? 0,
+      disponivel: it.disponivel ?? it.quantity_available ?? 0,
+      localizacao: it.localizacao || "",
+      responsavel: it.responsavel || "",
+      valor: it.valor ?? it.estimated_value ?? 0,
+      dataAquisicao:
+        it.dataAquisicao || (it.created_at ? it.created_at.slice(0, 10) : ""),
+      created_at: it.created_at || "",
+    };
+  }
+
   function mergeMovements(localMovs, serverMovs) {
     const map = new Map();
     const deleted = new Set(
@@ -591,7 +609,7 @@ document.addEventListener("sc:ready", function () {
 
   // ── Report: Inventário Geral ──────────────────────────────────────────────
   function genEstoque(from, to, condFilter, catFilter) {
-    const items = dbGet(KEYS.ITEMS).filter(
+    const items = dbGet(KEYS.ITEMS).map(normalizeLocalItem).filter(
       (it) =>
         dateInRange(it.dataAquisicao, from, to) &&
         matchCondFilter(it.condicao, condFilter) &&
@@ -661,6 +679,7 @@ document.addEventListener("sc:ready", function () {
   // ── Report: Movimentações ─────────────────────────────────────────────────
   function genMovimentacoes(from, to, typeFilter) {
     const movs = dbGet(KEYS.MOVEMENTS)
+      .map(normalizeMovement)
       .filter(
         (m) =>
           dateInRange(m.created_at, from, to) &&
@@ -738,7 +757,7 @@ document.addEventListener("sc:ready", function () {
 
   // ── Report: Estado dos Itens ──────────────────────────────────────────────
   function genCondicao(catFilter) {
-    const items = dbGet(KEYS.ITEMS).filter(
+    const items = dbGet(KEYS.ITEMS).map(normalizeLocalItem).filter(
       (it) => !catFilter || it.categoria === catFilter,
     );
 
@@ -813,12 +832,13 @@ document.addEventListener("sc:ready", function () {
   // ── Report: Doações e Impacto ─────────────────────────────────────────────
   function genDoacoes(from, to) {
     const movs = dbGet(KEYS.MOVEMENTS)
+      .map(normalizeMovement)
       .filter((m) => m.tipo === "DOACAO" && dateInRange(m.created_at, from, to))
       .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 
     const qtdTotal = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
     const itemMap = {};
-    dbGet(KEYS.ITEMS).forEach((it) => {
+    dbGet(KEYS.ITEMS).map(normalizeLocalItem).forEach((it) => {
       itemMap[it.id] = it;
     });
     const valorEst = movs.reduce((s, m) => {
@@ -884,13 +904,14 @@ document.addEventListener("sc:ready", function () {
   // ── Report: Descartes e Reciclagem ────────────────────────────────────────
   function genDescarte(from, to) {
     const movs = dbGet(KEYS.MOVEMENTS)
+      .map(normalizeMovement)
       .filter(
         (m) => m.tipo === "DESCARTE" && dateInRange(m.created_at, from, to),
       )
       .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 
     const qtdTotal = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
-    const itemsDiscard = dbGet(KEYS.ITEMS).filter((it) =>
+    const itemsDiscard = dbGet(KEYS.ITEMS).map(normalizeLocalItem).filter((it) =>
       isDiscard(it.condicao),
     ).length;
 
@@ -946,7 +967,7 @@ document.addEventListener("sc:ready", function () {
 
   // ── Report: Log de Auditoria ──────────────────────────────────────────────
   function genAuditoria(from, to) {
-    const movs = dbGet(KEYS.MOVEMENTS).filter((m) =>
+    const movs = dbGet(KEYS.MOVEMENTS).map(normalizeMovement).filter((m) =>
       dateInRange(m.created_at, from, to),
     );
     const reqs = dbGet(KEYS.REQUESTS).filter((r) =>
