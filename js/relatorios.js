@@ -100,7 +100,8 @@ document.addEventListener("sc:ready", function () {
       nome: it.nome || it.product_name || "—",
       patrimonio: it.patrimonio || it.serial_number || "",
       categoria: it.categoria || it.category_name || "",
-      condicao: (it.condicao || it.condition_code || "").toLowerCase() || "otimo",
+      condicao:
+        (it.condicao || it.condition_code || "").toLowerCase() || "otimo",
       total: it.total ?? it.quantity ?? 0,
       disponivel: it.disponivel ?? it.quantity_available ?? 0,
       localizacao: it.localizacao || "",
@@ -143,7 +144,11 @@ document.addEventListener("sc:ready", function () {
         localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user");
       const user = raw ? JSON.parse(raw) : {};
       return (
-        user.organization_id || user.organizationId || user.org || user.orgId || ""
+        user.organization_id ||
+        user.organizationId ||
+        user.org ||
+        user.orgId ||
+        ""
       );
     } catch {
       return "";
@@ -152,7 +157,10 @@ document.addEventListener("sc:ready", function () {
   function _relApi(params) {
     const token = _relToken();
     const orgId = _relOrgId();
-    const qs = new URLSearchParams({ ...params, organization_id: orgId }).toString();
+    const qs = new URLSearchParams({
+      ...params,
+      organization_id: orgId,
+    }).toString();
     return fetch(`/api/relatorios?${qs}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
@@ -171,8 +179,7 @@ document.addEventListener("sc:ready", function () {
       responsavel: it.responsavel || "",
       valor: it.estimated_value ?? it.valor ?? 0,
       dataAquisicao:
-        it.dataAquisicao ||
-        (it.created_at ? it.created_at.slice(0, 10) : ""),
+        it.dataAquisicao || (it.created_at ? it.created_at.slice(0, 10) : ""),
       created_at: it.created_at || new Date().toISOString(),
     };
   }
@@ -330,6 +337,8 @@ document.addEventListener("sc:ready", function () {
     });
     dbSet(KEYS.MOVEMENTS, movs);
   }
+
+  init();
 
   // ── Report config ──────────────────────────────────────────────────────────
   const REPORT_CFG = {
@@ -571,14 +580,16 @@ document.addEventListener("sc:ready", function () {
           );
         } else if (data.tipo === "descarte") {
           const existing = dbGet(KEYS.MOVEMENTS);
-          const descartes = data.dados.map((d) => normalizeMovement({
-            id: d.id,
-            item_id: d.item_id,
-            nome_item: d.product_name,
-            tipo: "DESCARTE",
-            quantidade: d.quantity,
-            created_at: d.created_at,
-          }));
+          const descartes = data.dados.map((d) =>
+            normalizeMovement({
+              id: d.id,
+              item_id: d.item_id,
+              nome_item: d.product_name,
+              tipo: "DESCARTE",
+              quantidade: d.quantity,
+              created_at: d.created_at,
+            }),
+          );
           dbSet(KEYS.MOVEMENTS, mergeMovements(existing, descartes));
         }
       })
@@ -609,12 +620,14 @@ document.addEventListener("sc:ready", function () {
 
   // ── Report: Inventário Geral ──────────────────────────────────────────────
   function genEstoque(from, to, condFilter, catFilter) {
-    const items = dbGet(KEYS.ITEMS).map(normalizeLocalItem).filter(
-      (it) =>
-        dateInRange(it.dataAquisicao, from, to) &&
-        matchCondFilter(it.condicao, condFilter) &&
-        (!catFilter || it.categoria === catFilter),
-    );
+    const items = dbGet(KEYS.ITEMS)
+      .map(normalizeLocalItem)
+      .filter(
+        (it) =>
+          dateInRange(it.dataAquisicao, from, to) &&
+          matchCondFilter(it.condicao, condFilter) &&
+          (!catFilter || it.categoria === catFilter),
+      );
 
     const good = items.filter((it) => isGood(it.condicao)).length;
     const repair = items.filter((it) => isRepair(it.condicao)).length;
@@ -757,9 +770,9 @@ document.addEventListener("sc:ready", function () {
 
   // ── Report: Estado dos Itens ──────────────────────────────────────────────
   function genCondicao(catFilter) {
-    const items = dbGet(KEYS.ITEMS).map(normalizeLocalItem).filter(
-      (it) => !catFilter || it.categoria === catFilter,
-    );
+    const items = dbGet(KEYS.ITEMS)
+      .map(normalizeLocalItem)
+      .filter((it) => !catFilter || it.categoria === catFilter);
 
     const good = items.filter((it) => isGood(it.condicao)).length;
     const repair = items.filter((it) => isRepair(it.condicao)).length;
@@ -838,9 +851,11 @@ document.addEventListener("sc:ready", function () {
 
     const qtdTotal = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
     const itemMap = {};
-    dbGet(KEYS.ITEMS).map(normalizeLocalItem).forEach((it) => {
-      itemMap[it.id] = it;
-    });
+    dbGet(KEYS.ITEMS)
+      .map(normalizeLocalItem)
+      .forEach((it) => {
+        itemMap[it.id] = it;
+      });
     const valorEst = movs.reduce((s, m) => {
       const it = itemMap[m.item_id];
       return s + (it ? parseFloat(it.valor || 0) * (m.quantidade || 1) : 0);
@@ -911,9 +926,9 @@ document.addEventListener("sc:ready", function () {
       .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
 
     const qtdTotal = movs.reduce((s, m) => s + (m.quantidade || 0), 0);
-    const itemsDiscard = dbGet(KEYS.ITEMS).map(normalizeLocalItem).filter((it) =>
-      isDiscard(it.condicao),
-    ).length;
+    const itemsDiscard = dbGet(KEYS.ITEMS)
+      .map(normalizeLocalItem)
+      .filter((it) => isDiscard(it.condicao)).length;
 
     setKpi(1, movs.length, "Total de Descartes", "descartes realizados");
     setKpi(
@@ -967,9 +982,9 @@ document.addEventListener("sc:ready", function () {
 
   // ── Report: Log de Auditoria ──────────────────────────────────────────────
   function genAuditoria(from, to) {
-    const movs = dbGet(KEYS.MOVEMENTS).map(normalizeMovement).filter((m) =>
-      dateInRange(m.created_at, from, to),
-    );
+    const movs = dbGet(KEYS.MOVEMENTS)
+      .map(normalizeMovement)
+      .filter((m) => dateInRange(m.created_at, from, to));
     const reqs = dbGet(KEYS.REQUESTS).filter((r) =>
       dateInRange(r.created_at, from, to),
     );
