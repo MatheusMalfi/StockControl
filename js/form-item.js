@@ -1,4 +1,22 @@
-"use strict";
+// ── Máscara BRL para Valor Estimado ─────────────────────────────────────
+function maskBRLInput(input) {
+  if (!input) return;
+  input.addEventListener("input", function () {
+    let v = input.value.replace(/\D/g, "");
+    v = (parseInt(v, 10) || 0).toString();
+    while (v.length < 3) v = "0" + v;
+    let reais = v.slice(0, -2);
+    let centavos = v.slice(-2);
+    reais = reais.replace(/^0+/, "") || "0";
+    reais = reais.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+    input.value = `R$ ${reais},${centavos}`;
+  });
+  input.addEventListener("blur", function () {
+    if (!input.value) input.value = "R$ 0,00";
+  });
+}
+
+("use strict");
 
 (function bootstrap() {
   if (!window.SC || !window.SC.ready) {
@@ -898,6 +916,20 @@
     populateLocations();
     addCharCounter(productName, 200);
     addCharCounter(description, 1000);
+
+    // Aplica máscara BRL ao campo de valor estimado
+    maskBRLInput(estimatedValue);
+
+    // Remove máscara ao enviar o formulário
+    if (form && estimatedValue) {
+      form.addEventListener("submit", function () {
+        if (estimatedValue.value) {
+          estimatedValue.value = estimatedValue.value
+            .replace(/[^\d,]/g, "")
+            .replace(",", ".");
+        }
+      });
+    }
 
     if (IS_EDIT) {
       document.title = "Editar Item — StockControl";
