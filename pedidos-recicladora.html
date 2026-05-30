@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script>
+    (function() {
+      try {
+        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
+        var theme = 'light';
+
+        if (rawUser) {
+          var user = JSON.parse(rawUser);
+          var orgId = user && user.organization_id;
+
+          if (orgId) {
+            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
+
+            if (rawPrefs) {
+              theme = JSON.parse(rawPrefs).tema || theme;
+            }
+          }
+        }
+
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+        }
+
+        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
+        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
+        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
+      } catch (error) {}
+    })();
+  </script>
+
+  <title>Pedidos — JEDA | StockControl</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/styles/main.css" />
+  <link rel="stylesheet" href="/styles/components.css" />
+
+  <style>
+    .recycler-summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .recycler-logo {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .recycler-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .recycler-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+    }
+
+    .recycler-meta {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      margin-top: 3px;
+    }
+
+    .order-title {
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .order-meta {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .order-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .mobile-order-list {
+      display: none;
+    }
+
+    .mobile-order-card {
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-alt);
+    }
+
+    .mobile-order-card + .mobile-order-card {
+      margin-top: var(--space-3);
+    }
+
+    .mobile-order-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .mobile-order-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2);
+    }
+
+    @media (max-width: 760px) {
+      .orders-table-wrapper {
+        display: none;
+      }
+
+      .mobile-order-list {
+        display: block;
+      }
+
+      .page-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+
+      .page-header > div:last-child {
+        width: 100%;
+      }
+
+      .page-header .btn {
+        width: 100%;
+      }
+
+      .recycler-summary {
+        align-items: flex-start;
+      }
+
+      .mobile-order-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="page-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Pedidos</h1>
+        <p class="page-subtitle">Pedidos pendentes de coleta da JEDA</p>
+      </div>
+
+      <div style="display:flex; gap:var(--space-2);">
+        <button class="btn btn-secondary" onclick="window.location.href='tela1-inicio.html'" type="button">
+          Voltar
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:var(--space-5);">
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">ONG</h2>
+          <span class="badge badge-danger">2 pedidos</span>
+        </div>
+
+        <div class="card-body">
+          <div class="recycler-summary">
+            <div class="recycler-logo">I</div>
+
+            <div class="recycler-info">
+              <div class="recycler-name">JEDA</div>
+              <div class="recycler-meta">Parceiro com pedidos aguardando análise e agendamento.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+          <h2 class="card-title">Lista de Pedidos</h2>
+          <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar coleta</a>
+        </div>
+
+        <div class="table-wrapper orders-table-wrapper" style="border:none; border-radius:0;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Status</th>
+                <th>ONG</th>
+                <th style="text-align:right;">Ações</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr>
+                <td>
+                  <div class="order-title">Pedido 03/2026</div>
+                  <div class="order-meta">Solicitação de coleta pendente</div>
+                </td>
+
+                <td>
+                  <span class="badge badge-warning">Pendente</span>
+                </td>
+
+                <td>JEDA</td>
+
+                <td>
+                  <div class="order-actions">
+                    <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
+                    <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div class="order-title">Pedido 07/2026</div>
+                  <div class="order-meta">Solicitação de coleta pendente</div>
+                </td>
+
+                <td>
+                  <span class="badge badge-warning">Pendente</span>
+                </td>
+
+                <td>JEDA</td>
+
+                <td>
+                  <div class="order-actions">
+                    <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
+                    <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card-body mobile-order-list">
+
+          <div class="mobile-order-card">
+            <div class="mobile-order-header">
+              <div>
+                <div class="order-title">Pedido 03/2026</div>
+                <div class="order-meta">JEDA</div>
+              </div>
+
+              <span class="badge badge-warning">Pendente</span>
+            </div>
+
+            <div class="mobile-order-actions">
+              <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
+              <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
+            </div>
+          </div>
+
+          <div class="mobile-order-card">
+            <div class="mobile-order-header">
+              <div>
+                <div class="order-title">Pedido 07/2026</div>
+                <div class="order-meta">JEDA</div>
+              </div>
+
+              <span class="badge badge-warning">Pendente</span>
+            </div>
+
+            <div class="mobile-order-actions">
+              <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
+              <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/layout.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

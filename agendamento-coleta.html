@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script>
+    (function() {
+      try {
+        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
+        var theme = 'light';
+
+        if (rawUser) {
+          var user = JSON.parse(rawUser);
+          var orgId = user && user.organization_id;
+
+          if (orgId) {
+            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
+
+            if (rawPrefs) {
+              theme = JSON.parse(rawPrefs).tema || theme;
+            }
+          }
+        }
+
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+        }
+
+        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
+        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
+        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
+      } catch (error) {}
+    })();
+  </script>
+
+  <title>Agendamento de Coleta — StockControl</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/styles/main.css" />
+  <link rel="stylesheet" href="/styles/components.css" />
+
+  <style>
+    .schedule-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+      gap: var(--space-5);
+      align-items: start;
+    }
+
+    .recycler-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-alt);
+      margin-bottom: var(--space-4);
+    }
+
+    .recycler-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-full);
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.125rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .recycler-name {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+    }
+
+    .recycler-subtitle {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .order-summary {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .summary-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .summary-label {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+
+    .summary-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      text-align: right;
+    }
+
+    .schedule-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .form-control[type="date"] {
+      color-scheme: light;
+    }
+
+    [data-theme="dark"] .form-control[type="date"] {
+      color-scheme: dark;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      margin-top: var(--space-2);
+    }
+
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-top: var(--space-2);
+    }
+
+    .info-item {
+      display: flex;
+      gap: var(--space-3);
+      align-items: flex-start;
+      padding: var(--space-3);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border-light);
+    }
+
+    .info-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-full);
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .info-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .info-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+    }
+
+    .info-text {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      line-height: 1.45;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 900px) {
+      .schedule-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Agendamento de Coleta</h1>
+        <p class="page-subtitle">Informe a data de retirada e observações para concluir o agendamento</p>
+      </div>
+
+      <div style="display:flex; gap:var(--space-2); flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="window.location.href='tela3-detalhe-pedido.html'" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Voltar
+        </button>
+
+        <button class="btn btn-primary" onclick="window.location.href='tela1-inicio.html'" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9.5L12 3l9 6.5" />
+            <path d="M5 10v10h14V10" />
+          </svg>
+          Início
+        </button>
+      </div>
+    </div>
+
+    <div class="schedule-layout">
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Agendamento do Pedido 03/2026</h2>
+          </div>
+          <span class="badge badge-primary">Coleta</span>
+        </div>
+
+        <div class="card-body">
+          <div class="recycler-card">
+            <div class="recycler-avatar">I</div>
+            <div>
+              <div class="recycler-name">JEDA</div>
+              <div class="recycler-subtitle">Empresa responsável pelo pedido</div>
+            </div>
+          </div>
+
+          <form class="schedule-form" id="scheduleForm">
+            <div class="form-group">
+              <label class="form-label" for="data-retirada">Data de retirada</label>
+              <input
+                type="date"
+                id="data-retirada"
+                name="data-retirada"
+                class="form-control"
+                required
+              />
+              <span class="form-hint">Selecione a data prevista para a retirada dos materiais.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="observacoes">Observações à empresa</label>
+              <textarea
+                id="observacoes"
+                name="observacoes"
+                class="form-control"
+                rows="6"
+                placeholder="Descreva instruções especiais, restrições de acesso, contato no local…"
+              ></textarea>
+              <span class="form-hint">Use este campo para informar detalhes importantes sobre a coleta.</span>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-secondary" onclick="window.location.href='tela3-detalhe-pedido.html'" type="button">
+                Cancelar
+              </button>
+
+              <button class="btn btn-primary" type="submit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                Agendar Coleta
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Resumo</h2>
+        </div>
+
+        <div class="card-body">
+          <div class="order-summary">
+            <div class="summary-row">
+              <span class="summary-label">Pedido</span>
+              <span class="summary-value">03/2026</span>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Empresa</span>
+              <span class="summary-value">JEDA</span>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Produtos</span>
+              <span class="summary-value">3 itens</span>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Peso total</span>
+              <span class="summary-value">16,700 kg</span>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Quantidade total</span>
+              <span class="summary-value">43 unidades</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-header">
+          <h2 class="card-title">Orientações para a coleta</h2>
+        </div>
+
+        <div class="card-body">
+          <div class="info-list">
+            <div class="info-item">
+              <div class="info-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <div>
+                <div class="info-title">Defina uma data disponível</div>
+                <div class="info-text">Escolha um dia em que o material esteja separado e pronto para retirada.</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+                </svg>
+              </div>
+              <div>
+                <div class="info-title">Informe observações importantes</div>
+                <div class="info-text">Adicione detalhes sobre acesso, horário preferencial, responsável no local ou restrições.</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </div>
+              <div>
+                <div class="info-title">Confirme o agendamento</div>
+                <div class="info-text">Após confirmar, o pedido ficará marcado para coleta na data selecionada.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/layout.js"></script>
+  <script src="/js/main.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var form = document.getElementById('scheduleForm');
+      var dateInput = document.getElementById('data-retirada');
+
+      if (!form || !dateInput) return;
+
+      form.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        if (!dateInput.value) {
+          if (typeof showToast === 'function') {
+            showToast('Selecione uma data de retirada para continuar.', 'warning');
+          } else {
+            alert('Selecione uma data de retirada para continuar.');
+          }
+          return;
+        }
+
+        var formattedDate = new Date(dateInput.value + 'T00:00:00').toLocaleDateString('pt-BR');
+        var message = 'Coleta do Pedido 03/2026 agendada para ' + formattedDate + '.';
+
+        if (typeof showToast === 'function') {
+          showToast(message, 'success');
+        } else {
+          alert(message);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
