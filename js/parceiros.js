@@ -11,65 +11,6 @@
   const ITEMS_KEY   = "sc_items";
   const NOTIF_KEY   = "sc_notifications";
 
-  // ── Mock data ──────────────────────────────────────────────────────────────
-  const MOCK = [
-    {
-      id: "parc_001", tipo: "doador", nome: "ONG Educação Digital",
-      cnpj: "12.345.678/0001-90", email: "contato@ongeducacao.org",
-      telefone: "(11) 98765-4321", whatsapp: "(11) 98765-4321",
-      responsavel: "João Silva", cargo: "Diretor", website: "www.ongeducacao.org",
-      areaAtuacao: "Educação", enderecoTexto: "São Paulo, SP",
-      endereco: { logradouro: "Av. Paulista", numero: "1000", bairro: "Bela Vista", cidade: "São Paulo", estado: "SP" },
-      observacoes: "Parceiro desde 2023, excelente relacionamento",
-      itensTotais: 15, primeiroContato: "2023-03-10", ultimoContato: "2024-01-15",
-      criadoEm: "2023-03-10T10:00:00", ativo: true,
-    },
-    {
-      id: "parc_002", tipo: "recebedor", nome: "Associação Viver Bem",
-      cnpj: "98.765.432/0001-10", email: "associacao@vivembem.org.br",
-      telefone: "(21) 3333-4444", whatsapp: "(21) 99888-7766",
-      responsavel: "Maria Santos", cargo: "Presidente", website: "",
-      areaAtuacao: "Assistência Social", enderecoTexto: "Rio de Janeiro, RJ",
-      endereco: { logradouro: "Rua da Assembleia", numero: "200", bairro: "Centro", cidade: "Rio de Janeiro", estado: "RJ" },
-      observacoes: "Recebe principalmente móveis e eletrodomésticos",
-      itensTotais: 8, primeiroContato: "2023-06-15", ultimoContato: "2024-01-20",
-      criadoEm: "2023-06-15T14:00:00", ativo: true,
-    },
-    {
-      id: "parc_003", tipo: "ambos", nome: "Instituto Reciclar SP",
-      cnpj: "11.222.333/0001-44", email: "contato@reciclarsp.org",
-      telefone: "(11) 4444-5555", whatsapp: "",
-      responsavel: "Pedro Lima", cargo: "Coordenador", website: "www.reciclarsp.org",
-      areaAtuacao: "Meio Ambiente", enderecoTexto: "São Paulo, SP",
-      endereco: { logradouro: "Av. Brigadeiro Faria Lima", numero: "3900", bairro: "Itaim Bibi", cidade: "São Paulo", estado: "SP" },
-      observacoes: "Parceiro estratégico para descarte sustentável",
-      itensTotais: 22, primeiroContato: "2023-01-05", ultimoContato: "2024-01-10",
-      criadoEm: "2023-01-05T09:00:00", ativo: true,
-    },
-    {
-      id: "parc_004", tipo: "empresa", nome: "TechStore Equipamentos",
-      cnpj: "55.666.777/0001-88", email: "vendas@techstore.com.br",
-      telefone: "(11) 2222-3333", whatsapp: "(11) 99111-2233",
-      responsavel: "Ana Costa", cargo: "Gerente Comercial", website: "www.techstore.com.br",
-      areaAtuacao: "Tecnologia", enderecoTexto: "São Paulo, SP",
-      endereco: { logradouro: "Praça da Sé", numero: "50", bairro: "Sé", cidade: "São Paulo", estado: "SP" },
-      observacoes: "Fornecedor de equipamentos de informática",
-      itensTotais: 30, primeiroContato: "2022-11-20", ultimoContato: "2024-01-25",
-      criadoEm: "2022-11-20T11:00:00", ativo: true,
-    },
-    {
-      id: "parc_005", tipo: "orgao_publico", nome: "Secretaria Municipal de Educação",
-      cnpj: "44.555.666/0001-77", email: "patrimonio@sme.prefeitura.sp.gov.br",
-      telefone: "(11) 3333-9999", whatsapp: "",
-      responsavel: "Carlos Ferreira", cargo: "Gestor de Patrimônio", website: "www.sme.prefeitura.sp.gov.br",
-      areaAtuacao: "Educação Pública", enderecoTexto: "São Paulo, SP",
-      endereco: { logradouro: "Praça da Sé", numero: "100", bairro: "Centro", cidade: "São Paulo", estado: "SP" },
-      observacoes: "Parceria para doação de materiais escolares",
-      itensTotais: 45, primeiroContato: "2022-08-01", ultimoContato: "2024-01-05",
-      criadoEm: "2022-08-01T08:00:00", ativo: true,
-    },
-  ];
-
   // ── Labels & classes ───────────────────────────────────────────────────────
   const TIPO_LABEL = {
     doador:       "Doador",
@@ -139,7 +80,7 @@
         if (list.length) { savePartners(list); loadAndRender(); }
       })
       .catch(() => {});
-    if (!getPartners().length) savePartners(MOCK);
+    if (!getPartners().length) savePartners([]);
   }
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
