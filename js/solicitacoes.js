@@ -1177,7 +1177,7 @@ function initSolicitacoes() {
   function showConfirm(
     message,
     onConfirm,
-    { title = "Confirmar", variant = "warning" } = {},
+    { title = "Confirme a ação", variant = "warning" } = {},
   ) {
     const el = document.getElementById("modalConfirmarSolMensagem");
     const elTitle = document.getElementById("modalConfirmarSolTitulo");
@@ -1194,13 +1194,11 @@ function initSolicitacoes() {
       icon.innerHTML = CONFIRM_ICONS[variant] || CONFIRM_ICONS.warning;
     }
     btn.className = `btn ${variant === "success" ? "btn-success" : variant === "danger" ? "btn-danger" : "btn-primary"}`;
-    const handler = () => {
-      btn.removeEventListener("click", handler);
+    btn.onclick = () => {
+      btn.onclick = null;
       SC.closeModal("modalConfirmarSol");
       onConfirm();
     };
-    btn.removeEventListener("click", handler);
-    btn.addEventListener("click", handler);
     SC.openModal("modalConfirmarSol");
   }
 
