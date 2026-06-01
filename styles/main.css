@@ -250,6 +250,18 @@ table {
   text-decoration: none;
 }
 
+/* Estado colapsado: centraliza a logo e evita clipping no ícone */
+.sidebar:not(.pinned) .sidebar-header {
+  justify-content: center;
+  padding-left: var(--space-4);
+  padding-right: var(--space-5);
+}
+
+.sidebar:not(.pinned) .sidebar-logo {
+  justify-content: center;
+  gap: 0;
+}
+
 /* Icon box */
 .sidebar-logo-icon {
   width: 36px;
