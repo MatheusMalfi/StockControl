@@ -71,26 +71,32 @@
      ============================================================ */
   function aplicarTema(tema) {
     const html = document.documentElement;
-    if (tema === 'escuro') {
-      html.setAttribute('data-theme', 'dark');
-    } else if (tema === 'auto') {
-      html.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    if (tema === "escuro") {
+      html.setAttribute("data-theme", "dark");
+    } else if (tema === "auto") {
+      html.setAttribute(
+        "data-theme",
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light",
+      );
     } else {
-      html.setAttribute('data-theme', 'light');
+      html.setAttribute("data-theme", "light");
     }
   }
 
   function getCurrentPreferencesStorageKey() {
     const user = getUser() || {};
-    const orgId = user.organization_id || user.organizationId || user.orgId || '';
-    return orgId ? `sc_preferencias_${orgId}` : 'sc_preferencias';
+    const orgId =
+      user.organization_id || user.organizationId || user.orgId || "";
+    return orgId ? `sc_preferencias_${orgId}` : "sc_preferencias";
   }
 
   function carregarTemaPreferido() {
     try {
       const prefsRaw = localStorage.getItem(getCurrentPreferencesStorageKey());
       const prefs = prefsRaw ? JSON.parse(prefsRaw) : {};
-      const tema = prefs.tema || 'claro';
+      const tema = prefs.tema || "claro";
       aplicarTema(tema);
     } catch {}
   }
@@ -103,7 +109,8 @@
 
   SC.storageKey = function (key, orgId) {
     const user = getUser() || {};
-    const organizationId = orgId || user.organization_id || user.organizationId || user.org;
+    const organizationId =
+      orgId || user.organization_id || user.organizationId || user.org;
     return organizationId ? `${key}_${organizationId}` : key;
   };
 
@@ -329,8 +336,8 @@
 
     // Try to load user's avatar from local storage
     const getUserStorageKey = () => {
-      const id = user?.id || user?.user_id || user?.userId || '';
-      return id ? `sc_usuario_${id}` : 'sc_usuario';
+      const id = user?.id || user?.user_id || user?.userId || "";
+      return id ? `sc_usuario_${id}` : "sc_usuario";
     };
     let userAvatar = null;
     try {
@@ -343,58 +350,58 @@
     const sidebarInitials = document.getElementById("sidebarInitials");
     const sidebarUserName = document.getElementById("sidebarUserName");
     const sidebarUserRole = document.getElementById("sidebarUserRole");
-    
+
     if (sidebarInitials) {
       const sidebarAvatar = sidebarInitials.parentElement;
       if (sidebarAvatar && userAvatar) {
-        sidebarInitials.style.display = 'none';
-        let img = sidebarAvatar.querySelector('img');
+        sidebarInitials.style.display = "none";
+        let img = sidebarAvatar.querySelector("img");
         if (!img) {
-          img = document.createElement('img');
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'cover';
-          img.style.borderRadius = 'inherit';
+          img = document.createElement("img");
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          img.style.borderRadius = "inherit";
           sidebarAvatar.appendChild(img);
         }
         img.src = userAvatar;
       } else if (sidebarInitials) {
         sidebarInitials.textContent = initials;
-        sidebarInitials.style.display = '';
+        sidebarInitials.style.display = "";
         if (sidebarAvatar) {
-          const img = sidebarAvatar.querySelector('img');
+          const img = sidebarAvatar.querySelector("img");
           if (img) img.remove();
         }
       }
     }
-    
+
     if (sidebarUserName) sidebarUserName.textContent = user.name || "Usuário";
     if (sidebarUserRole) sidebarUserRole.textContent = roleLabel;
 
     /* Header */
     const headerAvatar = document.getElementById("headerAvatar");
     const headerUserName = document.getElementById("headerUserName");
-    
+
     if (headerAvatar) {
       if (userAvatar) {
-        headerAvatar.textContent = '';
-        let img = headerAvatar.querySelector('img');
+        headerAvatar.textContent = "";
+        let img = headerAvatar.querySelector("img");
         if (!img) {
-          img = document.createElement('img');
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'cover';
-          img.style.borderRadius = 'inherit';
+          img = document.createElement("img");
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          img.style.borderRadius = "inherit";
           headerAvatar.appendChild(img);
         }
         img.src = userAvatar;
       } else {
         headerAvatar.textContent = initials;
-        const img = headerAvatar.querySelector('img');
+        const img = headerAvatar.querySelector("img");
         if (img) img.remove();
       }
     }
-    
+
     if (headerUserName)
       headerUserName.textContent = user.name
         ? user.name.split(" ")[0]
@@ -420,7 +427,7 @@
       /* Non-critical: keep showing cached data */
     });
 
-    /* ============================================================
+  /* ============================================================
      NOTIFICATIONS DROPDOWN
      ============================================================ */
 
@@ -461,8 +468,10 @@
       titulo: n.titulo || n.title || "Notificação",
       mensagem: n.mensagem || n.message || "",
       lida: n.lida === true || n.lida === 1 || n.lida === "1",
-      arquivada: n.arquivada === true || n.arquivada === 1 || n.arquivada === "1",
-      criadaEm: n.criadaEm || n.created_at || n.createdAt || new Date().toISOString(),
+      arquivada:
+        n.arquivada === true || n.arquivada === 1 || n.arquivada === "1",
+      criadaEm:
+        n.criadaEm || n.created_at || n.createdAt || new Date().toISOString(),
     };
   }
 
@@ -485,7 +494,13 @@
 
   function getCurrentOrgIdForNotifications() {
     const user = SC.currentUser || getUser() || {};
-    return user.organization_id || user.organizationId || user.org || user.orgId || null;
+    return (
+      user.organization_id ||
+      user.organizationId ||
+      user.org ||
+      user.orgId ||
+      null
+    );
   }
 
   function mergeNotificationState(remoteNotifs) {
@@ -493,12 +508,13 @@
 
     return remoteNotifs.map((remote) => {
       const n = normalizeNotif(remote);
-      const local = localNotifs.find(x => x.id === n.id) || {};
+      const local = localNotifs.find((x) => x.id === n.id) || {};
 
       return {
         ...n,
         lida: typeof local.lida === "boolean" ? local.lida : n.lida,
-        arquivada: typeof local.arquivada === "boolean" ? local.arquivada : n.arquivada,
+        arquivada:
+          typeof local.arquivada === "boolean" ? local.arquivada : n.arquivada,
       };
     });
   }
@@ -509,9 +525,9 @@
 
     const activeNotifs = (Array.isArray(notifs) ? notifs : [])
       .map(normalizeNotif)
-      .filter(n => !n.arquivada);
+      .filter((n) => !n.arquivada);
 
-    const unreadNotifs = activeNotifs.filter(n => !n.lida);
+    const unreadNotifs = activeNotifs.filter((n) => !n.lida);
     const unread = unreadNotifs.length;
 
     if (badge) {
@@ -533,7 +549,10 @@
             Tudo lido
           </div>`;
       } else {
-        listDrop.innerHTML = current.map(n => `
+        listDrop.innerHTML =
+          current
+            .map(
+              (n) => `
           <a href="/notificacoes.html" class="dropdown-item" style="white-space:normal;padding:var(--space-3);">
             <div style="font-size:0.875rem;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
               ${notifEscHtml(n.titulo)}
@@ -542,8 +561,10 @@
               ${notifRelTime(n.criadaEm)}
             </div>
           </a>
-        `).join("") +
-        `<div class="dropdown-separator"></div>
+        `,
+            )
+            .join("") +
+          `<div class="dropdown-separator"></div>
          <a href="/notificacoes.html" class="dropdown-item" style="text-align:center;font-size:0.8125rem;">Ver todas</a>`;
       }
     }
@@ -561,7 +582,9 @@
 
       if (!orgId) return;
 
-      const data = await SC.api(`/notificacoes?organization_id=${encodeURIComponent(orgId)}`);
+      const data = await SC.api(
+        `/notificacoes?organization_id=${encodeURIComponent(orgId)}`,
+      );
 
       const rawNotifs = Array.isArray(data)
         ? data
@@ -597,14 +620,6 @@
     if (e.key && e.key.includes("sc_notifications")) {
       loadNotifications();
     }
-  });
-
-  // Atualiza o contador do sino periodicamente em qualquer página aberta
-  setInterval(loadNotifications, 30000);
-
-  // Atualiza também quando o usuário volta para a aba do sistema
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) loadNotifications();
   });
 
   /* ============================================================
@@ -653,22 +668,22 @@
     try {
       const raw = localStorage.getItem(getCurrentPreferencesStorageKey());
       const prefs = raw ? JSON.parse(raw) : {};
-      return prefs.formatoData || 'DD/MM/AAAA';
+      return prefs.formatoData || "DD/MM/AAAA";
     } catch {
-      return 'DD/MM/AAAA';
+      return "DD/MM/AAAA";
     }
   }
 
   function formatDateByPattern(date, pattern) {
-    const pad = (value) => String(value).padStart(2, '0');
+    const pad = (value) => String(value).padStart(2, "0");
     const day = pad(date.getDate());
     const month = pad(date.getMonth() + 1);
     const year = date.getFullYear();
 
     switch (pattern) {
-      case 'MM/DD/AAAA':
+      case "MM/DD/AAAA":
         return `${month}/${day}/${year}`;
-      case 'AAAA-MM-DD':
+      case "AAAA-MM-DD":
         return `${year}-${month}-${day}`;
       default:
         return `${day}/${month}/${year}`;
@@ -677,15 +692,16 @@
 
   function parseDateValue(value) {
     if (!value) return null;
-    if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
-    if (typeof value !== 'string') return null;
+    if (value instanceof Date)
+      return Number.isNaN(value.getTime()) ? null : value;
+    if (typeof value !== "string") return null;
 
     const trimmed = value.trim();
     const isoDate = new Date(trimmed);
     if (!Number.isNaN(isoDate.getTime())) return isoDate;
 
     const pattern = getSavedDateFormat();
-    const dateTimeSplit = trimmed.split(' ');
+    const dateTimeSplit = trimmed.split(" ");
     const datePart = dateTimeSplit[0];
     const timePart = dateTimeSplit[1] || null;
 
@@ -700,15 +716,20 @@
       const n1 = Number(a);
       const n2 = Number(b);
       const n3 = Number(c);
-      if (pattern === 'MM/DD/AAAA') {
+      if (pattern === "MM/DD/AAAA") {
         return new Date(n3, n1 - 1, n2);
       }
       return new Date(n3, n2 - 1, n1);
     }
 
-    if (timePart && (match = trimmed.match(/^([0-9]{2})\/([0-9]{2})\/([0-9]{4})\s+([0-9]{2}):([0-9]{2})$/))) {
+    if (
+      timePart &&
+      (match = trimmed.match(
+        /^([0-9]{2})\/([0-9]{2})\/([0-9]{4})\s+([0-9]{2}):([0-9]{2})$/,
+      ))
+    ) {
       const [, a, b, c, h, m] = match.map(Number);
-      if (pattern === 'MM/DD/AAAA') {
+      if (pattern === "MM/DD/AAAA") {
         return new Date(c, a - 1, b, h, m);
       }
       return new Date(c, b - 1, a, h, m);
@@ -731,9 +752,9 @@
     const d = parseDateValue(iso);
     if (!d) return iso;
     const datePart = formatDateByPattern(d, getSavedDateFormat());
-    const timePart = d.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
+    const timePart = d.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
     return `${datePart} ${timePart}`;
   };
