@@ -41,13 +41,9 @@ const CREATE_RULES = `
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 `;
 
-async function ensureTables() {
-  await pool.query(CREATE_NOTIF);
-  await pool.query(CREATE_RULES);
+async function ensureColumn(tableName, columnDefinition) {
   try {
-    await pool.query(
-      "ALTER TABLE notificacoes ADD COLUMN arquivada TINYINT(1) NOT NULL DEFAULT 0",
-    );
+    await pool.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnDefinition}`);
   } catch (err) {
     if (err && (err.code === "ER_DUP_FIELDNAME" || err.errno === 1060)) {
       return;
@@ -56,8 +52,46 @@ async function ensureTables() {
   }
 }
 
+async function ensureTables() {
+  await pool.query(CREATE_NOTIF);
+  await pool.query(CREATE_RULES);
+
+  await ensureColumn("notificacoes", "titulo VARCHAR(255) DEFAULT NULL");
+  await ensureColumn("notificacoes", "mensagem TEXT DEFAULT NULL");
+  await ensureColumn("notificacoes", "tipo VARCHAR(50) DEFAULT 'info'");
+  await ensureColumn("notificacoes", "subtipo VARCHAR(100) DEFAULT NULL");
+  await ensureColumn("notificacoes", "item_id VARCHAR(100) DEFAULT NULL");
+  await ensureColumn("notificacoes", "item_nome VARCHAR(255) DEFAULT NULL");
+  await ensureColumn("notificacoes", "prioridade VARCHAR(50) DEFAULT NULL");
+  await ensureColumn("notificacoes", "lida TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("notificacoes", "arquivada TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn(
+    "notificacoes",
+    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
+  );
+
+  await ensureColumn(
+    "notif_rules",
+    "estoque_baixo TINYINT(1) NOT NULL DEFAULT 1",
+  );
+  await ensureColumn("notif_rules", "descarte TINYINT(1) NOT NULL DEFAULT 1");
+  await ensureColumn(
+    "notif_rules",
+    "doacao_pendente TINYINT(1) NOT NULL DEFAULT 1",
+  );
+  await ensureColumn("notif_rules", "email TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("notif_rules", "minimo INT NOT NULL DEFAULT 5");
+}
+
 function getOrgId(req) {
   return req.query.organization_id || req.body?.organization_id;
+}
+
+function parseCreatedAt(input) {
+  if (!input) return new Date();
+  const dt = new Date(input);
+  if (Number.isNaN(dt.getTime())) return new Date();
+  return dt;
 }
 
 /* GET /api/notificacoes */
@@ -109,6 +143,7 @@ router.post("/sync", async (req, res) => {
       for (const n of notifs) {
         const id =
           n.id || `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const createdAt = parseCreatedAt(n.criadaEm || n.created_at);
         await conn.execute(
           `INSERT INTO notificacoes (
       id,
@@ -143,7 +178,7 @@ router.post("/sync", async (req, res) => {
             n.lida ? 1 : 0,
             n.arquivada ? 1 : 0,
 
-            n.criadaEm || n.created_at || new Date().toISOString(),
+            createdAt,
           ],
         );
       }
