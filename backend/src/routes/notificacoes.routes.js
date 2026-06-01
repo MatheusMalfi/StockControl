@@ -1,6 +1,6 @@
 "use strict";
 const express = require("express");
-const pool    = require("../db");
+const pool = require("../db");
 
 const router = express.Router();
 
@@ -44,7 +44,16 @@ const CREATE_RULES = `
 async function ensureTables() {
   await pool.query(CREATE_NOTIF);
   await pool.query(CREATE_RULES);
-  await pool.query("ALTER TABLE notificacoes ADD COLUMN IF NOT EXISTS arquivada TINYINT(1) NOT NULL DEFAULT 0");
+  try {
+    await pool.query(
+      "ALTER TABLE notificacoes ADD COLUMN arquivada TINYINT(1) NOT NULL DEFAULT 0",
+    );
+  } catch (err) {
+    if (err && (err.code === "ER_DUP_FIELDNAME" || err.errno === 1060)) {
+      return;
+    }
+    throw err;
+  }
 }
 
 function getOrgId(req) {
@@ -56,7 +65,10 @@ router.get("/", async (req, res) => {
   try {
     await ensureTables();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const [notifs] = await pool.query(
       "SELECT * FROM notificacoes WHERE organization_id = ? AND arquivada = 0 ORDER BY created_at DESC LIMIT 200",
       [orgId],
@@ -77,7 +89,10 @@ router.post("/sync", async (req, res) => {
   try {
     await ensureTables();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const rawNotifs = Array.isArray(req.body)
       ? req.body
       : Array.isArray(req.body?.notificacoes)
@@ -88,11 +103,14 @@ router.post("/sync", async (req, res) => {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
-      await conn.execute("DELETE FROM notificacoes WHERE organization_id = ?", [orgId]);
+      await conn.execute("DELETE FROM notificacoes WHERE organization_id = ?", [
+        orgId,
+      ]);
       for (const n of notifs) {
-        const id = n.id || `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const id =
+          n.id || `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         await conn.execute(
-  `INSERT INTO notificacoes (
+          `INSERT INTO notificacoes (
       id,
       organization_id,
       titulo,
@@ -108,25 +126,25 @@ router.post("/sync", async (req, res) => {
    )
    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-  id,
-  orgId,
+            id,
+            orgId,
 
-  n.titulo || null,
-  n.mensagem || null,
+            n.titulo || null,
+            n.mensagem || null,
 
-  n.tipo || "info",
-  n.subtipo || null,
+            n.tipo || "info",
+            n.subtipo || null,
 
-  n.itemId || null,
-  n.itemNome || null,
+            n.itemId || null,
+            n.itemNome || null,
 
-  n.prioridade || null,
+            n.prioridade || null,
 
-  n.lida ? 1 : 0,
-  n.arquivada ? 1 : 0,
+            n.lida ? 1 : 0,
+            n.arquivada ? 1 : 0,
 
-  n.criadaEm || n.created_at || new Date().toISOString(),
-],
+            n.criadaEm || n.created_at || new Date().toISOString(),
+          ],
         );
       }
       await conn.commit();
@@ -148,7 +166,10 @@ router.put("/rules", async (req, res) => {
   try {
     await ensureTables();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const { estoqueBaixo, descarte, doacaoPendente, email, minimo } = req.body;
     await pool.execute(
       `INSERT INTO notif_rules (organization_id, estoque_baixo, descarte, doacao_pendente, email, minimo)
@@ -159,8 +180,14 @@ router.put("/rules", async (req, res) => {
          doacao_pendente = VALUES(doacao_pendente),
          email         = VALUES(email),
          minimo        = VALUES(minimo)`,
-      [orgId, estoqueBaixo ? 1 : 0, descarte ? 1 : 0,
-       doacaoPendente ? 1 : 0, email ? 1 : 0, minimo ?? 5],
+      [
+        orgId,
+        estoqueBaixo ? 1 : 0,
+        descarte ? 1 : 0,
+        doacaoPendente ? 1 : 0,
+        email ? 1 : 0,
+        minimo ?? 5,
+      ],
     );
     res.json({ success: true });
   } catch (err) {
