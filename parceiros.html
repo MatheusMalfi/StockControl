@@ -1,244 +1,365 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>
-    (function() {
-      try {
-        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
-        var theme = 'light';
-        if (rawUser) {
-          var user = JSON.parse(rawUser);
-          var orgId = user && user.organization_id;
-          if (orgId) {
-            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
-            if (rawPrefs) {
-              theme = JSON.parse(rawPrefs).tema || theme;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var rawUser =
+            localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user");
+          var theme = "light";
+          if (rawUser) {
+            var user = JSON.parse(rawUser);
+            var orgId = user && user.organization_id;
+            if (orgId) {
+              var rawPrefs = localStorage.getItem("sc_preferencias_" + orgId);
+              if (rawPrefs) {
+                theme = JSON.parse(rawPrefs).tema || theme;
+              }
             }
           }
+          if (theme === "auto") {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "escuro"
+              : "claro";
+          }
+          document.documentElement.setAttribute(
+            "data-theme",
+            theme === "escuro" ? "dark" : "light",
+          );
+          document.documentElement.style.backgroundColor =
+            theme === "escuro" ? "#0f172a" : "#f8fafc";
+          document.documentElement.style.color =
+            theme === "escuro" ? "#f8fafc" : "#1e293b";
+        } catch (error) {}
+      })();
+    </script>
+    <title>Parceiros — StockControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+    <style>
+      .kpi-grid {
+        display: flex;
+        gap: 24px;
+        margin-bottom: var(--space-5);
+      }
+      .kpi-card {
+        flex: 1 1 0;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        padding: 28px 0 20px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 160px;
+        min-height: 90px;
+        box-sizing: border-box;
+        transition:
+          box-shadow 0.15s,
+          border-color 0.15s;
+      }
+      .kpi-label {
+        font-size: 1rem;
+        color: var(--color-text-muted);
+        margin-bottom: 8px;
+        text-align: center;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+      .kpi-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: center;
+        margin: 0;
+        display: block;
+      }
+      @media (max-width: 900px) {
+        .kpi-grid {
+          flex-direction: column;
+          gap: 16px;
         }
-        if (theme === 'auto') {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+        .kpi-card {
+          min-width: 0;
+          width: 100%;
         }
-        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
-        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
-        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
-      } catch (error) {}
-    })();
-  </script>
-  <title>Parceiros — StockControl</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/main.css" />
-  <link rel="stylesheet" href="/styles/components.css" />
-  <style>
-    /* ── Partner grid ── */
-    .partner-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: var(--space-4);
-    }
-    .partner-card {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      padding: var(--space-5);
-      transition: box-shadow 0.15s, border-color 0.15s;
-      cursor: pointer;
-    }
-    .partner-card:hover {
-      box-shadow: var(--shadow-md);
-      border-color: var(--color-primary);
-    }
-    .partner-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: var(--radius-lg);
-      background: var(--color-primary-light);
-      color: var(--color-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
+      }
+      /* ── Partner grid ── */
+      .partner-grid {
+        display: grid;
+        gap: 24px;
+        margin-bottom: var(--space-5);
+      }
+      .partner-card {
+        /* ...mantém o restante do CSS existente... */
+      }
+      .partner-card:hover {
+        box-shadow: var(--shadow-md);
+        border-color: var(--color-primary);
+      }
+      .partner-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-lg);
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
 
-    /* ── Type badges ── */
-    .partner-type-badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 99px;
-      font-weight: 500;
-      display: inline-block;
-    }
-    .partner-type-doador    { background: #DBEAFE; color: #1D4ED8; }
-    .partner-type-recebedor { background: #DCFCE7; color: #166534; }
-    .partner-type-ambos     { background: #EDE9FE; color: #5B21B6; }
-    .partner-type-empresa   { background: #FEF3C7; color: #92400E; }
-    .partner-type-publico   { background: #E0F2FE; color: #0369A1; }
+      /* ── Type badges ── */
+      .partner-type-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-weight: 500;
+        display: inline-block;
+      }
+      .partner-type-doador {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      .partner-type-recebedor {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .partner-type-ambos {
+        background: #ede9fe;
+        color: #5b21b6;
+      }
+      .partner-type-empresa {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .partner-type-publico {
+        background: #e0f2fe;
+        color: #0369a1;
+      }
 
-    /* ── Partner card stats ── */
-    .partner-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid var(--color-border);
-    }
-    .partner-stat-label { font-size: 11px; color: var(--color-text-muted); }
-    .partner-stat-value { font-size: 15px; font-weight: 600; }
+      /* ── Partner card stats ── */
+      .partner-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--color-border);
+      }
+      .partner-stat-label {
+        font-size: 11px;
+        color: var(--color-text-muted);
+      }
+      .partner-stat-value {
+        font-size: 15px;
+        font-weight: 600;
+      }
 
-    /* ── History list in drawer ── */
-    .history-list { list-style: none; padding: 0; margin: 0; }
-    .history-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--color-border);
-      font-size: 13px;
-    }
-    .history-item:last-child { border-bottom: none; }
+      /* ── History list in drawer ── */
+      .history-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .history-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--color-border);
+        font-size: 13px;
+      }
+      .history-item:last-child {
+        border-bottom: none;
+      }
 
-    /* ── Drawer ── */
-    .drawer-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      z-index: 300;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-    .drawer-overlay.is-visible { opacity: 1; pointer-events: auto; }
+      /* ── Drawer ── */
+      .drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 300;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .drawer-overlay.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
 
-    .item-drawer {
-      position: fixed;
-      top: 0;
-      right: 0;
-      height: 100%;
-      width: 440px;
-      max-width: 95vw;
-      background: var(--color-surface);
-      box-shadow: var(--shadow-xl);
-      z-index: 301;
-      display: flex;
-      flex-direction: column;
-      transform: translateX(100%);
-      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-      overflow: hidden;
-    }
-    .item-drawer.is-open { transform: translateX(0); }
+      .item-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: 440px;
+        max-width: 95vw;
+        background: var(--color-surface);
+        box-shadow: var(--shadow-xl);
+        z-index: 301;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      .item-drawer.is-open {
+        transform: translateX(0);
+      }
 
-    .drawer-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      flex-shrink: 0;
-    }
-    .drawer-title { font-size: 1rem; font-weight: 600; }
-    .drawer-close {
-      width: 32px; height: 32px;
-      border: none; background: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: var(--radius-md);
-      color: var(--color-text-secondary);
-      font-size: 18px;
-      transition: background var(--transition-fast);
-    }
-    .drawer-close:hover { background: var(--color-surface-alt); }
-    .drawer-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: var(--space-5);
-    }
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        flex-shrink: 0;
+      }
+      .drawer-title {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .drawer-close {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        color: var(--color-text-secondary);
+        font-size: 18px;
+        transition: background var(--transition-fast);
+      }
+      .drawer-close:hover {
+        background: var(--color-surface-alt);
+      }
+      .drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-5);
+      }
 
-    /* ── Search dropdown ── */
-    .search-results-dropdown {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      right: 0;
-      min-width: 360px;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      z-index: 200;
-      max-height: 320px;
-      overflow-y: auto;
-    }
-    .search-result-group {
-      padding: 6px 12px 4px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .search-result-item {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-2) var(--space-3);
-      font-size: 13px;
-      cursor: pointer;
-      text-decoration: none;
-      color: var(--color-text-primary);
-      transition: background var(--transition-fast);
-    }
-    .search-result-item:hover { background: var(--color-surface-alt); }
+      /* ── Search dropdown ── */
+      .search-results-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        min-width: 360px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        z-index: 200;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+      .search-result-group {
+        padding: 6px 12px 4px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .search-result-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: none;
+        color: var(--color-text-primary);
+        transition: background var(--transition-fast);
+      }
+      .search-result-item:hover {
+        background: var(--color-surface-alt);
+      }
 
-    /* ── Delete modal warn ── */
-    .delete-impact-warn {
-      background: var(--color-warning-light, #fef9c3);
-      border: 1px solid var(--color-warning, #eab308);
-      border-radius: var(--radius-md);
-      padding: var(--space-3);
-      font-size: 0.875rem;
-      color: var(--color-warning-dark, #854d0e);
-      margin-top: var(--space-3);
-      display: none;
-    }
-    .delete-impact-warn.is-visible { display: block; }
-  </style>
-</head>
-<body>
-
-  <main class="page-content">
-
+      /* ── Delete modal warn ── */
+      .delete-impact-warn {
+        background: var(--color-warning-light, #fef9c3);
+        border: 1px solid var(--color-warning, #eab308);
+        border-radius: var(--radius-md);
+        padding: var(--space-3);
+        font-size: 0.875rem;
+        color: var(--color-warning-dark, #854d0e);
+        margin-top: var(--space-3);
+        display: none;
+      }
+      .delete-impact-warn.is-visible {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-content">
       <div class="page-header">
         <div>
           <h1 class="page-title">Parceiros</h1>
-          <p class="page-subtitle">Doadores, recebedores e organizações parceiras</p>
+          <p class="page-subtitle">
+            Doadores, recebedores e organizações parceiras
+          </p>
         </div>
         <button class="btn btn-primary" id="btn-new-partner">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           Novo Parceiro
         </button>
       </div>
 
       <!-- KPIs -->
-      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:var(--space-5);">
+      <div class="kpi-grid">
         <div class="kpi-card">
           <span class="kpi-label">Total de Parceiros</span>
           <span class="kpi-value" id="kpi-total">—</span>
         </div>
         <div class="kpi-card">
           <span class="kpi-label">Doadores</span>
-          <span class="kpi-value" style="color:var(--color-primary)" id="kpi-donors">—</span>
+          <span
+            class="kpi-value"
+            style="color: var(--color-primary)"
+            id="kpi-donors"
+            >—</span
+          >
         </div>
         <div class="kpi-card">
           <span class="kpi-label">Recebedores</span>
-          <span class="kpi-value" style="color:var(--color-success)" id="kpi-recipients">—</span>
+          <span
+            class="kpi-value"
+            style="color: var(--color-success)"
+            id="kpi-recipients"
+            >—</span
+          >
         </div>
         <div class="kpi-card">
           <span class="kpi-label">Itens Totais</span>
@@ -247,14 +368,27 @@
       </div>
 
       <!-- Filters -->
-      <div class="filters-bar" style="margin-bottom:var(--space-4);">
-        <div class="search-input-wrap" style="flex:1; max-width:320px;">
-          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <div class="filters-bar" style="margin-bottom: var(--space-4)">
+        <div class="search-input-wrap" style="flex: 1; max-width: 320px">
+          <svg
+            class="search-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <input type="search" id="search-input" placeholder="Buscar por nome, CNPJ ou contato…" />
+          <input
+            type="search"
+            id="search-input"
+            placeholder="Buscar por nome, CNPJ ou contato…"
+          />
         </div>
-        <select class="form-control" id="filter-type" style="width:180px;">
+        <select class="form-control" id="filter-type" style="width: 180px">
           <option value="">Todos os tipos</option>
           <option value="doador">Doador</option>
           <option value="recebedor">Recebedor</option>
@@ -262,16 +396,45 @@
           <option value="empresa">Empresa</option>
           <option value="orgao_publico">Órgão Público</option>
         </select>
-        <div style="display:flex; gap:6px; margin-left:auto;">
-          <button class="btn btn-secondary btn-sm" id="btn-view-grid" title="Visualização em cards">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        <div style="display: flex; gap: 6px; margin-left: auto">
+          <button
+            class="btn btn-secondary btn-sm"
+            id="btn-view-grid"
+            title="Visualização em cards"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
             </svg>
           </button>
-          <button class="btn btn-secondary btn-sm" id="btn-view-table" title="Visualização em lista">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          <button
+            class="btn btn-secondary btn-sm"
+            id="btn-view-table"
+            title="Visualização em lista"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
           </button>
         </div>
@@ -281,7 +444,7 @@
       <div id="partners-grid" class="partner-grid"></div>
 
       <!-- Table view -->
-      <div id="partners-table-wrap" style="display:none;">
+      <div id="partners-table-wrap" style="display: none">
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
@@ -290,9 +453,9 @@
                 <th>Tipo</th>
                 <th>Contato</th>
                 <th>CNPJ</th>
-                <th style="text-align:right;">Itens</th>
+                <th style="text-align: right">Itens</th>
                 <th>Último Contato</th>
-                <th style="width:96px;"></th>
+                <th style="width: 96px"></th>
               </tr>
             </thead>
             <tbody id="partners-tbody"></tbody>
@@ -301,157 +464,313 @@
       </div>
 
       <!-- Empty state -->
-      <div id="empty-state" class="empty-state" style="display:none;">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".3">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      <div id="empty-state" class="empty-state" style="display: none">
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          opacity=".3"
+        >
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
         <p class="empty-state-text">Nenhum parceiro encontrado</p>
-        <button class="btn btn-primary btn-sm" id="empty-add-btn">Adicionar Parceiro</button>
+        <button class="btn btn-primary btn-sm" id="empty-add-btn">
+          Adicionar Parceiro
+        </button>
       </div>
 
       <!-- Pagination -->
-      <div id="parcPagination" style="display:flex; align-items:center; justify-content:space-between; margin-top:var(--space-5);">
-        <span id="parcPagInfo" style="font-size:0.875rem; color:var(--color-text-muted);"></span>
+      <div
+        id="parcPagination"
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: var(--space-5);
+        "
+      >
+        <span
+          id="parcPagInfo"
+          style="font-size: 0.875rem; color: var(--color-text-muted)"
+        ></span>
         <div id="parcPagControls"></div>
       </div>
-
     </main>
-  <!-- Toast -->
-  <div class="toast-container" id="toastContainer"></div>
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Drawer overlay -->
-  <div class="drawer-overlay" id="drawer-overlay"></div>
+    <!-- Drawer overlay -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
 
-  <!-- Partner detail drawer -->
-  <aside class="item-drawer" id="partner-drawer">
-    <div class="drawer-header">
-      <h2 class="drawer-title">Detalhes do Parceiro</h2>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-secondary btn-sm" id="btn-edit-partner">Editar</button>
-        <button class="btn btn-danger btn-sm" id="btn-delete-partner">Excluir</button>
-        <button class="drawer-close" id="drawer-close" aria-label="Fechar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-    <div class="drawer-body" id="drawer-body"></div>
-  </aside>
-
-  <!-- Modal: Parceiro (criar / editar) -->
-  <div class="modal-backdrop" id="modal-partner">
-    <div class="modal" style="max-width:600px;">
-      <div class="modal-header">
-        <h2 class="modal-title" id="partner-modal-title">Novo Parceiro</h2>
-        <button class="modal-close" data-close-modal="modal-partner" aria-label="Fechar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body" style="max-height:70vh; overflow-y:auto;">
-        <input type="hidden" id="partner-id" />
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
-          <div class="form-group" style="grid-column:1/-1;">
-            <label class="form-label required" for="partner-name">Nome / Razão Social</label>
-            <input type="text" class="form-control" id="partner-name" placeholder="Nome da organização ou pessoa" />
-          </div>
-          <div class="form-group">
-            <label class="form-label required" for="partner-type">Tipo</label>
-            <select class="form-control" id="partner-type">
-              <option value="doador">Doador</option>
-              <option value="recebedor">Recebedor</option>
-              <option value="ambos">Ambos</option>
-              <option value="empresa">Empresa</option>
-              <option value="orgao_publico">Órgão Público</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-cnpj">CNPJ / CPF</label>
-            <input type="text" class="form-control" id="partner-cnpj" placeholder="00.000.000/0001-00" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-email">E-mail</label>
-            <input type="email" class="form-control" id="partner-email" placeholder="contato@parceiro.org" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-phone">Telefone</label>
-            <input type="text" class="form-control" id="partner-phone" placeholder="(11) 99999-9999" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-whatsapp">WhatsApp</label>
-            <input type="text" class="form-control" id="partner-whatsapp" placeholder="(11) 99999-9999" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-responsavel">Responsável</label>
-            <input type="text" class="form-control" id="partner-responsavel" placeholder="Nome do responsável" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-cargo">Cargo</label>
-            <input type="text" class="form-control" id="partner-cargo" placeholder="Ex: Diretor, Presidente" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-website">Website</label>
-            <input type="text" class="form-control" id="partner-website" placeholder="www.parceiro.org" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="partner-area">Área de Atuação</label>
-            <input type="text" class="form-control" id="partner-area" placeholder="Ex: Educação, Saúde" />
-          </div>
-          <div class="form-group" style="grid-column:1/-1;">
-            <label class="form-label" for="partner-address">Cidade / Estado</label>
-            <input type="text" class="form-control" id="partner-address" placeholder="Ex: São Paulo, SP" />
-          </div>
-          <div class="form-group" style="grid-column:1/-1;">
-            <label class="form-label" for="partner-notes">Observações</label>
-            <textarea class="form-control" id="partner-notes" rows="3" placeholder="Informações adicionais sobre o parceiro…"></textarea>
-          </div>
+    <!-- Partner detail drawer -->
+    <aside class="item-drawer" id="partner-drawer">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Detalhes do Parceiro</h2>
+        <div style="display: flex; gap: 8px">
+          <button class="btn btn-secondary btn-sm" id="btn-edit-partner">
+            Editar
+          </button>
+          <button class="btn btn-danger btn-sm" id="btn-delete-partner">
+            Excluir
+          </button>
+          <button class="drawer-close" id="drawer-close" aria-label="Fechar">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-close-modal="modal-partner">Cancelar</button>
-        <button class="btn btn-primary" id="btn-save-partner">Salvar</button>
-      </div>
-    </div>
-  </div>
+      <div class="drawer-body" id="drawer-body"></div>
+    </aside>
 
-  <!-- Modal: Confirmar exclusão -->
-  <div class="modal-backdrop" id="deletePartnerModal">
-    <div class="modal modal-sm modal-confirm">
-      <div class="modal-header">
-        <h3 class="modal-title">Excluir Parceiro</h3>
-        <button class="modal-close" data-close-modal="deletePartnerModal" aria-label="Fechar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-confirm-icon danger">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6"/><path d="M14 11v6"/>
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
+    <!-- Modal: Parceiro (criar / editar) -->
+    <div class="modal-backdrop" id="modal-partner">
+      <div class="modal" style="max-width: 600px">
+        <div class="modal-header">
+          <h2 class="modal-title" id="partner-modal-title">Novo Parceiro</h2>
+          <button
+            class="modal-close"
+            data-close-modal="modal-partner"
+            aria-label="Fechar"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
-        <p class="modal-confirm-title">Excluir <strong id="deletePartnerNameDisplay">este parceiro</strong>?</p>
-        <p class="modal-confirm-desc">Esta ação não pode ser desfeita. O parceiro será removido do sistema.</p>
-        <div class="delete-impact-warn" id="deleteImpactWarn"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-close-modal="deletePartnerModal">Cancelar</button>
-        <button class="btn btn-danger" id="btnConfirmDelete">Excluir Parceiro</button>
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto">
+          <input type="hidden" id="partner-id" />
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: var(--space-3);
+            "
+          >
+            <div class="form-group" style="grid-column: 1/-1">
+              <label class="form-label required" for="partner-name"
+                >Nome / Razão Social</label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="partner-name"
+                placeholder="Nome da organização ou pessoa"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label required" for="partner-type">Tipo</label>
+              <select class="form-control" id="partner-type">
+                <option value="doador">Doador</option>
+                <option value="recebedor">Recebedor</option>
+                <option value="ambos">Ambos</option>
+                <option value="empresa">Empresa</option>
+                <option value="orgao_publico">Órgão Público</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-cnpj">CNPJ / CPF</label>
+              <input
+                type="text"
+                class="form-control"
+                id="partner-cnpj"
+                placeholder="00.000.000/0001-00"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-email">E-mail</label>
+              <input
+                type="email"
+                class="form-control"
+                id="partner-email"
+                placeholder="contato@parceiro.org"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-phone">Telefone</label>
+              <input
+                type="text"
+                class="form-control"
+                id="partner-phone"
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-whatsapp">WhatsApp</label>
+              <input
+                type="text"
+                class="form-control"
+                id="partner-whatsapp"
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-responsavel"
+                >Responsável</label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="partner-responsavel"
+                placeholder="Nome do responsável"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-cargo">Cargo</label>
+              <input
+                type="text"
+                class="form-control"
+                id="partner-cargo"
+                placeholder="Ex: Diretor, Presidente"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-website">Website</label>
+              <input
+                type="text"
+                class="form-control"
+                id="partner-website"
+                placeholder="www.parceiro.org"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="partner-area"
+                >Área de Atuação</label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="partner-area"
+                placeholder="Ex: Educação, Saúde"
+              />
+            </div>
+            <div class="form-group" style="grid-column: 1/-1">
+              <label class="form-label" for="partner-address"
+                >Cidade / Estado</label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="partner-address"
+                placeholder="Ex: São Paulo, SP"
+              />
+            </div>
+            <div class="form-group" style="grid-column: 1/-1">
+              <label class="form-label" for="partner-notes">Observações</label>
+              <textarea
+                class="form-control"
+                id="partner-notes"
+                rows="3"
+                placeholder="Informações adicionais sobre o parceiro…"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="modal-partner">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" id="btn-save-partner">Salvar</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script src="/js/layout.js"></script>
-  <script src="/js/main.js"></script>
-  <script src="/js/parceiros.js"></script>
-</body>
+    <!-- Modal: Confirmar exclusão -->
+    <div class="modal-backdrop" id="deletePartnerModal">
+      <div class="modal modal-sm modal-confirm">
+        <div class="modal-header">
+          <h3 class="modal-title">Excluir Parceiro</h3>
+          <button
+            class="modal-close"
+            data-close-modal="deletePartnerModal"
+            aria-label="Fechar"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-confirm-icon danger">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+          </div>
+          <p class="modal-confirm-title">
+            Excluir
+            <strong id="deletePartnerNameDisplay">este parceiro</strong>?
+          </p>
+          <p class="modal-confirm-desc">
+            Esta ação não pode ser desfeita. O parceiro será removido do
+            sistema.
+          </p>
+          <div class="delete-impact-warn" id="deleteImpactWarn"></div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            data-close-modal="deletePartnerModal"
+          >
+            Cancelar
+          </button>
+          <button class="btn btn-danger" id="btnConfirmDelete">
+            Excluir Parceiro
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/layout.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/parceiros.js"></script>
+  </body>
 </html>

@@ -74,11 +74,12 @@ document.addEventListener("sc:ready", function () {
   }
 
   function getOrganizationId() {
-    const u = JSON.parse(
-      localStorage.getItem("sc_user") ||
-      sessionStorage.getItem("sc_user") ||
-      "{}"
-    ) || {};
+    const u =
+      JSON.parse(
+        localStorage.getItem("sc_user") ||
+          sessionStorage.getItem("sc_user") ||
+          "{}",
+      ) || {};
 
     return u.organization_id || u.organizationId || u.org || null;
   }
@@ -112,7 +113,10 @@ document.addEventListener("sc:ready", function () {
     }
 
     const orgId = getOrganizationId();
-    const payload = { notificacoes: arr, ...(orgId ? { organization_id: orgId } : {}) };
+    const payload = {
+      notificacoes: arr,
+      ...(orgId ? { organization_id: orgId } : {}),
+    };
 
     return _notifApi("POST", "/api/notificacoes/sync", payload).catch(() => {});
   }
@@ -145,7 +149,7 @@ document.addEventListener("sc:ready", function () {
     }
   }
 
-  // ── Seed mock notifications ───────────────────────────────────────────────
+  // Seed notifications
   function seedIfNeeded() {
     const _nu =
       JSON.parse(
@@ -167,265 +171,6 @@ document.addEventListener("sc:ready", function () {
       .catch(() => {});
     const existing = allNotifs();
     if (existing.length) return;
-
-    const mock = [
-      {
-        id: uid(),
-        tipo: "estoque",
-        subtipo: "estoque_baixo",
-        titulo: 'Estoque crítico: Monitor 24"',
-        mensagem:
-          'Monitor 24" está com 0 unidades disponíveis. Reposição urgente necessária.',
-        itemId: "item_002",
-        itemNome: 'Monitor 24"',
-        prioridade: "critica",
-        lida: false,
-        arquivada: false,
-        criadaEm: hoursAgo(2),
-        lidaEm: null,
-        acao: { label: "Ver item", url: "estoque.html" },
-      },
-      {
-        id: uid(),
-        tipo: "estoque",
-        subtipo: "estoque_baixo",
-        titulo: "Estoque baixo: Notebook Dell",
-        mensagem:
-          "Notebook Dell Inspiron está com apenas 2 unidades disponíveis (limite: 5).",
-        itemId: "item_001",
-        itemNome: "Notebook Dell Inspiron",
-        prioridade: "alta",
-        lida: false,
-        arquivada: false,
-        criadaEm: hoursAgo(5),
-        lidaEm: null,
-        acao: { label: "Ver item", url: "estoque.html" },
-      },
-      {
-        id: uid(),
-        tipo: "estoque",
-        subtipo: "estoque_baixo",
-        titulo: "Estoque baixo: Mouse Óptico",
-        mensagem: "Mouse Óptico está com 3 unidades disponíveis (limite: 5).",
-        itemId: "item_004",
-        itemNome: "Mouse Óptico",
-        prioridade: "media",
-        lida: false,
-        arquivada: false,
-        criadaEm: daysAgo(1),
-        lidaEm: null,
-        acao: { label: "Ver item", url: "estoque.html" },
-      },
-      {
-        id: uid(),
-        tipo: "descarte",
-        subtipo: "descarte_pendente",
-        titulo: "Descarte pendente: Cadeira Escritório",
-        mensagem:
-          "Cadeira Escritório está marcada para descarte há 45 dias sem movimentação.",
-        itemId: "item_007",
-        itemNome: "Cadeira Escritório",
-        prioridade: "alta",
-        lida: false,
-        arquivada: false,
-        criadaEm: daysAgo(2),
-        lidaEm: null,
-        acao: { label: "Ver item", url: "estoque.html" },
-      },
-      {
-        id: uid(),
-        tipo: "descarte",
-        subtipo: "descarte_pendente",
-        titulo: "Descarte pendente: Monitor Antigo",
-        mensagem:
-          "Monitor CRT está marcado para descarte há 62 dias e não foi processado.",
-        itemId: "item_999",
-        itemNome: "Monitor CRT",
-        prioridade: "critica",
-        lida: true,
-        arquivada: false,
-        criadaEm: daysAgo(3),
-        lidaEm: daysAgo(3),
-        acao: null,
-      },
-      {
-        id: uid(),
-        tipo: "solicitacao",
-        subtipo: "solicitacao_nova",
-        titulo: "Nova solicitação urgente — Enfermaria",
-        mensagem:
-          "Setor Enfermaria solicitou 1x Cadeira de Rodas. Urgência: Urgente.",
-        itemId: "item_011",
-        itemNome: "Cadeira de Rodas",
-        prioridade: "critica",
-        lida: false,
-        arquivada: false,
-        criadaEm: hoursAgo(1),
-        lidaEm: null,
-        acao: { label: "Ver solicitação", url: "solicitacoes.html" },
-      },
-      {
-        id: uid(),
-        tipo: "solicitacao",
-        subtipo: "solicitacao_nova",
-        titulo: "Nova solicitação — Lab TI",
-        mensagem: "Lab TI solicitou 2x Notebook Dell Inspiron. Urgência: Alta.",
-        itemId: "item_001",
-        itemNome: "Notebook Dell Inspiron",
-        prioridade: "alta",
-        lida: false,
-        arquivada: false,
-        criadaEm: hoursAgo(3),
-        lidaEm: null,
-        acao: { label: "Ver solicitação", url: "solicitacoes.html" },
-      },
-      {
-        id: uid(),
-        tipo: "solicitacao",
-        subtipo: "solicitacao_nova",
-        titulo: "Nova solicitação — Sala A01",
-        mensagem: "Sala A01 solicitou 3x Teclado USB. Urgência: Média.",
-        itemId: "item_003",
-        itemNome: "Teclado USB",
-        prioridade: "media",
-        lida: true,
-        arquivada: false,
-        criadaEm: daysAgo(1),
-        lidaEm: daysAgo(1),
-        acao: { label: "Ver solicitação", url: "solicitacoes.html" },
-      },
-      {
-        id: uid(),
-        tipo: "solicitacao",
-        subtipo: "solicitacao_aprovada",
-        titulo: "Solicitação aprovada",
-        mensagem: "A solicitação de 1x Oxímetro pelo Setor Saúde foi aprovada.",
-        itemId: "item_013",
-        itemNome: "Oxímetro",
-        prioridade: "baixa",
-        lida: true,
-        arquivada: false,
-        criadaEm: daysAgo(2),
-        lidaEm: daysAgo(2),
-        acao: null,
-      },
-      {
-        id: uid(),
-        tipo: "meta",
-        subtipo: "meta_prazo",
-        titulo: "Meta de arrecadação: 7 dias restantes",
-        mensagem:
-          "A meta de doações de equipamentos para ONGs vence em 7 dias. Progresso atual: 68%.",
-        itemId: null,
-        itemNome: null,
-        prioridade: "alta",
-        lida: false,
-        arquivada: false,
-        criadaEm: hoursAgo(6),
-        lidaEm: null,
-        acao: { label: "Ver relatório", url: "relatorios.html" },
-      },
-      {
-        id: uid(),
-        tipo: "meta",
-        subtipo: "meta_progresso",
-        titulo: "Meta de doações: 80% concluída",
-        mensagem:
-          "Parabéns! A meta de arrecadação de equipamentos atingiu 80% do objetivo.",
-        itemId: null,
-        itemNome: null,
-        prioridade: "media",
-        lida: true,
-        arquivada: false,
-        criadaEm: daysAgo(4),
-        lidaEm: daysAgo(4),
-        acao: { label: "Ver relatório", url: "relatorios.html" },
-      },
-      {
-        id: uid(),
-        tipo: "sistema",
-        subtipo: "sistema_backup",
-        titulo: "Backup concluído com sucesso",
-        mensagem:
-          "Backup automático dos dados do sistema realizado às 02:00. Sem erros.",
-        itemId: null,
-        itemNome: null,
-        prioridade: "baixa",
-        lida: true,
-        arquivada: false,
-        criadaEm: daysAgo(1),
-        lidaEm: daysAgo(1),
-        acao: null,
-      },
-      {
-        id: uid(),
-        tipo: "sistema",
-        subtipo: "sistema_atualizacao",
-        titulo: "Nova versão disponível: v2.4.1",
-        mensagem:
-          "StockControl v2.4.1 está disponível com melhorias de desempenho e correções de segurança.",
-        itemId: null,
-        itemNome: null,
-        prioridade: "media",
-        lida: false,
-        arquivada: false,
-        criadaEm: daysAgo(1),
-        lidaEm: null,
-        acao: null,
-      },
-      {
-        id: uid(),
-        tipo: "sistema",
-        subtipo: "sistema_importacao",
-        titulo: "Importação de dados concluída",
-        mensagem:
-          "42 itens foram importados com sucesso a partir do arquivo de inventário.",
-        itemId: null,
-        itemNome: null,
-        prioridade: "baixa",
-        lida: true,
-        arquivada: false,
-        criadaEm: daysAgo(5),
-        lidaEm: daysAgo(5),
-        acao: null,
-      },
-      {
-        id: uid(),
-        tipo: "sistema",
-        subtipo: "sistema_relatorio",
-        titulo: "Relatório mensal gerado",
-        mensagem:
-          "O relatório de movimentações do mês foi gerado e está disponível na seção Relatórios.",
-        itemId: null,
-        itemNome: null,
-        prioridade: "baixa",
-        lida: true,
-        arquivada: false,
-        criadaEm: daysAgo(7),
-        lidaEm: daysAgo(7),
-        acao: { label: "Ver relatório", url: "relatorios.html" },
-      },
-      {
-        id: uid(),
-        tipo: "estoque",
-        subtipo: "estoque_baixo",
-        titulo: "Estoque zerado: Teclado USB",
-        mensagem:
-          "Teclado USB atingiu 0 unidades disponíveis. Reposição necessária.",
-        itemId: "item_003",
-        itemNome: "Teclado USB",
-        prioridade: "critica",
-        lida: false,
-        arquivada: false,
-        criadaEm: hoursAgo(8),
-        lidaEm: null,
-        acao: { label: "Ver item", url: "estoque.html" },
-      },
-    ];
-
-    // Sort newest first
-    mock.sort((a, b) => b.criadaEm.localeCompare(a.criadaEm));
-    saveNotifs(mock);
   }
 
   // ── Scan for new alerts from data ─────────────────────────────────────────
@@ -905,13 +650,13 @@ document.addEventListener("sc:ready", function () {
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
-  const rules = getRules();
-  loadRulesToUI(rules);
-  await seedIfNeeded();
-  wireTabs();
-  wireActions();
-  renderList();
-}
+    const rules = getRules();
+    loadRulesToUI(rules);
+    await seedIfNeeded();
+    wireTabs();
+    wireActions();
+    renderList();
+  }
 
   init();
 });
