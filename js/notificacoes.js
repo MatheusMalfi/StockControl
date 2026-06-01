@@ -1,6 +1,13 @@
 "use strict";
 
-document.addEventListener("sc:ready", function () {
+let notificacoesBooted = false;
+
+function bootNotificacoes() {
+  if (notificacoesBooted) return;
+  notificacoesBooted = true;
+
+  const LOG_PREFIX = "[notificacoes]";
+
   // ── Constants ─────────────────────────────────────────────────────────────
   const KEYS = {
     NOTIFS: "sc_notifications",
@@ -55,6 +62,11 @@ document.addEventListener("sc:ready", function () {
     } catch {}
   }
 
+  function dbGetArray(key) {
+    const value = dbGet(key);
+    return Array.isArray(value) ? value : [];
+  }
+
   // ── API helpers ───────────────────────────────────────────────────────────
   function _notifToken() {
     return (
@@ -90,23 +102,169 @@ document.addEventListener("sc:ready", function () {
       Math.random().toString(36).slice(2, 6)
     );
   }
-  function daysAgo(n) {
-    const d = new Date();
-    d.setDate(d.getDate() - n);
-    return d.toISOString();
+
+  function normalizeCondicao(raw) {
+    const upper = String(raw || "").toUpperCase();
+    if (upper === "DESCARTAR" || upper === "DISCARD") return "descartar";
+    if (upper === "REPARO") return "reparo";
+    if (upper === "OTIMO") return "otimo";
+
+    const lower = String(raw || "").toLowerCase();
+    return lower || "otimo";
   }
-  function hoursAgo(n) {
-    const d = new Date();
-    d.setHours(d.getHours() - n);
-    return d.toISOString();
+
+  function normalizeItem(it) {
+    if (!it || typeof it !== "object") return null;
+    return {
+      id: String(it.id || it.item_id || ""),
+      nome: it.nome || it.product_name || it.produto || it.item || "Item",
+      disponivel:
+        Number(
+          it.disponivel ?? it.quantity_available ?? it.quantidade_disponivel,
+        ) ||
+        Number(it.quantity ?? it.total) ||
+        0,
+      condicao: normalizeCondicao(
+        it.condicao || it.condition_code || it.status,
+      ),
+      created_at: it.created_at || it.data_criacao || null,
+    };
+  }
+
+  function normalizeMovement(m) {
+    if (!m || typeof m !== "object") return null;
+    return {
+      item_id: m.item_id || m.product_id || m.itemId || null,
+      created_at: m.created_at || m.data || null,
+    };
+  }
+
+  function normalizeRequest(r) {
+    if (!r || typeof r !== "object") return null;
+    return {
+      id: String(r.id || ""),
+      status: String(r.status || "").toLowerCase(),
+      urgencia: String(r.urgencia || r.prioridade || "media").toLowerCase(),
+      solicitante: r.solicitante || r.requester || "Usuário",
+      nome_item: r.nome_item || r.item || r.produto || "Item",
+      setor: r.setor || r.tipo || "Setor",
+      quantidade: Number(r.quantidade || 1) || 1,
+      created_at: r.created_at || r.data_solicitacao || null,
+    };
+  }
+
+  function normalizeItemsList(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeItem).filter((x) => x && x.id);
+  }
+
+  function normalizeMovementsList(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeMovement).filter(Boolean);
+  }
+
+  function normalizeRequestsList(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeRequest).filter((x) => x && x.id);
+  }
+
+  function orgQuery() {
+    const orgId = getOrganizationId();
+    return orgId ? `?organization_id=${encodeURIComponent(orgId)}` : "";
+  }
+
+  async function fetchItemsReal() {
+    try {
+      const data = await _notifApi("GET", `/api/items${orgQuery()}`);
+      const rows = Array.isArray(data) ? data : data.items || data.itens || [];
+      const normalized = normalizeItemsList(rows);
+      if (normalized.length) dbSet(KEYS.ITEMS, normalized);
+      return normalized;
+    } catch {
+      return normalizeItemsList(dbGetArray(KEYS.ITEMS));
+    }
+  }
+
+  async function fetchMovementsReal() {
+    try {
+      const data = await _notifApi("GET", `/api/movimentacoes${orgQuery()}`);
+      const rows = Array.isArray(data)
+        ? data
+        : data.movimentacoes || data.movements || [];
+      const normalized = normalizeMovementsList(rows);
+      if (normalized.length) dbSet(KEYS.MOVEMENTS, normalized);
+      return normalized;
+    } catch {
+      return normalizeMovementsList(dbGetArray(KEYS.MOVEMENTS));
+    }
+  }
+
+  async function fetchRequestsReal() {
+    try {
+      const data = await _notifApi("GET", `/api/solicitacoes${orgQuery()}`);
+      const rows = Array.isArray(data)
+        ? data
+        : data.solicitacoes || data.requests || [];
+      const normalized = normalizeRequestsList(rows);
+      if (normalized.length) dbSet(KEYS.REQUESTS, normalized);
+      return normalized;
+    } catch {
+      return normalizeRequestsList(dbGetArray(KEYS.REQUESTS));
+    }
+  }
+
+  function normalizeNotif(n) {
+    if (!n || typeof n !== "object") return null;
+    return {
+      ...n,
+      id: n.id,
+      tipo: n.tipo || "info",
+      subtipo: n.subtipo || null,
+      itemId: n.itemId ?? n.item_id ?? null,
+      itemNome: n.itemNome ?? n.item_nome ?? null,
+      criadaEm: n.criadaEm || n.created_at || new Date().toISOString(),
+      created_at: n.created_at || n.criadaEm || new Date().toISOString(),
+      lida: n.lida === true || n.lida === 1,
+      arquivada: n.arquivada === true || n.arquivada === 1,
+    };
+  }
+
+  function normalizeNotifList(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeNotif).filter(Boolean);
+  }
+
+  function notifUniqueKey(n) {
+    const subtipo = n?.subtipo || "";
+    const itemId = notifItemId(n) || "";
+    if (subtipo || itemId)
+      return `${n?.tipo || ""}|${subtipo}|${String(itemId)}`;
+    return `${n?.tipo || ""}|${n?.titulo || ""}|${n?.mensagem || ""}`;
+  }
+
+  function dedupeNotifs(list) {
+    const seen = new Set();
+    const out = [];
+    for (const n of list) {
+      const key = notifUniqueKey(n);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(n);
+    }
+    return out;
+  }
+
+  function notifItemId(n) {
+    return n?.itemId ?? n?.item_id ?? null;
   }
 
   // ── Notification helpers ──────────────────────────────────────────────────
   function allNotifs() {
-    return dbGet(KEYS.NOTIFS);
+    return dedupeNotifs(normalizeNotifList(dbGet(KEYS.NOTIFS)));
   }
-  function saveNotifs(arr) {
-    dbSet(KEYS.NOTIFS, arr);
+  async function saveNotifs(arr) {
+    const normalized = dedupeNotifs(normalizeNotifList(arr));
+    dbSet(KEYS.NOTIFS, normalized);
 
     if (typeof SC.loadNotifications === "function") {
       SC.loadNotifications();
@@ -114,11 +272,16 @@ document.addEventListener("sc:ready", function () {
 
     const orgId = getOrganizationId();
     const payload = {
-      notificacoes: arr,
+      notificacoes: normalized,
       ...(orgId ? { organization_id: orgId } : {}),
     };
 
-    return _notifApi("POST", "/api/notificacoes/sync", payload).catch(() => {});
+    try {
+      await _notifApi("POST", "/api/notificacoes/sync", payload);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function getRules() {
@@ -127,7 +290,14 @@ document.addEventListener("sc:ready", function () {
   function saveRulesData(r) {
     dbSet(KEYS.RULES, r);
     const orgId = getOrganizationId();
-    const payload = { ...r, ...(orgId ? { organization_id: orgId } : {}) };
+    const payload = {
+      estoqueBaixo: !!r.lowStock,
+      descarte: !!r.discard,
+      doacaoPendente: !!r.request,
+      email: !!r.email,
+      minimo: Number(r.lowStockThreshold) || 5,
+      ...(orgId ? { organization_id: orgId } : {}),
+    };
     _notifApi("PUT", "/api/notificacoes/rules", payload).catch(() => {});
   }
 
@@ -149,47 +319,67 @@ document.addEventListener("sc:ready", function () {
     }
   }
 
-  // Seed notifications
-  function seedIfNeeded() {
-    const _nu =
-      JSON.parse(
-        localStorage.getItem("sc_user") ||
-          sessionStorage.getItem("sc_user") ||
-          "{}",
-      ) || {};
-    _notifApi(
-      "GET",
-      `/api/notificacoes${_nu.organization_id ? `?organization_id=${_nu.organization_id}` : ""}`,
-    )
-      .then((data) => {
-        const notifs = Array.isArray(data) ? data : data.notificacoes || [];
-        if (notifs.length) {
-          dbSet(KEYS.NOTIFS, notifs);
-          renderList();
-        }
-      })
-      .catch(() => {});
-    const existing = allNotifs();
-    if (existing.length) return;
+  // ── Carrega notificações reais da API ────────────────────────────────────
+  async function loadNotifsFromApi() {
+    const orgId = getOrganizationId();
+    try {
+      const data = await _notifApi(
+        "GET",
+        `/api/notificacoes${orgId ? `?organization_id=${orgId}` : ""}`,
+      );
+      const notifs = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.notificacoes)
+          ? data.notificacoes
+          : [];
+      const normalizedRemote = dedupeNotifs(normalizeNotifList(notifs));
+      const localNotifs = allNotifs();
+      if (normalizedRemote.length > 0 || localNotifs.length === 0) {
+        dbSet(KEYS.NOTIFS, normalizedRemote);
+      }
+
+      const apiRules = data && !Array.isArray(data) ? data.rules : null;
+      if (apiRules && typeof apiRules === "object") {
+        const current = getRules();
+        const mappedRules = {
+          ...current,
+          lowStock: !!apiRules.estoque_baixo,
+          lowStockThreshold:
+            Number(apiRules.minimo) || current.lowStockThreshold,
+          discard: !!apiRules.descarte,
+          request: !!apiRules.doacao_pendente,
+          email: !!apiRules.email,
+        };
+        dbSet(KEYS.RULES, mappedRules);
+      }
+    } catch {
+      // Mantém cache local atual quando a API estiver indisponível.
+    }
   }
 
   // ── Scan for new alerts from data ─────────────────────────────────────────
-  function scanForAlerts() {
+  async function scanForAlerts() {
     const rules = getRules();
     const notifs = allNotifs();
     const now = new Date();
     let newCount = 0;
+    let synced = true;
+    const [items, movs, requests] = await Promise.all([
+      fetchItemsReal(),
+      fetchMovementsReal(),
+      fetchRequestsReal(),
+    ]);
 
     function hasExisting(subtipo, itemId) {
       return notifs.some(
-        (n) => !n.arquivada && n.subtipo === subtipo && n.itemId === itemId,
+        (n) => n.subtipo === subtipo && notifItemId(n) === itemId,
       );
     }
 
     // Rule 1: Low stock
     if (rules.lowStock) {
       const threshold = parseInt(rules.lowStockThreshold, 10) || 5;
-      dbGet(KEYS.ITEMS).forEach((it) => {
+      items.forEach((it) => {
         const disp = parseInt(it.disponivel, 10) || 0;
         if (disp > threshold) return;
         if (hasExisting("estoque_baixo", it.id)) return;
@@ -223,18 +413,24 @@ document.addEventListener("sc:ready", function () {
     // Rule 2: Discard items
     if (rules.discard) {
       const limitDays = parseInt(rules.discardDays, 10) || 30;
-      const movs = dbGet(KEYS.MOVEMENTS);
-      dbGet(KEYS.ITEMS)
+      items
         .filter((it) => it.condicao === "descartar")
         .forEach((it) => {
           if (hasExisting("descarte_pendente", it.id)) return;
           // Find last movement for this item
           const lastMov = movs
-            .filter((m) => m.item_id === it.id)
-            .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+            .filter((m) => String(m.item_id || "") === String(it.id || ""))
+            .sort((a, b) =>
+              String(b.created_at || "").localeCompare(
+                String(a.created_at || ""),
+              ),
+            )[0];
           const refDate = lastMov
             ? new Date(lastMov.created_at)
-            : new Date(it.created_at || 0);
+            : it.created_at
+              ? new Date(it.created_at)
+              : null;
+          if (!refDate || Number.isNaN(refDate.getTime())) return;
           const daysSince = Math.floor((now - refDate) / 86400000);
           if (daysSince < limitDays) return;
           notifs.unshift({
@@ -264,7 +460,7 @@ document.addEventListener("sc:ready", function () {
         media: "media",
         baixa: "baixa",
       };
-      dbGet(KEYS.REQUESTS)
+      requests
         .filter((r) => r.status === "pendente")
         .forEach((r) => {
           if (hasExisting("solicitacao_nova", r.id)) return;
@@ -288,7 +484,7 @@ document.addEventListener("sc:ready", function () {
     }
 
     if (newCount > 0) {
-      saveNotifs(notifs);
+      synced = await saveNotifs(notifs);
       if (rulesCount) {
         rulesCount.textContent = newCount;
         rulesCount.style.display = "inline-flex";
@@ -297,7 +493,7 @@ document.addEventListener("sc:ready", function () {
         }, 5000);
       }
     }
-    return newCount;
+    return { newCount, synced };
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -366,7 +562,7 @@ document.addEventListener("sc:ready", function () {
             ${priorityBadge(n.prioridade)}
           </div>
           <div class="notif-msg">${SC.escHtml(n.mensagem)}</div>
-          <div class="notif-time">${SC.fmtRelTime(n.criadaEm)} · ${SC.escHtml(tipoLbl)}</div>
+          <div class="notif-time">${SC.fmtRelTime(n.criadaEm || n.created_at)} · ${SC.escHtml(tipoLbl)}</div>
         </div>
         ${!n.lida ? `<div class="notif-dot" aria-hidden="true"></div>` : ""}
         <div class="notif-item-actions">
@@ -579,24 +775,38 @@ document.addEventListener("sc:ready", function () {
     };
   }
 
-  function saveRules() {
+  async function saveRules() {
     const btn = document.getElementById("btn-save-rules");
-    const rules = collectRules();
-    saveRulesData(rules);
-    if (btn) {
-      btn.disabled = true;
-    }
-    const newCount = scanForAlerts();
-    renderList();
-    if (btn) {
-      btn.disabled = false;
-    }
-    if (newCount > 0) {
-      SC.toastSuccess(
-        `Regras salvas. ${newCount} novo${newCount > 1 ? "s alertas gerados" : " alerta gerado"}.`,
-      );
-    } else {
-      SC.toastSuccess("Regras de alertas salvas com sucesso.");
+    try {
+      const rules = collectRules();
+      console.log(`${LOG_PREFIX} saveRules:start`, { rules });
+      saveRulesData(rules);
+      if (btn) {
+        btn.disabled = true;
+      }
+      const { newCount, synced } = await scanForAlerts();
+      console.log(`${LOG_PREFIX} saveRules:scanResult`, { newCount, synced });
+      renderList();
+
+      if (!synced && newCount > 0) {
+        SC.toastWarning(
+          "Alertas gerados localmente, mas não foram salvos no servidor. Verifique login/conexão.",
+        );
+      }
+      if (newCount > 0) {
+        SC.toastSuccess(
+          `Regras salvas. ${newCount} novo${newCount > 1 ? "s alertas gerados" : " alerta gerado"}.`,
+        );
+      } else {
+        SC.toastSuccess("Regras de alertas salvas com sucesso.");
+      }
+    } catch {
+      console.error(`${LOG_PREFIX} saveRules:error`);
+      SC.toastError("Não foi possível salvar as configurações de alertas.");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+      }
     }
   }
 
@@ -623,15 +833,31 @@ document.addEventListener("sc:ready", function () {
     document
       .getElementById("btn-save-rules")
       ?.addEventListener("click", saveRules);
-    document.getElementById("btnScanAlerts")?.addEventListener("click", () => {
-      const n = scanForAlerts();
-      renderList();
-      SC.toastSuccess(
-        n > 0
-          ? `${n} novo${n > 1 ? "s alertas gerados" : " alerta gerado"} com base nas regras ativas.`
-          : "Nenhum novo alerta detectado. Tudo em ordem.",
-      );
-    });
+    document
+      .getElementById("btnScanAlerts")
+      ?.addEventListener("click", async () => {
+        try {
+          const { newCount: n, synced } = await scanForAlerts();
+          console.log(`${LOG_PREFIX} btnScanAlerts:scanResult`, {
+            newCount: n,
+            synced,
+          });
+          renderList();
+          if (!synced && n > 0) {
+            SC.toastWarning(
+              "Alertas gerados localmente, mas não foram salvos no servidor. Verifique login/conexão.",
+            );
+          }
+          SC.toastSuccess(
+            n > 0
+              ? `${n} novo${n > 1 ? "s alertas gerados" : " alerta gerado"} com base nas regras ativas.`
+              : "Nenhum novo alerta detectado. Tudo em ordem.",
+          );
+        } catch {
+          console.error(`${LOG_PREFIX} btnScanAlerts:error`);
+          SC.toastError("Não foi possível gerar alertas.");
+        }
+      });
 
     // Toggle dimming
     const toggleIds = [
@@ -650,13 +876,28 @@ document.addEventListener("sc:ready", function () {
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
-    const rules = getRules();
-    loadRulesToUI(rules);
-    await seedIfNeeded();
+    loadRulesToUI(getRules());
+    await loadNotifsFromApi();
+    loadRulesToUI(getRules());
     wireTabs();
     wireActions();
     renderList();
   }
 
   init();
-});
+}
+
+if (window.SC && window.SC.ready) {
+  bootNotificacoes();
+} else {
+  document.addEventListener("sc:ready", bootNotificacoes, { once: true });
+  window.addEventListener(
+    "load",
+    () => {
+      if (window.SC && window.SC.ready) {
+        bootNotificacoes();
+      }
+    },
+    { once: true },
+  );
+}
