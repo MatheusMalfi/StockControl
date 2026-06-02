@@ -408,9 +408,83 @@
         : "Usuário";
   }
 
+  function isRecyclerUser(user) {
+    if (!user) return false;
+    const type =
+      user.org_type ||
+      user.organization_type ||
+      user.orgType ||
+      user.role ||
+      "";
+    return String(type).toUpperCase() === "RECYCLER";
+  }
+
+  function updateSidebarForRecycler(user) {
+    const navItems = Array.from(
+      document.querySelectorAll("#sidebar .sidebar-nav .nav-item"),
+    );
+    if (!navItems.length) return;
+
+    const currentPage = window.location.pathname.split("/").pop() || "index.html";
+    const isRecycler = isRecyclerUser(user);
+
+    if (!isRecycler) {
+      navItems.forEach((item) => {
+        item.removeAttribute("data-disabled");
+        item.classList.remove("disabled");
+        item.style.pointerEvents = "";
+        item.style.opacity = "";
+        item.removeAttribute("title");
+      });
+      return;
+    }
+
+    const recyclerTargets = [
+      {
+        href: "/recicladora/recicladora.html",
+        page: "recicladora.html",
+        label: "Recicladora",
+      },
+      {
+        href: "/recicladora/pedidos-recicladora.html",
+        page: "pedidos-recicladora.html",
+        label: "Pedidos",
+      },
+    ];
+
+    navItems.forEach((item, index) => {
+      if (index < recyclerTargets.length) {
+        const target = recyclerTargets[index];
+        item.setAttribute("href", target.href);
+        item.dataset.page = target.page;
+        item.classList.toggle("active", currentPage === target.page);
+
+        const label = item.querySelector(".nav-label");
+        if (label) label.textContent = target.label;
+
+        item.classList.remove("disabled");
+        item.style.pointerEvents = "";
+        item.style.opacity = "";
+        item.removeAttribute("title");
+        item.dataset.disabled = "false";
+      } else {
+        item.setAttribute("href", "javascript:void(0)");
+        item.dataset.disabled = "true";
+        item.classList.add("disabled");
+        item.style.pointerEvents = "none";
+        item.style.opacity = "0.45";
+        item.setAttribute("title", "Opção temporariamente desativada para recicladoras");
+      }
+    });
+  }
+
   /* Try from session cache first, then fetch */
   const cachedUser = getUser();
-  if (cachedUser) applyUserInfo(cachedUser);
+  if (cachedUser) {
+    SC.currentUser = cachedUser;
+    applyUserInfo(cachedUser);
+    updateSidebarForRecycler(cachedUser);
+  }
 
   SC.api("/users/me")
     .then((data) => {
@@ -422,6 +496,7 @@
       storage.setItem(USER_KEY, JSON.stringify(user));
       applyUserInfo(user);
       SC.currentUser = user;
+      updateSidebarForRecycler(user);
     })
     .catch(() => {
       /* Non-critical: keep showing cached data */
