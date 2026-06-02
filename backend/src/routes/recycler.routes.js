@@ -9,13 +9,20 @@ router.get("/ongs/solicitacoes", async (req, res) => {
   try {
     const [ongs] = await pool.query(
       `SELECT o.id, o.name,
-              COALESCE(s.request_count, 0) AS request_count
+              COALESCE(s.request_count, 0) AS request_count,
+              COALESCE(p.approved_count, 0) AS approved_count
        FROM organizations o
        LEFT JOIN (
          SELECT organization_id, COUNT(*) AS request_count
          FROM solicitacoes
          GROUP BY organization_id
        ) s ON s.organization_id = o.id
+       LEFT JOIN (
+         SELECT organization_id, COUNT(*) AS approved_count
+         FROM solicitacoes
+         WHERE status = 'aprovada'
+         GROUP BY organization_id
+       ) p ON p.organization_id = o.id
        WHERE o.org_type = 'ONG'
        ORDER BY o.name`,
     );

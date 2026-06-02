@@ -20,12 +20,23 @@
     const colors = ["logo-impact", "logo-recicla", "logo-metal"];
     const logoClass = colors[index % colors.length];
     const count = parseInt(org.request_count, 10) || 0;
+    const approved = parseInt(org.approved_count, 10) || 0;
+    const approvedText =
+      approved > 0
+        ? `${approved} solicitação${approved === 1 ? "" : "ões"} aprovada${approved === 1 ? "" : "s"}`
+        : count === 0
+        ? "Sem solicitações de coleta"
+        : `${count} solicitações de coleta`;
+
     return `
-      <a href="/solicitacoes.html" class="partner-card">
+      <a href="/solicitacoes.html" class="partner-card${approved > 0 ? " partner-card--approved" : ""}">
         <div class="partner-logo ${logoClass}">${getInitial(org.name)}</div>
         <div class="partner-info">
-          <div class="partner-name">${esc(org.name)}</div>
-          <div class="partner-meta">${count === 0 ? "Sem solicitações de coleta" : `${count} solicitações de coleta`}</div>
+          <div class="partner-name-row">
+            <div class="partner-name">${esc(org.name)}</div>
+            ${approved > 0 ? `<span class="partner-new-badge">${approved}</span>` : ""}
+          </div>
+          <div class="partner-meta">${esc(approvedText)}</div>
         </div>
         <div class="count-badge">${count}</div>
       </a>
