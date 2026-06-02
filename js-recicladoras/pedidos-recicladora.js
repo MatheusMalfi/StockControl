@@ -1,0 +1,167 @@
+(function bootPedidosRecicladora() {
+  if (!window.SC || !window.SC.ready) {
+    document.addEventListener("sc:ready", bootPedidosRecicladora, { once: true });
+    return;
+  }
+
+  const orderCountBadge = document.getElementById("orderCountBadge");
+  const recyclerLogo = document.getElementById("recyclerLogo");
+  const recyclerName = document.getElementById("recyclerName");
+  const recyclerMeta = document.getElementById("recyclerMeta");
+  const pageSubtitle = document.getElementById("pageSubtitle");
+  const ordersTableBody = document.getElementById("ordersTableBody");
+  const mobileOrderList = document.getElementById("mobileOrderList");
+
+  function getInitial(name) {
+    if (!name) return "?";
+    return name.trim()[0].toUpperCase();
+  }
+
+  function getStatusBadge(status) {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized === "aprovada") return "badge badge-success";
+    if (normalized === "pendente") return "badge badge-warning";
+    if (normalized === "recusada") return "badge badge-danger";
+    return "badge badge-secondary";
+  }
+
+  function esc(value) {
+    return SC.escHtml(String(value || ""));
+  }
+
+  function buildOrderActions(orderId, isApproved) {
+    const detailsButton = `
+      <button class="btn btn-ghost btn-sm" type="button" onclick="window.location.href='/recicladora/detalhes-pedido.html?solicitacao_id=${encodeURIComponent(
+        orderId,
+      )}'">Detalhes</button>
+    `;
+
+    const scheduleButton = isApproved
+      ? `
+      <button class="btn btn-primary btn-sm" type="button" onclick="window.location.href='/recicladora/agendamento-coleta.html?solicitacao_id=${encodeURIComponent(
+        orderId,
+      )}'">Agendar coleta</button>
+    `
+      : "";
+
+    return `<div class="order-actions">${detailsButton}${scheduleButton}</div>`;
+  }
+
+  function buildOrderRow(order, index, orgName) {
+    const description = order.item || order.obs || "Sem descrição";
+    const statusText = order.status ? String(order.status).toLowerCase() : "pendente";
+    const isApproved = statusText === "aprovada";
+    const orderNumber = `Pedido ${index + 1}`;
+
+    return `
+      <tr>
+        <td>
+          <div class="order-title">${esc(orderNumber)}</div>
+          <div class="order-meta">${esc(description)}</div>
+        </td>
+        <td>
+          <span class="${getStatusBadge(statusText)}">${esc(order.status || "Pendente")}</span>
+        </td>
+        <td>${esc(orgName)}</td>
+        <td style="text-align:right;">
+          ${buildOrderActions(order.id, isApproved)}
+        </td>
+      </tr>
+    `;
+  }
+
+  function buildMobileOrder(order, index, orgName) {
+    const description = order.item || order.obs || "Sem descrição";
+    const statusText = order.status ? String(order.status).toLowerCase() : "pendente";
+    const isApproved = statusText === "aprovada";
+
+    return `
+      <div class="mobile-order-card">
+        <div class="mobile-order-header">
+          <div>
+            <div class="order-title">Pedido ${index + 1}</div>
+            <div class="order-meta">${esc(description)}</div>
+          </div>
+          <span class="${getStatusBadge(statusText)}">${esc(order.status || "Pendente")}</span>
+        </div>
+        <div class="mobile-order-actions">
+          ${buildOrderActions(order.id, isApproved)}
+        </div>
+      </div>
+    `;
+  }
+
+  function updateHeader(orgName, count) {
+    if (recyclerName) recyclerName.textContent = orgName;
+    if (recyclerLogo) recyclerLogo.textContent = getInitial(orgName);
+    if (recyclerMeta)
+      recyclerMeta.textContent =
+        count > 0
+          ? `Parceiro com ${count} pedido${count === 1 ? "" : "s"} aguardando coleta.`
+          : "Nenhum pedido encontrado para esta ONG.";
+    if (pageSubtitle)
+      pageSubtitle.textContent = `Pedidos pendentes de coleta de ${orgName}`;
+    if (orderCountBadge)
+      orderCountBadge.textContent = `${count} pedido${count === 1 ? "" : "s"}`;
+  }
+
+  function renderOrders(orders, orgName) {
+    if (!orders || !orders.length) {
+      if (ordersTableBody) ordersTableBody.innerHTML = "<tr><td colspan=4>Não há pedidos de coleta para esta ONG.</td></tr>";
+      if (mobileOrderList)
+        mobileOrderList.innerHTML =
+          "<div class=\"mobile-order-card\">Nenhum pedido de coleta encontrado.</div>";
+      updateHeader(orgName, 0);
+      return;
+    }
+
+    if (ordersTableBody)
+      ordersTableBody.innerHTML = orders
+        .map((order, index) => buildOrderRow(order, index, orgName))
+        .join("");
+
+    if (mobileOrderList)
+      mobileOrderList.innerHTML = orders
+        .map((order, index) => buildMobileOrder(order, index, orgName))
+        .join("");
+
+    updateHeader(orgName, orders.length);
+  }
+
+  async function loadOrders() {
+    const params = new URLSearchParams(window.location.search);
+    const orgId = params.get("org_id");
+    const orgName = params.get("org_name")
+      ? decodeURIComponent(params.get("org_name"))
+      : "ONG";
+
+    if (!orgId) {
+      if (ordersTableBody) ordersTableBody.innerHTML = "<tr><td colspan=4>Parâmetro organization_id não informado.</td></tr>";
+      if (mobileOrderList)
+        mobileOrderList.innerHTML =
+          "<div class=\"mobile-order-card\">Parâmetro organization_id não informado.</div>";
+      if (recyclerMeta)
+        recyclerMeta.textContent = "Informe uma ONG válida para visualizar os pedidos.";
+      return;
+    }
+
+    try {
+      const response = await SC.api(`/solicitacoes?organization_id=${encodeURIComponent(orgId)}`);
+      const orders = Array.isArray(response)
+        ? response
+        : response.solicitacoes || [];
+      renderOrders(orders, orgName);
+    } catch (err) {
+      console.error("Erro ao carregar pedidos da ONG:", err);
+      if (ordersTableBody) ordersTableBody.innerHTML = "<tr><td colspan=4>Erro ao carregar pedidos.</td></tr>";
+      if (mobileOrderList)
+        mobileOrderList.innerHTML =
+          "<div class=\"mobile-order-card\">Erro ao carregar pedidos da ONG.</div>";
+      if (recyclerMeta)
+        recyclerMeta.textContent = "Erro ao carregar pedidos desta ONG.";
+      updateHeader(orgName, 0);
+    }
+  }
+
+  loadOrders();
+})();

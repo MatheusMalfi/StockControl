@@ -28,8 +28,12 @@
         ? "Sem solicitações de coleta"
         : `${count} solicitações de coleta`;
 
+    const href = `/recicladora/pedidos-recicladora.html?org_id=${encodeURIComponent(
+      org.id,
+    )}&org_name=${encodeURIComponent(org.name)}`;
+
     return `
-      <a href="/solicitacoes.html" class="partner-card${approved > 0 ? " partner-card--approved" : ""}">
+      <a href="${href}" class="partner-card${approved > 0 ? " partner-card--approved" : ""}">
         <div class="partner-logo ${logoClass}">${getInitial(org.name)}</div>
         <div class="partner-info">
           <div class="partner-name-row">

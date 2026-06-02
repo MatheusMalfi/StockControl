@@ -171,31 +171,31 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">Pedidos</h1>
-        <p class="page-subtitle">Pedidos pendentes de coleta da JEDA</p>
-      </div>
+          <p class="page-subtitle" id="pageSubtitle">Pedidos pendentes de coleta</p>
+        </div>
 
-      <div style="display:flex; gap:var(--space-2);">
-        <button class="btn btn-secondary" onclick="window.location.href='tela1-inicio.html'" type="button">
-          Voltar
-        </button>
+        <div style="display:flex; gap:var(--space-2);">
+          <button class="btn btn-secondary" onclick="window.location.href='/recicladora/recicladora.html'" type="button">
+            Voltar
+          </button>
+        </div>
       </div>
-    </div>
 
     <div class="grid grid-3" style="margin-top:var(--space-5);">
 
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">ONG</h2>
-          <span class="badge badge-danger">2 pedidos</span>
+          <span class="badge badge-danger" id="orderCountBadge">0 pedidos</span>
         </div>
 
         <div class="card-body">
           <div class="recycler-summary">
-            <div class="recycler-logo">I</div>
+            <div class="recycler-logo" id="recyclerLogo">?</div>
 
             <div class="recycler-info">
-              <div class="recycler-name">JEDA</div>
-              <div class="recycler-meta">Parceiro com pedidos aguardando análise e agendamento.</div>
+              <div class="recycler-name" id="recyclerName">-</div>
+              <div class="recycler-meta" id="recyclerMeta">Carregando pedidos...</div>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@
       <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <h2 class="card-title">Lista de Pedidos</h2>
-          <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar coleta</a>
+          <a href="/recicladora/agendamento-coleta.html" class="btn btn-primary btn-sm">Agendar coleta</a>
         </div>
 
         <div class="table-wrapper orders-table-wrapper" style="border:none; border-radius:0;">
@@ -213,93 +213,17 @@
               <tr>
                 <th>Pedido</th>
                 <th>Status</th>
-                <th>ONG</th>
+                <th>Descrição</th>
                 <th style="text-align:right;">Ações</th>
               </tr>
             </thead>
 
-            <tbody>
-              <tr>
-                <td>
-                  <div class="order-title">Pedido 03/2026</div>
-                  <div class="order-meta">Solicitação de coleta pendente</div>
-                </td>
-
-                <td>
-                  <span class="badge badge-warning">Pendente</span>
-                </td>
-
-                <td>JEDA</td>
-
-                <td>
-                  <div class="order-actions">
-                    <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
-                    <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
-                  </div>
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  <div class="order-title">Pedido 07/2026</div>
-                  <div class="order-meta">Solicitação de coleta pendente</div>
-                </td>
-
-                <td>
-                  <span class="badge badge-warning">Pendente</span>
-                </td>
-
-                <td>JEDA</td>
-
-                <td>
-                  <div class="order-actions">
-                    <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
-                    <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
-                  </div>
-                </td>
-              </tr>
+            <tbody id="ordersTableBody">
             </tbody>
           </table>
         </div>
 
-        <div class="card-body mobile-order-list">
-
-          <div class="mobile-order-card">
-            <div class="mobile-order-header">
-              <div>
-                <div class="order-title">Pedido 03/2026</div>
-                <div class="order-meta">JEDA</div>
-              </div>
-
-              <span class="badge badge-warning">Pendente</span>
-            </div>
-
-            <div class="mobile-order-actions">
-              <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
-              <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
-            </div>
-          </div>
-
-          <div class="mobile-order-card">
-            <div class="mobile-order-header">
-              <div>
-                <div class="order-title">Pedido 07/2026</div>
-                <div class="order-meta">JEDA</div>
-              </div>
-
-              <span class="badge badge-warning">Pendente</span>
-            </div>
-
-            <div class="mobile-order-actions">
-              <a href="tela3-detalhe-pedido.html" class="btn btn-ghost btn-sm">Detalhes</a>
-              <a href="tela4-agendamento.html" class="btn btn-primary btn-sm">Agendar</a>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-    </div>
+        <div class="card-body mobile-order-list" id="mobileOrderList"></div>
 
   </main>
 
@@ -307,5 +231,6 @@
 
   <script src="/js/layout.js"></script>
   <script src="/js/main.js"></script>
+  <script src="/js-recicladoras/pedidos-recicladora.js"></script>
 </body>
 </html>
