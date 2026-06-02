@@ -3,6 +3,30 @@ const pool = require("../db");
 
 const router = express.Router();
 
+// GET /api/recycler/ongs/solicitacoes
+// Lista todas as ONGs cadastradas e a quantidade de solicitações de coleta feitas por cada uma
+router.get("/ongs/solicitacoes", async (req, res) => {
+  try {
+    const [ongs] = await pool.query(
+      `SELECT o.id, o.name,
+              COALESCE(s.request_count, 0) AS request_count
+       FROM organizations o
+       LEFT JOIN (
+         SELECT organization_id, COUNT(*) AS request_count
+         FROM solicitacoes
+         GROUP BY organization_id
+       ) s ON s.organization_id = o.id
+       WHERE o.org_type = 'ONG'
+       ORDER BY o.name`,
+    );
+
+    res.json({ success: true, ongs });
+  } catch (err) {
+    console.error("Erro em GET /api/recycler/ongs/solicitacoes:", err);
+    res.status(500).json({ message: "Erro ao carregar lista de ONGs." });
+  }
+});
+
 // GET /api/recycler/ongs
 // Lista as ONGs que possuem pedidos com status REQUESTED
 router.get("/ongs", async (req, res) => {
