@@ -217,19 +217,19 @@
 
     <div class="page-header">
       <div>
-        <h1 class="page-title">Detalhe do Pedido 03/2026</h1>
-        <p class="page-subtitle">Visualize as informações completas do pedido selecionado</p>
+        <h1 class="page-title" id="pageTitle">Detalhe do Pedido</h1>
+        <p class="page-subtitle" id="pageSubtitle">Visualize as informações completas do pedido selecionado</p>
       </div>
 
       <div style="display:flex; gap:var(--space-2); flex-wrap:wrap;">
-        <button class="btn btn-secondary" onclick="window.location.href='tela2-lista-pedidos.html'" type="button">
+        <button class="btn btn-secondary" onclick="window.location.href='/recicladora/pedidos-recicladora.html'" type="button">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
           Voltar
         </button>
 
-        <button class="btn btn-primary" onclick="window.location.href='tela4-agendamento.html'" type="button">
+        <button class="btn btn-primary" id="scheduleBtn" type="button" style="display:none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
             <line x1="16" y1="2" x2="16" y2="6"/>
@@ -247,16 +247,16 @@
         <div class="card-body">
           <div class="order-hero">
             <div class="recycler-info">
-              <div class="recycler-avatar">I</div>
+              <div class="recycler-avatar" id="orgInitial">?</div>
               <div>
-                <div class="recycler-name">JEDA</div>
-                <div class="recycler-subtitle">Controle de Estoque • Pedido de coleta</div>
+                <div class="recycler-name" id="orgName">-</div>
+                <div class="recycler-subtitle" id="orgMeta">Carregando...</div>
               </div>
             </div>
 
             <div class="order-code">
               <span class="order-code-label">Pedido</span>
-              <span class="order-code-value">03/2026</span>
+              <span class="order-code-value" id="orderCode">-</span>
             </div>
           </div>
         </div>
@@ -265,27 +265,27 @@
       <div class="summary-grid">
         <div class="summary-item">
           <div class="summary-label">Produtos</div>
-          <div class="summary-value">3</div>
+          <div class="summary-value" id="productsCount">0</div>
           <div class="summary-helper">tipos cadastrados</div>
         </div>
 
         <div class="summary-item">
           <div class="summary-label">Peso total</div>
-          <div class="summary-value">16,700 kg</div>
+          <div class="summary-value" id="totalWeight">0 kg</div>
           <div class="summary-helper">somando todos os itens</div>
         </div>
 
         <div class="summary-item">
-          <div class="summary-label">Quantidade</div>
-          <div class="summary-value">43</div>
-          <div class="summary-helper">unidades no pedido</div>
+          <div class="summary-label">Valor total</div>
+          <div class="summary-value" id="totalValue">-</div>
+          <div class="summary-helper" id="valueCurrency">estimado</div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">Descrição do Pedido</h2>
-          <span class="badge badge-primary">Pedido aberto</span>
+          <span class="badge badge-primary" id="statusBadge">-</span>
         </div>
 
         <div class="table-wrapper" style="border:none; border-radius:0;">
@@ -293,59 +293,20 @@
             <thead>
               <tr>
                 <th>Produto</th>
+                <th>Localização</th>
                 <th>Peso</th>
+                <th>Valor Estimado</th>
                 <th>Quantidade</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div class="product-cell">
-                    <div class="product-icon">1</div>
-                    <div>
-                      <div class="product-title">Notebook Le novo</div>
-                      <div class="product-description">Fio descascado</div>
-                    </div>
-                  </div>
-                </td>
-                <td>5,000 kg</td>
-                <td>20 unidades</td>
-              </tr>
-
-              <tr>
-                <td>
-                  <div class="product-cell">
-                    <div class="product-icon">2</div>
-                    <div>
-                      <div class="product-title">Alumínio</div>
-                      <div class="product-description">Perfil estrutural</div>
-                    </div>
-                  </div>
-                </td>
-                <td>3,200 kg</td>
-                <td>15 unidades</td>
-              </tr>
-
-              <tr>
-                <td>
-                  <div class="product-cell">
-                    <div class="product-icon">3</div>
-                    <div>
-                      <div class="product-title">Ferro</div>
-                      <div class="product-description">Chapa grossa</div>
-                    </div>
-                  </div>
-                </td>
-                <td>8,500 kg</td>
-                <td>8 unidades</td>
-              </tr>
+            <tbody id="itemsTableBody">
             </tbody>
           </table>
         </div>
 
         <div class="card-body">
           <div class="detail-actions">
-            <button class="btn btn-secondary" onclick="window.location.href='tela1-inicio.html'" type="button">
+            <button class="btn btn-secondary" onclick="window.location.href='/recicladora/recicladora.html'" type="button">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 9.5L12 3l9 6.5"/>
                 <path d="M5 10v10h14V10"/>
@@ -353,7 +314,7 @@
               Início
             </button>
 
-            <button class="btn btn-primary" onclick="window.location.href='tela4-agendamento.html'" type="button">
+            <button class="btn btn-primary" id="scheduleBtn2" type="button" style="display:none;">
               Agendar Coleta
             </button>
           </div>
@@ -368,5 +329,6 @@
 
   <script src="/js/layout.js"></script>
   <script src="/js/main.js"></script>
+  <script src="/js-recicladoras/detalhes-pedido.js"></script>
 </body>
 </html>

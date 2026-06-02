@@ -185,6 +185,57 @@ router.patch("/:id/status", async (req, res) => {
   }
 });
 
+/* GET /api/solicitacoes/:id/detalhes */
+router.get("/:id/detalhes", async (req, res) => {
+  try {
+    const solicitacaoId = req.params.id;
+
+    const [solicRows] = await pool.query(
+      `SELECT s.*, o.name as org_name
+       FROM solicitacoes s
+       JOIN organizations o ON o.id = s.organization_id
+       WHERE s.id = ? LIMIT 1`,
+      [solicitacaoId],
+    );
+
+    if (!solicRows.length) {
+      return res
+        .status(404)
+        .json({ message: "Solicitação não encontrada." });
+    }
+
+    const solicitacao = solicRows[0];
+
+    const [items] = await pool.query(
+      `SELECT 
+        i.id, i.product_name, i.quantity, i.estimated_value, i.currency,
+        sl.name as storage_location,
+        c.name as category_name,
+        b.name as brand_name,
+        m.name as model_name
+       FROM items i
+       LEFT JOIN storage_locations sl ON sl.id = i.storage_location_id
+       LEFT JOIN categories c ON c.id = i.category_id
+       LEFT JOIN brands b ON b.id = i.brand_id
+       LEFT JOIN models m ON m.id = i.model_id
+       WHERE i.organization_id = ? AND i.is_active = 1
+       ORDER BY i.product_name`,
+      [solicitacao.organization_id],
+    );
+
+    res.json({
+      success: true,
+      solicitacao,
+      items,
+    });
+  } catch (err) {
+    console.error("GET /api/solicitacoes/:id/detalhes:", err);
+    res
+      .status(500)
+      .json({ message: "Erro ao buscar detalhes da solicitação." });
+  }
+});
+
 /* DELETE /api/solicitacoes/:id */
 router.delete("/:id", async (req, res) => {
   try {
