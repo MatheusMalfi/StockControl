@@ -229,7 +229,7 @@
       </div>
 
       <div style="display:flex; gap:var(--space-2);">
-        <button class="btn btn-primary" onclick="window.location.href='tela2-lista-pedidos.html'" type="button">
+        <button class="btn btn-primary" onclick="window.location.href='/solicitacoes.html'" type="button">
           Ver pedidos
         </button>
       </div>
@@ -241,45 +241,14 @@
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">ONG's Parceiras</h2>
-          <span class="badge badge-danger">6 pendentes</span>
+          <span class="badge badge-danger" id="partnerTotalBadge">0 solicitações</span>
         </div>
 
         <div class="card-body">
-          <div class="home-list">
-
-            <a href="tela2-lista-pedidos.html" class="partner-card">
-              <div class="partner-logo logo-impact">I</div>
-
-              <div class="partner-info">
-                <div class="partner-name">JEDA</div>
-                <div class="partner-meta">Pedidos de coleta aguardando análise</div>
-              </div>
-
-              <div class="count-badge">3</div>
-            </a>
-
-            <a href="#" class="partner-card">
-              <div class="partner-logo logo-recicla">R</div>
-
-              <div class="partner-info">
-                <div class="partner-name">ReciclaFer</div>
-                <div class="partner-meta">Pedidos de coleta aguardando análise</div>
-              </div>
-
-              <div class="count-badge">2</div>
-            </a>
-
-            <a href="#" class="partner-card">
-              <div class="partner-logo logo-metal">M</div>
-
-              <div class="partner-info">
-                <div class="partner-name">MetalVerde</div>
-                <div class="partner-meta">Pedidos de coleta aguardando análise</div>
-              </div>
-
-              <div class="count-badge">1</div>
-            </a>
-
+          <div class="home-list" id="partnerList">
+            <div class="partner-card" style="justify-content:center;">
+              Carregando ONGs parceiras...
+            </div>
           </div>
         </div>
       </div>
@@ -336,5 +305,6 @@
 
   <script src="/js/layout.js"></script>
   <script src="/js/main.js"></script>
+  <script src="/js-recicladoras/recicladora.js"></script>
 </body>
 </html>
