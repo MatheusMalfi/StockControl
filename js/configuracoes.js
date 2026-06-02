@@ -462,8 +462,7 @@ function initConfiguracoes() {
   carregarLogAcessos();
 
   // Apply saved theme
-  const prefs = carregarDoLocalStorage(
-    getCurrentPreferencesStorageKey());
+  const prefs = carregarDoLocalStorage(getCurrentPreferencesStorageKey(), {});
   aplicarTema(prefs.tema || "claro");
 }
 
@@ -549,8 +548,7 @@ function carregarPerfil() {
   atualizarAvatarHeader();
 
   // Load display prefs
-  const prefs = carregarDoLocalStorage(
-    getCurrentPreferencesStorageKey());
+  const prefs = carregarDoLocalStorage(getCurrentPreferencesStorageKey(), {});
   const setS = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.value = val ?? "";
@@ -559,6 +557,12 @@ function carregarPerfil() {
   setS("prefIdioma", prefs.idioma || "pt-BR");
   setS("prefPaginacao", prefs.paginacao || 20);
   setS("prefFormatoData", prefs.formatoData || "DD/MM/AAAA");
+
+  console.log("[configuracoes] carregarPerfil", {
+    session,
+    usuarioLocal: u,
+    preferencias: prefs,
+  });
 }
 
 async function salvarPerfil() {
@@ -796,10 +800,10 @@ function salvarPreferenciasExibicao() {
 // ── Organização ───────────────────────────────────────────────────────────────
 function carregarOrganizacao() {
   const session = _getOrgData();
-  const org = carregarDoLocalStorage(
-    getCurrentOrganizationStorageKey());
+  const org = carregarDoLocalStorage(getCurrentOrganizationStorageKey(), {});
   const fallbackEmail =
     session.email || session.user?.email || session.usuario?.email || "";
+  const orgType = org.org_type || session.org_type || "";
   const orgEmail = org.email || fallbackEmail;
 
   const set = (id, val) => {
@@ -807,6 +811,7 @@ function carregarOrganizacao() {
     if (el) el.value = val ?? "";
   };
   set("orgName", org.nome);
+  set("orgType", orgType);
   set("orgEmail", orgEmail);
   set("orgPhone", org.telefone);
 
@@ -820,6 +825,13 @@ function carregarOrganizacao() {
   set("goalTarget", org.meta?.quantidade);
   set("goalStart", org.meta?.inicio);
   set("goalEnd", org.meta?.fim);
+
+  console.log("[configuracoes] carregarOrganizacao", {
+    session,
+    organizacao: org,
+    orgType,
+    orgEmail,
+  });
 
   const imgEl = document.getElementById("orgLogoImg");
   const placehEl = document.getElementById("logoPlaceholder");
@@ -1622,9 +1634,7 @@ function _aplicarRegrasNotif(r) {
 }
 
 function carregarPreferenciasNotificacao() {
-  _aplicarRegrasNotif(
-    carregarDoLocalStorage("sc_notif_rules"),
-  );
+  _aplicarRegrasNotif(carregarDoLocalStorage("sc_notif_rules"));
   const { organization_id } = _getOrgData();
   if (!organization_id) return;
   _cfgApi(
