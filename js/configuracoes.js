@@ -557,12 +557,6 @@ function carregarPerfil() {
   setS("prefIdioma", prefs.idioma || "pt-BR");
   setS("prefPaginacao", prefs.paginacao || 20);
   setS("prefFormatoData", prefs.formatoData || "DD/MM/AAAA");
-
-  console.log("[configuracoes] carregarPerfil", {
-    session,
-    usuarioLocal: u,
-    preferencias: prefs,
-  });
 }
 
 async function salvarPerfil() {
@@ -825,13 +819,6 @@ function carregarOrganizacao() {
   set("goalTarget", org.meta?.quantidade);
   set("goalStart", org.meta?.inicio);
   set("goalEnd", org.meta?.fim);
-
-  console.log("[configuracoes] carregarOrganizacao", {
-    session,
-    organizacao: org,
-    orgType,
-    orgEmail,
-  });
 
   const imgEl = document.getElementById("orgLogoImg");
   const placehEl = document.getElementById("logoPlaceholder");
