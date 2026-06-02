@@ -1,4 +1,10 @@
 (() => {
+  function getPostLoginRedirect(user) {
+    return user && user.org_type === "RECYCLER"
+      ? "/recicladora/recicladora.html"
+      : "/index.html";
+  }
+
   const form = document.getElementById("loginForm");
   const emailInput = document.getElementById("email");
   const passInput = document.getElementById("password");
@@ -170,7 +176,7 @@
           localStorage.setItem("log_acessos", JSON.stringify(log.slice(0, 20)));
         } catch {}
 
-        window.location.href = "/index.html";
+        window.location.href = getPostLoginRedirect(data.user ?? {});
       } else {
         if (res.status === 403 && data.email_nao_verificado) {
           // Mostra mensagem especial com link para reenviar o código
@@ -225,5 +231,12 @@
 
   const token =
     localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
-  if (token) window.location.href = "/index.html";
+  if (token) {
+    const storedUser = JSON.parse(
+      localStorage.getItem("sc_user") ||
+        sessionStorage.getItem("sc_user") ||
+        "{}",
+    );
+    window.location.href = getPostLoginRedirect(storedUser);
+  }
 })();
