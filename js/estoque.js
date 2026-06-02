@@ -722,23 +722,37 @@
   function openDiscardModal(id, name) {
     state.discardItemId = id;
     const desc = document.getElementById("discardDesc");
+    const reasonSelect = document.getElementById("discardReason");
+    const reasonGroup = document.getElementById("discardReasonGroup");
     if (desc)
       desc.textContent = `Descartar "${name}"? Esta ação registrará o descarte e não pode ser desfeita.`;
+    if (reasonSelect) reasonSelect.value = "";
+    if (reasonGroup) reasonGroup.classList.remove("has-error");
     SC.openModal("discardModal");
   }
 
   function wireDiscardModal() {
     const confirmBtn = document.getElementById("discardConfirmBtn");
+    const reasonSelect = document.getElementById("discardReason");
+    const reasonGroup = document.getElementById("discardReasonGroup");
     if (!confirmBtn) return;
 
+    reasonSelect?.addEventListener("change", () => {
+      if (reasonSelect.value) {
+        reasonGroup?.classList.remove("has-error");
+      }
+    });
+
     confirmBtn.addEventListener("click", async () => {
-      const reason = document.getElementById("discardReason")?.value || "";
+      const reason = reasonSelect?.value || "";
       const notes = document.getElementById("discardNotes")?.value || "";
 
       if (!reason) {
-        SC.toastWarning("Selecione o motivo do descarte.");
+        reasonGroup?.classList.add("has-error");
         return;
       }
+
+      reasonGroup?.classList.remove("has-error");
 
       confirmBtn.classList.add("is-loading");
       confirmBtn.disabled = true;
