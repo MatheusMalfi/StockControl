@@ -20,19 +20,29 @@
               }
             }
           }
-        if (theme === 'auto') {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+          if (theme === "auto") {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "escuro"
+              : "claro";
           }
-        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
-        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
-        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
+          document.documentElement.setAttribute(
+            "data-theme",
+            theme === "escuro" ? "dark" : "light",
+          );
+          document.documentElement.style.backgroundColor =
+            theme === "escuro" ? "#0f172a" : "#f8fafc";
+          document.documentElement.style.color =
+            theme === "escuro" ? "#f8fafc" : "#1e293b";
         } catch (error) {}
       })();
     </script>
     <title>Estoque — StockControl</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles/main.css" />
     <link rel="stylesheet" href="/styles/components.css" />
     <style>
@@ -707,9 +717,10 @@
           </p>
           <div
             class="form-group"
+            id="discardReasonGroup"
             style="margin-top: var(--space-4); text-align: left"
           >
-            <label class="form-label" for="discardReason"
+            <label class="form-label required" for="discardReason"
               >Motivo do descarte</label
             >
             <select class="form-control" id="discardReason">
@@ -720,6 +731,9 @@
               <option value="Obsolescência">Obsolescência</option>
               <option value="Outro">Outro</option>
             </select>
+            <span class="form-error" id="discardReasonError"
+              >Escolha um motivo.</span
+            >
           </div>
           <div
             class="form-group"

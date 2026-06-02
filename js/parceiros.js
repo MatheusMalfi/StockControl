@@ -5,116 +5,183 @@
     document.addEventListener("sc:ready", bootstrap, { once: true });
     return;
   }
-  const STORAGE_KEY = "sc_parceiros";
-  const AUDIT_KEY   = "sc_audit_log";
-  const MOVS_KEY    = "sc_movements";
-  const ITEMS_KEY   = "sc_items";
-  const NOTIF_KEY   = "sc_notifications";
+  const LEGACY_STORAGE_KEY = "sc_parceiros";
+  const STORAGE_KEY = SC.storageKey(LEGACY_STORAGE_KEY);
+  const AUDIT_KEY = "sc_audit_log";
+  const MOVS_KEY = "sc_movements";
+  const ITEMS_KEY = "sc_items";
+  const NOTIF_KEY = "sc_notifications";
 
   // ── Labels & classes ───────────────────────────────────────────────────────
   const TIPO_LABEL = {
-    doador:       "Doador",
-    recebedor:    "Recebedor",
-    ambos:        "Ambos",
-    empresa:      "Empresa",
-    orgao_publico:"Órgão Público",
+    doador: "Doador",
+    recebedor: "Recebedor",
+    ambos: "Ambos",
+    empresa: "Empresa",
+    orgao_publico: "Órgão Público",
   };
   const TIPO_CSS = {
-    doador:       "partner-type-doador",
-    recebedor:    "partner-type-recebedor",
-    ambos:        "partner-type-ambos",
-    empresa:      "partner-type-empresa",
-    orgao_publico:"partner-type-publico",
+    doador: "partner-type-doador",
+    recebedor: "partner-type-recebedor",
+    ambos: "partner-type-ambos",
+    empresa: "partner-type-empresa",
+    orgao_publico: "partner-type-publico",
   };
 
   // ── State ─────────────────────────────────────────────────────────────────
   const state = {
-    page: 1, perPage: 12, total: 0,
-    search: "", tipo: "", view: "grid",
-    filtered: [], activeId: null,
+    page: 1,
+    perPage: 12,
+    total: 0,
+    search: "",
+    tipo: "",
+    view: "grid",
+    filtered: [],
+    activeId: null,
   };
 
   let pendingDeleteId = null;
 
   // ── API helpers ───────────────────────────────────────────────────────────
   function _parcToken() {
-    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+    return (
+      localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token")
+    );
   }
   function _parcApi(method, url, body) {
     const token = _parcToken();
     return fetch(url, {
       method,
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       ...(body != null ? { body: JSON.stringify(body) } : {}),
-    }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+    }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+  }
+
+  function getCurrentOrgId() {
+    try {
+      const rawUser =
+        localStorage.getItem("sc_user") ||
+        sessionStorage.getItem("sc_user") ||
+        "{}";
+      const user = JSON.parse(rawUser) || {};
+      return user.organization_id || user.organizationId || user.org || null;
+    } catch {
+      return null;
+    }
   }
 
   // ── Storage helpers ───────────────────────────────────────────────────────
   function getPartners() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    } catch {
+      return [];
+    }
   }
-  function savePartners(list) { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+  function savePartners(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function clearLegacyPartnerCache() {
+    if (STORAGE_KEY !== LEGACY_STORAGE_KEY) {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+  }
 
   function getMovements() {
-    try { return JSON.parse(localStorage.getItem(SC.storageKey(MOVS_KEY)) || "[]") || []; } catch { return []; }
+    try {
+      return (
+        JSON.parse(localStorage.getItem(SC.storageKey(MOVS_KEY)) || "[]") || []
+      );
+    } catch {
+      return [];
+    }
   }
   function getItems() {
-    try { return JSON.parse(localStorage.getItem(SC.storageKey(ITEMS_KEY)) || "[]") || []; } catch { return []; }
+    try {
+      return (
+        JSON.parse(localStorage.getItem(SC.storageKey(ITEMS_KEY)) || "[]") || []
+      );
+    } catch {
+      return [];
+    }
   }
 
   function addAuditLog(acao, tipo, entidadeId) {
     try {
       const logs = JSON.parse(localStorage.getItem(AUDIT_KEY) || "[]");
-      logs.unshift({ id: "log_" + Date.now(), acao, tipo, entidadeId, criadoEm: new Date().toISOString() });
+      logs.unshift({
+        id: "log_" + Date.now(),
+        acao,
+        tipo,
+        entidadeId,
+        criadoEm: new Date().toISOString(),
+      });
       if (logs.length > 500) logs.length = 500;
       localStorage.setItem(AUDIT_KEY, JSON.stringify(logs));
     } catch (_) {}
   }
 
-  // ── Seed ──────────────────────────────────────────────────────────────────
-  function seedIfNeeded() {
-    const _pu = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
-    _parcApi("GET", `/api/parceiros${_pu.organization_id ? `?organization_id=${_pu.organization_id}` : ""}`)
-      .then(data => {
+  // ── Sync ──────────────────────────────────────────────────────────────────
+  function syncPartnersFromApi() {
+    const organizationId = getCurrentOrgId();
+    if (!organizationId) {
+      savePartners([]);
+      loadAndRender();
+      return;
+    }
+
+    _parcApi("GET", `/api/parceiros?organization_id=${organizationId}`)
+      .then((data) => {
         const list = Array.isArray(data) ? data : data.parceiros || [];
-        if (list.length) { savePartners(list); loadAndRender(); }
+        savePartners(list);
+        loadAndRender();
       })
-      .catch(() => {});
-    if (!getPartners().length) savePartners([]);
+      .catch(() => {
+        loadAndRender();
+      });
   }
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   function updateKPIs() {
-    const all = getPartners().filter(p => p.ativo !== false);
-    const donors     = all.filter(p => p.tipo === "doador"    || p.tipo === "ambos").length;
-    const receivers  = all.filter(p => p.tipo === "recebedor" || p.tipo === "ambos").length;
+    const all = getPartners().filter((p) => p.ativo !== false);
+    const donors = all.filter(
+      (p) => p.tipo === "doador" || p.tipo === "ambos",
+    ).length;
+    const receivers = all.filter(
+      (p) => p.tipo === "recebedor" || p.tipo === "ambos",
+    ).length;
     const totalItems = all.reduce((s, p) => s + (p.itensTotais || 0), 0);
-    setText("kpi-total",      all.length);
-    setText("kpi-donors",     donors);
+    setText("kpi-total", all.length);
+    setText("kpi-donors", donors);
     setText("kpi-recipients", receivers);
-    setText("kpi-donated",    totalItems);
+    setText("kpi-donated", totalItems);
   }
 
   // ── Filter & render ───────────────────────────────────────────────────────
   function loadAndRender() {
-    let list = getPartners().filter(p => p.ativo !== false);
+    let list = getPartners().filter((p) => p.ativo !== false);
 
     if (state.search) {
       const q = state.search.toLowerCase();
-      list = list.filter(p =>
-        (p.nome        || "").toLowerCase().includes(q) ||
-        (p.cnpj        || "").toLowerCase().includes(q) ||
-        (p.email       || "").toLowerCase().includes(q) ||
-        (p.responsavel || "").toLowerCase().includes(q) ||
-        (p.areaAtuacao || "").toLowerCase().includes(q)
+      list = list.filter(
+        (p) =>
+          (p.nome || "").toLowerCase().includes(q) ||
+          (p.cnpj || "").toLowerCase().includes(q) ||
+          (p.email || "").toLowerCase().includes(q) ||
+          (p.responsavel || "").toLowerCase().includes(q) ||
+          (p.areaAtuacao || "").toLowerCase().includes(q),
       );
     }
-    if (state.tipo) list = list.filter(p => p.tipo === state.tipo);
+    if (state.tipo) list = list.filter((p) => p.tipo === state.tipo);
 
     state.filtered = list;
-    state.total    = list.length;
+    state.total = list.length;
 
-    const start   = (state.page - 1) * state.perPage;
+    const start = (state.page - 1) * state.perPage;
     const pageData = list.slice(start, start + state.perPage);
 
     render(pageData);
@@ -124,12 +191,15 @@
   }
 
   function render(pageData) {
-    const gridEl  = document.getElementById("partners-grid");
+    const gridEl = document.getElementById("partners-grid");
     const tableEl = document.getElementById("partners-table-wrap");
     const emptyEl = document.getElementById("empty-state");
 
     if (!state.filtered.length) {
-      if (gridEl)  { gridEl.innerHTML = ""; gridEl.style.display = "none"; }
+      if (gridEl) {
+        gridEl.innerHTML = "";
+        gridEl.style.display = "none";
+      }
       if (tableEl) tableEl.style.display = "none";
       if (emptyEl) emptyEl.style.display = "flex";
       return;
@@ -156,7 +226,7 @@
 
   function renderCard(p) {
     const initial = SC.escHtml((p.nome || "?")[0].toUpperCase());
-    const tipo    = SC.escHtml(TIPO_LABEL[p.tipo] || p.tipo || "");
+    const tipo = SC.escHtml(TIPO_LABEL[p.tipo] || p.tipo || "");
     const tipoCss = TIPO_CSS[p.tipo] || "partner-type-doador";
     return `<div class="partner-card" data-id="${p.id}">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
@@ -180,7 +250,7 @@
           </button>
         </div>
       </div>
-      ${p.email    ? `<div style="font-size:12px;color:var(--color-text-muted);margin-bottom:2px">✉ ${SC.escHtml(p.email)}</div>` : ""}
+      ${p.email ? `<div style="font-size:12px;color:var(--color-text-muted);margin-bottom:2px">✉ ${SC.escHtml(p.email)}</div>` : ""}
       ${p.telefone ? `<div style="font-size:12px;color:var(--color-text-muted)">☎ ${SC.escHtml(p.telefone)}</div>` : ""}
       <div class="partner-stats">
         <div>
@@ -197,9 +267,13 @@
 
   function renderRow(p) {
     const initial = SC.escHtml((p.nome || "?")[0].toUpperCase());
-    const tipo    = SC.escHtml(TIPO_LABEL[p.tipo] || p.tipo || "");
+    const tipo = SC.escHtml(TIPO_LABEL[p.tipo] || p.tipo || "");
     const tipoCss = TIPO_CSS[p.tipo] || "partner-type-doador";
-    const loc     = p.enderecoTexto || (p.endereco ? [p.endereco.cidade, p.endereco.estado].filter(Boolean).join(", ") : "");
+    const loc =
+      p.enderecoTexto ||
+      (p.endereco
+        ? [p.endereco.cidade, p.endereco.estado].filter(Boolean).join(", ")
+        : "");
     return `<tr data-id="${p.id}" style="cursor:pointer">
       <td>
         <div style="display:flex;align-items:center;gap:10px">
@@ -233,68 +307,113 @@
   }
 
   function wireCardEvents(container) {
-    container.querySelectorAll(".partner-card").forEach(card => {
+    container.querySelectorAll(".partner-card").forEach((card) => {
       card.addEventListener("click", () => openDrawer(card.dataset.id));
     });
-    container.querySelectorAll(".btn-edit-card").forEach(btn => {
-      btn.addEventListener("click", e => { e.stopPropagation(); openEditModal(btn.dataset.id); });
+    container.querySelectorAll(".btn-edit-card").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEditModal(btn.dataset.id);
+      });
     });
-    container.querySelectorAll(".btn-delete-card").forEach(btn => {
-      btn.addEventListener("click", e => { e.stopPropagation(); openDeleteModal(btn.dataset.id); });
+    container.querySelectorAll(".btn-delete-card").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openDeleteModal(btn.dataset.id);
+      });
     });
   }
 
   function wireRowEvents(tbody) {
-    tbody.querySelectorAll("tr[data-id]").forEach(tr => {
+    tbody.querySelectorAll("tr[data-id]").forEach((tr) => {
       tr.addEventListener("click", () => openDrawer(tr.dataset.id));
     });
-    tbody.querySelectorAll(".btn-edit-row").forEach(btn => {
-      btn.addEventListener("click", e => { e.stopPropagation(); openEditModal(btn.dataset.id); });
+    tbody.querySelectorAll(".btn-edit-row").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEditModal(btn.dataset.id);
+      });
     });
-    tbody.querySelectorAll(".btn-delete-row").forEach(btn => {
-      btn.addEventListener("click", e => { e.stopPropagation(); openDeleteModal(btn.dataset.id); });
+    tbody.querySelectorAll(".btn-delete-row").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openDeleteModal(btn.dataset.id);
+      });
     });
   }
 
   // ── Pagination ────────────────────────────────────────────────────────────
   function renderPagination() {
-    SC.renderPagination({
-      containerId: "parcPagControls",
-      infoId:      "parcPagInfo",
-      page:        state.page,
-      perPage:     state.perPage,
-      total:       state.total,
-      onPageChange: p => { state.page = p; loadAndRender(); },
+    const info = document.getElementById("parcPagInfo");
+    const container = document.getElementById("parcPagControls");
+    if (!container) return;
+
+    const totalPages = Math.max(1, Math.ceil(state.total / state.perPage));
+    const currentPage = Math.min(state.page, totalPages);
+    state.page = currentPage;
+
+    if (info) {
+      info.textContent =
+        state.total === 0 ? "0 de 0" : `${currentPage} de ${totalPages}`;
+    }
+
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? "disabled" : ""} aria-label="Anterior">&lt;</button>
+        <button class="page-btn active" type="button" aria-current="page">${currentPage}</button>
+        <button class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? "disabled" : ""} aria-label="Próximo">&gt;</button>
+      </div>`;
+
+    container.querySelectorAll(".page-btn[data-page]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const p = Number(btn.dataset.page);
+        if (p >= 1 && p <= totalPages && p !== currentPage) {
+          state.page = p;
+          loadAndRender();
+        }
+      });
     });
   }
 
   // ── Filters ───────────────────────────────────────────────────────────────
   function wireFilters() {
-    document.getElementById("search-input")?.addEventListener("input", SC.debounce(() => {
-      state.search = document.getElementById("search-input")?.value.trim() || "";
-      state.page = 1;
-      loadAndRender();
-    }, 300));
+    document.getElementById("search-input")?.addEventListener(
+      "input",
+      SC.debounce(() => {
+        state.search =
+          document.getElementById("search-input")?.value.trim() || "";
+        state.page = 1;
+        loadAndRender();
+      }, 300),
+    );
 
-    document.getElementById("filter-type")?.addEventListener("change", e => {
+    document.getElementById("filter-type")?.addEventListener("change", (e) => {
       state.tipo = e.target.value;
       state.page = 1;
       loadAndRender();
     });
 
     document.getElementById("btn-view-grid")?.addEventListener("click", () => {
-      state.view = "grid"; loadAndRender();
+      state.view = "grid";
+      loadAndRender();
     });
     document.getElementById("btn-view-table")?.addEventListener("click", () => {
-      state.view = "table"; loadAndRender();
+      state.view = "table";
+      loadAndRender();
     });
   }
 
   // ── Modal: save partner ───────────────────────────────────────────────────
   function wireModal() {
-    document.getElementById("btn-new-partner")?.addEventListener("click",  openNewModal);
-    document.getElementById("empty-add-btn")?.addEventListener("click",    openNewModal);
-    document.getElementById("btn-save-partner")?.addEventListener("click", savePartner);
+    document
+      .getElementById("btn-new-partner")
+      ?.addEventListener("click", openNewModal);
+    document
+      .getElementById("empty-add-btn")
+      ?.addEventListener("click", openNewModal);
+    document
+      .getElementById("btn-save-partner")
+      ?.addEventListener("click", savePartner);
   }
 
   function openNewModal() {
@@ -305,24 +424,29 @@
   }
 
   function openEditModal(id) {
-    const p = getPartners().find(x => String(x.id) === String(id));
+    const p = getPartners().find((x) => String(x.id) === String(id));
     if (!p) return;
     state.activeId = id;
 
-    setVal("partner-id",          p.id);
-    setVal("partner-name",        p.nome        || "");
-    setVal("partner-type",        p.tipo        || "doador");
-    setVal("partner-cnpj",        p.cnpj        || "");
-    setVal("partner-email",       p.email       || "");
-    setVal("partner-phone",       p.telefone    || "");
-    setVal("partner-whatsapp",    p.whatsapp    || "");
+    setVal("partner-id", p.id);
+    setVal("partner-name", p.nome || "");
+    setVal("partner-type", p.tipo || "doador");
+    setVal("partner-cnpj", p.cnpj || "");
+    setVal("partner-email", p.email || "");
+    setVal("partner-phone", p.telefone || "");
+    setVal("partner-whatsapp", p.whatsapp || "");
     setVal("partner-responsavel", p.responsavel || "");
-    setVal("partner-cargo",       p.cargo       || "");
-    setVal("partner-website",     p.website     || "");
-    setVal("partner-area",        p.areaAtuacao || "");
-    setVal("partner-address",     p.enderecoTexto ||
-      (p.endereco ? [p.endereco.cidade, p.endereco.estado].filter(Boolean).join(", ") : ""));
-    setVal("partner-notes",       p.observacoes || "");
+    setVal("partner-cargo", p.cargo || "");
+    setVal("partner-website", p.website || "");
+    setVal("partner-area", p.areaAtuacao || "");
+    setVal(
+      "partner-address",
+      p.enderecoTexto ||
+        (p.endereco
+          ? [p.endereco.cidade, p.endereco.estado].filter(Boolean).join(", ")
+          : ""),
+    );
+    setVal("partner-notes", p.observacoes || "");
 
     setText2("partner-modal-title", "Editar Parceiro");
     SC.openModal("modal-partner");
@@ -330,62 +454,78 @@
 
   function savePartner() {
     const nome = getVal("partner-name").trim();
-    if (!nome) { SC.toastError("Nome é obrigatório."); return; }
+    if (!nome) {
+      SC.toastError("Nome é obrigatório.");
+      return;
+    }
 
-    const id  = getVal("partner-id");
+    const id = getVal("partner-id");
     const btn = document.getElementById("btn-save-partner");
-    if (btn) { btn.disabled = true; btn.classList.add("loading"); }
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("loading");
+    }
 
-    const now      = new Date().toISOString();
+    const now = new Date().toISOString();
     const partners = getPartners();
 
     try {
       if (id) {
-        const idx = partners.findIndex(p => String(p.id) === String(id));
-        if (idx === -1) { SC.toastError("Parceiro não encontrado."); return; }
+        const idx = partners.findIndex((p) => String(p.id) === String(id));
+        if (idx === -1) {
+          SC.toastError("Parceiro não encontrado.");
+          return;
+        }
         partners[idx] = {
           ...partners[idx],
           nome,
-          tipo:           getVal("partner-type")        || "doador",
-          cnpj:           getVal("partner-cnpj").trim(),
-          email:          getVal("partner-email").trim(),
-          telefone:       getVal("partner-phone").trim(),
-          whatsapp:       getVal("partner-whatsapp").trim(),
-          responsavel:    getVal("partner-responsavel").trim(),
-          cargo:          getVal("partner-cargo").trim(),
-          website:        getVal("partner-website").trim(),
-          areaAtuacao:    getVal("partner-area").trim(),
-          enderecoTexto:  getVal("partner-address").trim(),
-          observacoes:    getVal("partner-notes").trim(),
-          atualizadoEm:   now,
+          tipo: getVal("partner-type") || "doador",
+          cnpj: getVal("partner-cnpj").trim(),
+          email: getVal("partner-email").trim(),
+          telefone: getVal("partner-phone").trim(),
+          whatsapp: getVal("partner-whatsapp").trim(),
+          responsavel: getVal("partner-responsavel").trim(),
+          cargo: getVal("partner-cargo").trim(),
+          website: getVal("partner-website").trim(),
+          areaAtuacao: getVal("partner-area").trim(),
+          enderecoTexto: getVal("partner-address").trim(),
+          observacoes: getVal("partner-notes").trim(),
+          atualizadoEm: now,
         };
         savePartners(partners);
-        _parcApi("PUT", `/api/parceiros/${id}`, partners[partners.findIndex(p => String(p.id) === String(id))]).catch(() => {});
+        _parcApi(
+          "PUT",
+          `/api/parceiros/${id}`,
+          partners[partners.findIndex((p) => String(p.id) === String(id))],
+        ).catch(() => {});
         addAuditLog(`Parceiro atualizado: ${nome}`, "parceiro", id);
         SC.toastSuccess("Parceiro atualizado!");
       } else {
         const newId = "parc_" + Date.now();
         partners.push({
-          id: newId, nome,
-          tipo:          getVal("partner-type")        || "doador",
-          cnpj:          getVal("partner-cnpj").trim(),
-          email:         getVal("partner-email").trim(),
-          telefone:      getVal("partner-phone").trim(),
-          whatsapp:      getVal("partner-whatsapp").trim(),
-          responsavel:   getVal("partner-responsavel").trim(),
-          cargo:         getVal("partner-cargo").trim(),
-          website:       getVal("partner-website").trim(),
-          areaAtuacao:   getVal("partner-area").trim(),
+          id: newId,
+          nome,
+          tipo: getVal("partner-type") || "doador",
+          cnpj: getVal("partner-cnpj").trim(),
+          email: getVal("partner-email").trim(),
+          telefone: getVal("partner-phone").trim(),
+          whatsapp: getVal("partner-whatsapp").trim(),
+          responsavel: getVal("partner-responsavel").trim(),
+          cargo: getVal("partner-cargo").trim(),
+          website: getVal("partner-website").trim(),
+          areaAtuacao: getVal("partner-area").trim(),
           enderecoTexto: getVal("partner-address").trim(),
-          observacoes:   getVal("partner-notes").trim(),
-          itensTotais:   0,
+          observacoes: getVal("partner-notes").trim(),
+          itensTotais: 0,
           primeiroContato: now.slice(0, 10),
-          ultimoContato:   now.slice(0, 10),
-          criadoEm:        now,
-          ativo:           true,
+          ultimoContato: now.slice(0, 10),
+          criadoEm: now,
+          ativo: true,
         });
         savePartners(partners);
-        _parcApi("POST", "/api/parceiros", partners[partners.length - 1]).catch(() => {});
+        _parcApi("POST", "/api/parceiros", partners[partners.length - 1]).catch(
+          () => {},
+        );
         addAuditLog(`Parceiro criado: ${nome}`, "parceiro", newId);
         SC.toastSuccess("Parceiro cadastrado!");
       }
@@ -393,20 +533,33 @@
       state.page = 1;
       loadAndRender();
     } finally {
-      if (btn) { btn.disabled = false; btn.classList.remove("loading"); }
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("loading");
+      }
     }
   }
 
   function clearForm() {
-    ["partner-name","partner-cnpj","partner-email","partner-phone","partner-whatsapp",
-     "partner-responsavel","partner-cargo","partner-website","partner-area",
-     "partner-address","partner-notes"].forEach(id => setVal(id, ""));
+    [
+      "partner-name",
+      "partner-cnpj",
+      "partner-email",
+      "partner-phone",
+      "partner-whatsapp",
+      "partner-responsavel",
+      "partner-cargo",
+      "partner-website",
+      "partner-area",
+      "partner-address",
+      "partner-notes",
+    ].forEach((id) => setVal(id, ""));
     setVal("partner-type", "doador");
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
   function openDeleteModal(id) {
-    const p = getPartners().find(x => String(x.id) === String(id));
+    const p = getPartners().find((x) => String(x.id) === String(id));
     if (!p) return;
     pendingDeleteId = id;
 
@@ -414,9 +567,11 @@
     if (nameEl) nameEl.textContent = p.nome || "este parceiro";
 
     // Check for history in movements
-    const movs     = getMovements();
-    const histCount = movs.filter(m => m.parceiroId === id || m.parceiro === p.nome || m.parceiro === id).length;
-    const warnEl   = document.getElementById("deleteImpactWarn");
+    const movs = getMovements();
+    const histCount = movs.filter(
+      (m) => m.parceiroId === id || m.parceiro === p.nome || m.parceiro === id,
+    ).length;
+    const warnEl = document.getElementById("deleteImpactWarn");
     if (warnEl) {
       if (histCount > 0) {
         warnEl.textContent = `Atenção: este parceiro possui ${histCount} registro(s) no histórico de movimentações. Os dados históricos serão preservados.`;
@@ -434,10 +589,12 @@
     if (!pendingDeleteId) return;
 
     const partners = getPartners();
-    const p        = partners.find(x => String(x.id) === String(pendingDeleteId));
+    const p = partners.find((x) => String(x.id) === String(pendingDeleteId));
     if (!p) return;
 
-    const updated = partners.filter(x => String(x.id) !== String(pendingDeleteId));
+    const updated = partners.filter(
+      (x) => String(x.id) !== String(pendingDeleteId),
+    );
     savePartners(updated);
     _parcApi("DELETE", `/api/parceiros/${pendingDeleteId}`).catch(() => {});
     addAuditLog(`Parceiro excluído: ${p.nome}`, "parceiro", pendingDeleteId);
@@ -455,10 +612,24 @@
 
   // ── Drawer ────────────────────────────────────────────────────────────────
   function wireDrawer() {
-    document.getElementById("drawer-close")?.addEventListener("click",       closeDrawer);
-    document.getElementById("drawer-overlay")?.addEventListener("click",     closeDrawer);
-    document.getElementById("btn-edit-partner")?.addEventListener("click",   () => { closeDrawer(); openEditModal(state.activeId); });
-    document.getElementById("btn-delete-partner")?.addEventListener("click", () => { closeDrawer(); openDeleteModal(state.activeId); });
+    document
+      .getElementById("drawer-close")
+      ?.addEventListener("click", closeDrawer);
+    document
+      .getElementById("drawer-overlay")
+      ?.addEventListener("click", closeDrawer);
+    document
+      .getElementById("btn-edit-partner")
+      ?.addEventListener("click", () => {
+        closeDrawer();
+        openEditModal(state.activeId);
+      });
+    document
+      .getElementById("btn-delete-partner")
+      ?.addEventListener("click", () => {
+        closeDrawer();
+        openDeleteModal(state.activeId);
+      });
   }
 
   function openDrawer(id) {
@@ -466,23 +637,37 @@
     document.getElementById("partner-drawer")?.classList.add("is-open");
     document.getElementById("drawer-overlay")?.classList.add("is-visible");
 
-    const p = getPartners().find(x => String(x.id) === String(id));
+    const p = getPartners().find((x) => String(x.id) === String(id));
     const body = document.getElementById("drawer-body");
     if (!p || !body) return;
 
     const movs = getMovements()
-      .filter(m => m.parceiroId === id || m.parceiro === p.nome || m.parceiro === id)
+      .filter(
+        (m) =>
+          m.parceiroId === id || m.parceiro === p.nome || m.parceiro === id,
+      )
       .slice(0, 10);
 
     body.innerHTML = buildDrawerContent(p, movs);
   }
 
   function buildDrawerContent(p, history) {
-    const tipo    = SC.escHtml(TIPO_LABEL[p.tipo] || p.tipo || "");
+    const tipo = SC.escHtml(TIPO_LABEL[p.tipo] || p.tipo || "");
     const tipoCss = TIPO_CSS[p.tipo] || "partner-type-doador";
     const initial = SC.escHtml((p.nome || "?")[0].toUpperCase());
-    const addr    = p.enderecoTexto ||
-      (p.endereco ? [p.endereco.logradouro, p.endereco.numero, p.endereco.bairro, p.endereco.cidade, p.endereco.estado].filter(Boolean).join(", ") : "");
+    const addr =
+      p.enderecoTexto ||
+      (p.endereco
+        ? [
+            p.endereco.logradouro,
+            p.endereco.numero,
+            p.endereco.bairro,
+            p.endereco.cidade,
+            p.endereco.estado,
+          ]
+            .filter(Boolean)
+            .join(", ")
+        : "");
 
     const websiteHtml = p.website
       ? `<a href="${p.website.startsWith("http") ? "" : "https://"}${SC.escHtml(p.website)}" target="_blank" rel="noopener" style="color:var(--color-primary)">${SC.escHtml(p.website)}</a>`
@@ -497,32 +682,40 @@
         </div>
       </div>
       <dl style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;font-size:13px;margin-bottom:20px">
-        ${p.cnpj        ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">CNPJ</dt><dd style="font-family:monospace">${SC.escHtml(p.cnpj)}</dd></div>` : ""}
-        ${p.email       ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">E-mail</dt><dd>${SC.escHtml(p.email)}</dd></div>` : ""}
-        ${p.telefone    ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Telefone</dt><dd>${SC.escHtml(p.telefone)}</dd></div>` : ""}
-        ${p.whatsapp    ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">WhatsApp</dt><dd>${SC.escHtml(p.whatsapp)}</dd></div>` : ""}
+        ${p.cnpj ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">CNPJ</dt><dd style="font-family:monospace">${SC.escHtml(p.cnpj)}</dd></div>` : ""}
+        ${p.email ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">E-mail</dt><dd>${SC.escHtml(p.email)}</dd></div>` : ""}
+        ${p.telefone ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Telefone</dt><dd>${SC.escHtml(p.telefone)}</dd></div>` : ""}
+        ${p.whatsapp ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">WhatsApp</dt><dd>${SC.escHtml(p.whatsapp)}</dd></div>` : ""}
         ${p.responsavel ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Responsável</dt><dd>${SC.escHtml(p.responsavel)}${p.cargo ? ` — ${SC.escHtml(p.cargo)}` : ""}</dd></div>` : ""}
-        ${p.website     ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Website</dt><dd>${websiteHtml}</dd></div>` : ""}
+        ${p.website ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Website</dt><dd>${websiteHtml}</dd></div>` : ""}
         ${p.areaAtuacao ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Área</dt><dd>${SC.escHtml(p.areaAtuacao)}</dd></div>` : ""}
         <div><dt style="color:var(--color-text-muted);margin-bottom:2px">Total de itens</dt><dd style="font-weight:700;font-size:15px">${p.itensTotais || 0}</dd></div>
         ${p.primeiroContato ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Primeiro contato</dt><dd>${SC.fmtDate(p.primeiroContato)}</dd></div>` : ""}
-        ${p.ultimoContato   ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Último contato</dt><dd>${SC.fmtDate(p.ultimoContato)}</dd></div>` : ""}
+        ${p.ultimoContato ? `<div><dt style="color:var(--color-text-muted);margin-bottom:2px">Último contato</dt><dd>${SC.fmtDate(p.ultimoContato)}</dd></div>` : ""}
         ${addr ? `<div style="grid-column:1/-1"><dt style="color:var(--color-text-muted);margin-bottom:2px">Endereço</dt><dd>${SC.escHtml(addr)}</dd></div>` : ""}
         ${p.observacoes ? `<div style="grid-column:1/-1"><dt style="color:var(--color-text-muted);margin-bottom:2px">Observações</dt><dd style="font-style:italic;color:var(--color-text-secondary)">${SC.escHtml(p.observacoes)}</dd></div>` : ""}
       </dl>
-      ${history.length ? `
+      ${
+        history.length
+          ? `
         <div style="border-top:1px solid var(--color-border);padding-top:16px">
           <div style="font-weight:600;font-size:13px;margin-bottom:10px">Histórico de Movimentações</div>
           <ul class="history-list">
-            ${history.map(h => `
+            ${history
+              .map(
+                (h) => `
               <li class="history-item">
                 <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:var(--color-surface-alt);color:var(--color-text-secondary);flex-shrink:0">${SC.escHtml(h.tipo || h.type || "—")}</span>
                 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${SC.escHtml(h.item || h.itemNome || h.nome || "—")}</span>
                 <span style="color:var(--color-text-muted);flex-shrink:0">${h.quantidade ?? h.quantity ?? "?"} un.</span>
                 <span style="color:var(--color-text-muted);flex-shrink:0">${SC.fmtDate(h.data || h.criadaEm || h.created_at || "")}</span>
-              </li>`).join("")}
+              </li>`,
+              )
+              .join("")}
           </ul>
-        </div>` : ""}`;
+        </div>`
+          : ""
+      }`;
   }
 
   function closeDrawer() {
@@ -532,40 +725,55 @@
 
   // ── Global search dropdown ────────────────────────────────────────────────
   function wireGlobalSearch() {
-    const input    = document.getElementById("globalSearch");
+    const input = document.getElementById("globalSearch");
     const dropdown = document.getElementById("searchDropdown");
     if (!input || !dropdown) return;
 
-    input.addEventListener("input", SC.debounce(() => {
-      const q = input.value.trim();
-      if (!q) { dropdown.style.display = "none"; return; }
-      showSearchResults(q, dropdown);
-    }, 250));
+    input.addEventListener(
+      "input",
+      SC.debounce(() => {
+        const q = input.value.trim();
+        if (!q) {
+          dropdown.style.display = "none";
+          return;
+        }
+        showSearchResults(q, dropdown);
+      }, 250),
+    );
 
-    document.addEventListener("click", e => {
+    document.addEventListener("click", (e) => {
       if (!input.contains(e.target) && !dropdown.contains(e.target)) {
         dropdown.style.display = "none";
       }
     });
 
-    input.addEventListener("keydown", e => {
-      if (e.key === "Escape") { dropdown.style.display = "none"; input.value = ""; }
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        dropdown.style.display = "none";
+        input.value = "";
+      }
     });
   }
 
   function showSearchResults(q, dropdown) {
     const ql = q.toLowerCase();
 
-    const partnerResults = getPartners().filter(p =>
-      (p.nome  || "").toLowerCase().includes(ql) ||
-      (p.cnpj  || "").toLowerCase().includes(ql) ||
-      (p.email || "").toLowerCase().includes(ql)
-    ).slice(0, 4);
+    const partnerResults = getPartners()
+      .filter(
+        (p) =>
+          (p.nome || "").toLowerCase().includes(ql) ||
+          (p.cnpj || "").toLowerCase().includes(ql) ||
+          (p.email || "").toLowerCase().includes(ql),
+      )
+      .slice(0, 4);
 
-    const itemResults = getItems().filter(i =>
-      (i.nome       || "").toLowerCase().includes(ql) ||
-      (i.patrimonio || "").toLowerCase().includes(ql)
-    ).slice(0, 3);
+    const itemResults = getItems()
+      .filter(
+        (i) =>
+          (i.nome || "").toLowerCase().includes(ql) ||
+          (i.patrimonio || "").toLowerCase().includes(ql),
+      )
+      .slice(0, 3);
 
     if (!partnerResults.length && !itemResults.length) {
       dropdown.innerHTML = `<div style="padding:var(--space-3) var(--space-4);color:var(--color-text-muted);font-size:13px;">Sem resultados para "<strong>${SC.escHtml(q)}</strong>"</div>`;
@@ -576,29 +784,34 @@
     let html = "";
     if (partnerResults.length) {
       html += `<div class="search-result-group">Parceiros (${partnerResults.length})</div>`;
-      html += partnerResults.map(p => {
-        const tipoCss = TIPO_CSS[p.tipo] || "partner-type-doador";
-        return `<div class="search-result-item" data-partner-id="${p.id}">
+      html += partnerResults
+        .map((p) => {
+          const tipoCss = TIPO_CSS[p.tipo] || "partner-type-doador";
+          return `<div class="search-result-item" data-partner-id="${p.id}">
           <span class="partner-type-badge ${tipoCss}" style="flex-shrink:0">${SC.escHtml(TIPO_LABEL[p.tipo] || p.tipo)}</span>
           <span style="flex:1">${SC.escHtml(p.nome || "")}</span>
           ${p.cnpj ? `<span style="color:var(--color-text-muted);font-family:monospace;font-size:11px">${SC.escHtml(p.cnpj)}</span>` : ""}
         </div>`;
-      }).join("");
+        })
+        .join("");
     }
     if (itemResults.length) {
       html += `<div class="search-result-group">Itens (${itemResults.length})</div>`;
-      html += itemResults.map(i =>
-        `<a href="estoque.html" class="search-result-item">
+      html += itemResults
+        .map(
+          (i) =>
+            `<a href="estoque.html" class="search-result-item">
           <span style="flex:1">${SC.escHtml(i.nome || "")}</span>
           <span style="color:var(--color-text-muted);font-size:11px">${SC.escHtml(i.patrimonio || "")}</span>
-        </a>`
-      ).join("");
+        </a>`,
+        )
+        .join("");
     }
 
     dropdown.innerHTML = html;
     dropdown.style.display = "block";
 
-    dropdown.querySelectorAll("[data-partner-id]").forEach(el => {
+    dropdown.querySelectorAll("[data-partner-id]").forEach((el) => {
       el.addEventListener("click", () => {
         dropdown.style.display = "none";
         document.getElementById("globalSearch").value = "";
@@ -610,41 +823,59 @@
   // ── Notification badge ────────────────────────────────────────────────────
   function updateNotifBadge() {
     try {
-      const notifs = JSON.parse(localStorage.getItem(SC.storageKey(NOTIF_KEY)) || "[]");
-      const unread = notifs.filter(n => !n.lida && !n.arquivada).length;
-      const badge  = document.getElementById("notifBadge");
+      const notifs = JSON.parse(
+        localStorage.getItem(SC.storageKey(NOTIF_KEY)) || "[]",
+      );
+      const unread = notifs.filter((n) => !n.lida && !n.arquivada).length;
+      const badge = document.getElementById("notifBadge");
       if (badge) {
-        badge.textContent   = unread > 99 ? "99+" : String(unread);
-        badge.style.display = unread > 0  ? "" : "none";
+        badge.textContent = unread > 99 ? "99+" : String(unread);
+        badge.style.display = unread > 0 ? "" : "none";
       }
 
       const listDrop = document.getElementById("notifListDrop");
       if (listDrop && unread > 0) {
-        const top5 = notifs.filter(n => !n.lida && !n.arquivada).slice(0, 5);
-        listDrop.innerHTML = top5.map(n => `
+        const top5 = notifs.filter((n) => !n.lida && !n.arquivada).slice(0, 5);
+        listDrop.innerHTML = top5
+          .map(
+            (n) => `
           <div class="dropdown-item" style="white-space:normal;cursor:default;padding:var(--space-3);">
             <div style="font-size:0.875rem;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;">${SC.escHtml(n.titulo || "Notificação")}</div>
             <div style="font-size:0.8125rem;color:var(--color-text-muted);">${SC.fmtRelTime(n.criadaEm)}</div>
-          </div>`).join("");
+          </div>`,
+          )
+          .join("");
       }
     } catch (_) {}
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  function getVal(id)     { return document.getElementById(id)?.value || ""; }
-  function setVal(id, v)  { const el = document.getElementById(id); if (el) el.value = v; }
-  function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
-  function setText2(id,v) { setText(id, v); }
+  function getVal(id) {
+    return document.getElementById(id)?.value || "";
+  }
+  function setVal(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  }
+  function setText(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v;
+  }
+  function setText2(id, v) {
+    setText(id, v);
+  }
 
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
-    seedIfNeeded();
+    clearLegacyPartnerCache();
     wireFilters();
     wireModal();
     wireDrawer();
     wireGlobalSearch();
-    document.getElementById("btnConfirmDelete")?.addEventListener("click", confirmDelete);
-    loadAndRender();
+    document
+      .getElementById("btnConfirmDelete")
+      ?.addEventListener("click", confirmDelete);
+    syncPartnersFromApi();
   }
 
   init();
