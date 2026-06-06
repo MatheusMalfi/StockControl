@@ -7,7 +7,7 @@ const router = express.Router();
 const CREATE_TABLE = `
   CREATE TABLE IF NOT EXISTS solicitacoes (
     id               VARCHAR(36)  NOT NULL PRIMARY KEY,
-    organization_id  INT          NOT NULL,
+    organization_id  BIGINT UNSIGNED NOT NULL,
     tipo             VARCHAR(50)  DEFAULT NULL,
     item             VARCHAR(255) DEFAULT NULL,
     quantidade       INT          NOT NULL DEFAULT 1,
@@ -153,12 +153,7 @@ router.patch("/:id/revisar", async (req, res) => {
       `UPDATE solicitacoes
        SET status = ?, revisor = ?, data_revisao = CURDATE(), obs = CONCAT(COALESCE(obs,''), ?)
        WHERE id = ?`,
-      [
-        finalStatus,
-        revisor || null,
-        obs ? `\n${obs}` : "",
-        req.params.id,
-      ],
+      [finalStatus, revisor || null, obs ? `\n${obs}` : "", req.params.id],
     );
     res.json({ success: true });
   } catch (err) {
@@ -185,6 +180,56 @@ router.patch("/:id/status", async (req, res) => {
   }
 });
 
+/* PATCH /api/solicitacoes/:id/agendar-coleta */
+router.patch("/:id/agendar-coleta", async (req, res) => {
+  try {
+    await ensureTable();
+    const { data_coleta, obs } = req.body;
+    if (!data_coleta) {
+      return res.status(400).json({ message: "data_coleta é obrigatória." });
+    }
+
+    const [[solicitacao]] = await pool.query(
+      "SELECT id, status, obs FROM solicitacoes WHERE id = ? LIMIT 1",
+      [req.params.id],
+    );
+
+    if (!solicitacao) {
+      return res.status(404).json({ message: "Solicitação não encontrada." });
+    }
+
+    const statusAtual = String(solicitacao.status || "").toLowerCase();
+    if (statusAtual !== "concluida" && statusAtual !== "concluída") {
+      return res.status(400).json({
+        message: "Apenas solicitações concluídas podem ser agendadas.",
+      });
+    }
+
+    const dataFormatada = new Date(
+      `${data_coleta}T00:00:00`,
+    ).toLocaleDateString("pt-BR");
+    const note = [
+      `COLETA AGENDADA PARA ${dataFormatada}`,
+      obs ? `Obs: ${obs}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const mergedObs = [solicitacao.obs || "", note].filter(Boolean).join("\n");
+
+    await pool.execute(
+      `UPDATE solicitacoes
+       SET status = 'coleta_agendada', data_revisao = ?, obs = ?
+       WHERE id = ?`,
+      [data_coleta, mergedObs, req.params.id],
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("PATCH /api/solicitacoes/:id/agendar-coleta:", err);
+    res.status(500).json({ message: "Erro ao agendar coleta." });
+  }
+});
+
 /* GET /api/solicitacoes/:id/detalhes */
 router.get("/:id/detalhes", async (req, res) => {
   try {
@@ -199,16 +244,14 @@ router.get("/:id/detalhes", async (req, res) => {
     );
 
     if (!solicRows.length) {
-      return res
-        .status(404)
-        .json({ message: "Solicitação não encontrada." });
+      return res.status(404).json({ message: "Solicitação não encontrada." });
     }
 
     const solicitacao = solicRows[0];
 
     const [items] = await pool.query(
       `SELECT 
-        i.id, i.product_name, i.quantity, i.estimated_value, i.currency,
+        i.id, i.product_name, i.quantity, i.weight_kg, i.estimated_value, i.currency,
         sl.name as storage_location,
         c.name as category_name,
         b.name as brand_name,
