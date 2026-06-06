@@ -21,73 +21,110 @@
   };
 
   let currentRequest = null;
+  let currentRequests = [];
 
   function normalizeStatus(status) {
     return String(status || "").toLowerCase();
   }
 
+  function getRequestIdsFromRoute() {
+    const params = new URLSearchParams(window.location.search);
+    return params.getAll("solicitacao_id").filter(Boolean);
+  }
+
+  function isRequestSchedulable(status) {
+    const statusLower = normalizeStatus(status);
+    return statusLower === "concluida";
+  }
+
+  function setFormDisabled(disabled) {
+    if (!elements.form) return;
+
+    elements.form
+      .querySelectorAll("input, textarea, button[type='submit']")
+      .forEach((el) => {
+        el.disabled = disabled;
+      });
+  }
+
   function buildDetailsHref() {
-    const solId = new URLSearchParams(window.location.search).get(
-      "solicitacao_id",
-    );
-    if (!solId) return "detalhes-pedido.html";
+    const requestIds = getRequestIdsFromRoute();
+    const solId = requestIds[0];
+    if (!solId || requestIds.length > 1) return "pedidos-recicladora.html";
     return `detalhes-pedido.html?solicitacao_id=${encodeURIComponent(solId)}`;
   }
 
   async function loadRequestData() {
-    const params = new URLSearchParams(window.location.search);
-    const solId = params.get("solicitacao_id");
+    const requestIds = getRequestIdsFromRoute();
 
-    if (!solId) {
+    if (!requestIds.length) {
       SC.toast("ID da solicitação não encontrado.", "error");
       return;
     }
 
     try {
-      const data = await SC.api(`/solicitacoes/${solId}/detalhes`);
-      const sol = data.solicitacao;
-      const items = data.items || [];
-      currentRequest = sol;
+      const requestsData = await Promise.all(
+        requestIds.map((requestId) =>
+          SC.api(`/solicitacoes/${requestId}/detalhes`),
+        ),
+      );
 
-      const statusLower = normalizeStatus(sol.status);
-      const isSchedulable =
-        statusLower === "concluida" || statusLower === "concluída";
+      currentRequests = requestsData.map((data) => ({
+        solicitacao: data.solicitacao,
+        items: data.items || [],
+      }));
+      currentRequest = currentRequests[0]?.solicitacao || null;
 
-      if (!isSchedulable && elements.form) {
+      const schedulableRequests = currentRequests.filter((request) =>
+        isRequestSchedulable(request.solicitacao.status),
+      );
+
+      if (!schedulableRequests.length) {
         SC.toast(
-          "Esta solicitação não está com status concluída e não pode ser agendada.",
+          "Nenhuma solicitação concluída disponível para agendamento.",
           "warning",
         );
-        elements.form
-          .querySelectorAll("input, textarea, button[type='submit']")
-          .forEach((el) => {
-            el.disabled = true;
-          });
+        setFormDisabled(true);
       }
+
+      const primaryRequest = currentRequest;
+      const primaryOrgName = primaryRequest?.org_name || "Organização";
+      const sameOrg = currentRequests.every(
+        (request) =>
+          (request.solicitacao.org_name || "Organização") === primaryOrgName,
+      );
+      const orderLabel =
+        currentRequests.length === 1
+          ? primaryRequest.id.substring(0, 8).toUpperCase()
+          : `${currentRequests.length} pedidos`;
 
       if (elements.orderDisplay) {
-        elements.orderDisplay.textContent = sol.id
-          .substring(0, 8)
-          .toUpperCase();
+        elements.orderDisplay.textContent = orderLabel;
       }
       if (elements.orderSummary) {
-        elements.orderSummary.textContent = sol.id
-          .substring(0, 8)
-          .toUpperCase();
+        elements.orderSummary.textContent = orderLabel;
       }
 
-      const orgName = sol.org_name || "Organização";
-      if (elements.orgName) elements.orgName.textContent = orgName;
+      if (elements.orgName)
+        elements.orgName.textContent = sameOrg
+          ? primaryOrgName
+          : `${currentRequests.length} ONGs`;
       if (elements.orgInitial)
-        elements.orgInitial.textContent = orgName[0].toUpperCase();
-      if (elements.summaryOrg) elements.summaryOrg.textContent = orgName;
+        elements.orgInitial.textContent = sameOrg
+          ? primaryOrgName[0].toUpperCase()
+          : String(currentRequests.length);
+      if (elements.summaryOrg)
+        elements.summaryOrg.textContent = sameOrg
+          ? primaryOrgName
+          : `${currentRequests.length} ONGs`;
 
-      const totalItems = items.length;
-      const totalQty = items.reduce(
+      const allItems = currentRequests.flatMap((request) => request.items);
+      const totalItems = allItems.length;
+      const totalQty = allItems.reduce(
         (sum, item) => sum + (parseInt(item.quantity, 10) || 0),
         0,
       );
-      const totalWeight = items.reduce((sum, item) => {
+      const totalWeight = allItems.reduce((sum, item) => {
         const weight = parseFloat(item.weight_kg) || 0;
         const quantity = parseInt(item.quantity, 10) || 1;
         return sum + weight * quantity;
@@ -106,6 +143,14 @@
           },
         )} kg`;
       }
+
+      if (currentRequests.length > 1 && elements.backToDetailsBtn) {
+        elements.backToDetailsBtn.textContent = "Voltar para pedidos";
+      }
+
+      if (currentRequests.length > 1 && elements.cancelScheduleBtn) {
+        elements.cancelScheduleBtn.textContent = "Cancelar";
+      }
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
       SC.toast("Erro ao carregar dados da solicitação.", "error");
@@ -115,10 +160,8 @@
   if (elements.dateInput) {
     const now = new Date();
     const today = now.toISOString().split("T")[0];
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
     elements.dateInput.min = today;
-    elements.dateInput.value = tomorrow.toISOString().split("T")[0];
+    elements.dateInput.value = today;
   }
 
   if (elements.backToDetailsBtn) {
@@ -137,9 +180,7 @@
     elements.form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      const solId = new URLSearchParams(window.location.search).get(
-        "solicitacao_id",
-      );
+      const requestIds = getRequestIdsFromRoute();
       const date = elements.dateInput ? elements.dateInput.value : "";
       const obs = elements.obsInput ? elements.obsInput.value.trim() : "";
 
@@ -148,13 +189,16 @@
         return;
       }
 
-      if (!currentRequest) {
+      if (!currentRequests.length) {
         SC.toast("Solicitação não carregada.", "error");
         return;
       }
 
-      const statusLower = normalizeStatus(currentRequest.status);
-      if (statusLower !== "concluida" && statusLower !== "concluída") {
+      const schedulableIds = currentRequests
+        .filter((request) => isRequestSchedulable(request.solicitacao.status))
+        .map((request) => request.solicitacao.id);
+
+      if (!schedulableIds.length) {
         SC.toast(
           "Somente solicitações concluídas podem ser agendadas.",
           "warning",
@@ -163,18 +207,27 @@
       }
 
       try {
-        await SC.api(`/solicitacoes/${solId}/agendar-coleta`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            data_coleta: date,
-            obs,
-          }),
-        });
+        await Promise.all(
+          schedulableIds.map((requestId) =>
+            SC.api(`/solicitacoes/${requestId}/agendar-coleta`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                data_coleta: date,
+                obs,
+              }),
+            }),
+          ),
+        );
 
-        SC.toast("Coleta agendada com sucesso!", "success");
+        SC.toast(
+          schedulableIds.length === 1
+            ? "Coleta agendada com sucesso!"
+            : `${schedulableIds.length} coletas agendadas com sucesso!`,
+          "success",
+        );
         const year = new Date(`${date}T00:00:00`).getFullYear();
         setTimeout(() => {
           window.location.href = `recicladora.html?open_history=${year}`;
