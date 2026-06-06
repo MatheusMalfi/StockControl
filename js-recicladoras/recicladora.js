@@ -17,6 +17,15 @@
     return SC.escHtml(String(value || ""));
   }
 
+  function getStatusLabel(status) {
+    const normalized = String(status || "pendente").toLowerCase();
+    if (normalized === "coleta_agendada") return "Agendada";
+    if (normalized === "concluida") return "Concluída";
+    if (normalized === "pendente") return "Pendente";
+    if (normalized === "recusada") return "Recusada";
+    return String(status || "Pendente");
+  }
+
   function getInitial(name) {
     if (!name) return "?";
     return esc(name.trim()[0].toUpperCase());
@@ -112,7 +121,7 @@
               )}</td>
               <td>${esc(row.org_name)}</td>
               <td>${esc(scheduledDate)}</td>
-              <td>${esc(row.status)}</td>
+              <td>${esc(getStatusLabel(row.status))}</td>
             </tr>
           `;
         })
