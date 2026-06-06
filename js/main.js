@@ -123,18 +123,28 @@
    *  - On 401 → clears session and redirects to login
    */
   SC.api = async function (path, options = {}) {
+    const requestOptions = { ...options };
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${getToken()}`,
-      ...(options.headers || {}),
+      ...(requestOptions.headers || {}),
     };
 
     /* FormData bodies must NOT have Content-Type set (browser sets it) */
-    if (options.body instanceof FormData) {
+    if (requestOptions.body instanceof FormData) {
       delete headers["Content-Type"];
+    } else if (
+      requestOptions.body &&
+      typeof requestOptions.body === "object" &&
+      !(requestOptions.body instanceof Blob)
+    ) {
+      requestOptions.body = JSON.stringify(requestOptions.body);
     }
 
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...requestOptions,
+      headers,
+    });
 
     if (res.status === 401) {
       clearSession();
@@ -425,7 +435,8 @@
     );
     if (!navItems.length) return;
 
-    const currentPage = window.location.pathname.split("/").pop() || "index.html";
+    const currentPage =
+      window.location.pathname.split("/").pop() || "index.html";
     const isRecycler = isRecyclerUser(user);
 
     if (!isRecycler) {
@@ -443,12 +454,17 @@
       {
         href: "/recicladora/recicladora.html",
         page: "recicladora.html",
-        label: "Recicladora",
+        label: "Dashboard",
       },
       {
         href: "/recicladora/pedidos-recicladora.html",
         page: "pedidos-recicladora.html",
         label: "Pedidos",
+      },
+      {
+        href: "/recicladora/agendamento-coleta.html",
+        page: "agendamento-coleta.html",
+        label: "Agendar Coleta",
       },
     ];
 
@@ -473,7 +489,10 @@
         item.classList.add("disabled");
         item.style.pointerEvents = "none";
         item.style.opacity = "0.45";
-        item.setAttribute("title", "Opção temporariamente desativada para recicladoras");
+        item.setAttribute(
+          "title",
+          "Opção temporariamente desativada para recicladoras",
+        );
       }
     });
   }
