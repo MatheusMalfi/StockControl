@@ -1,6 +1,8 @@
 (function bootPedidosRecicladora() {
   if (!window.SC || !window.SC.ready) {
-    document.addEventListener("sc:ready", bootPedidosRecicladora, { once: true });
+    document.addEventListener("sc:ready", bootPedidosRecicladora, {
+      once: true,
+    });
     return;
   }
 
@@ -9,8 +11,12 @@
   const recyclerName = document.getElementById("recyclerName");
   const recyclerMeta = document.getElementById("recyclerMeta");
   const pageSubtitle = document.getElementById("pageSubtitle");
+  const orgSwitcher = document.getElementById("orgSwitcher");
   const ordersTableBody = document.getElementById("ordersTableBody");
   const mobileOrderList = document.getElementById("mobileOrderList");
+  const btnHeaderDetails = document.getElementById("btnHeaderDetails");
+  const btnHeaderSchedule = document.getElementById("btnHeaderSchedule");
+  let availableOrgs = [];
 
   function getInitial(name) {
     if (!name) return "?";
@@ -19,10 +25,20 @@
 
   function getStatusBadge(status) {
     const normalized = String(status || "").toLowerCase();
-    if (normalized === "aprovada") return "badge badge-success";
+    if (
+      normalized === "concluida" ||
+      normalized === "concluída" ||
+      normalized === "coleta_agendada"
+    )
+      return "badge badge-success";
     if (normalized === "pendente") return "badge badge-warning";
     if (normalized === "recusada") return "badge badge-danger";
     return "badge badge-secondary";
+  }
+
+  function isSchedulable(status) {
+    const normalized = String(status || "").toLowerCase();
+    return normalized === "concluida" || normalized === "concluída";
   }
 
   function esc(value) {
@@ -49,8 +65,10 @@
 
   function buildOrderRow(order, index, orgName) {
     const description = order.item || order.obs || "Sem descrição";
-    const statusText = order.status ? String(order.status).toLowerCase() : "pendente";
-    const isApproved = statusText === "aprovada";
+    const statusText = order.status
+      ? String(order.status).toLowerCase()
+      : "pendente";
+    const isApproved = isSchedulable(statusText);
     const orderNumber = `Pedido ${index + 1}`;
 
     return `
@@ -63,7 +81,7 @@
           <span class="${getStatusBadge(statusText)}">${esc(order.status || "Pendente")}</span>
         </td>
         <td>${esc(orgName)}</td>
-        <td style="text-align:right;">
+        <td style="text-align:center;">
           ${buildOrderActions(order.id, isApproved)}
         </td>
       </tr>
@@ -72,8 +90,10 @@
 
   function buildMobileOrder(order, index, orgName) {
     const description = order.item || order.obs || "Sem descrição";
-    const statusText = order.status ? String(order.status).toLowerCase() : "pendente";
-    const isApproved = statusText === "aprovada";
+    const statusText = order.status
+      ? String(order.status).toLowerCase()
+      : "pendente";
+    const isApproved = isSchedulable(statusText);
 
     return `
       <div class="mobile-order-card">
@@ -105,13 +125,45 @@
       orderCountBadge.textContent = `${count} pedido${count === 1 ? "" : "s"}`;
   }
 
+  function updateHeaderButtons(orders) {
+    if (!orders || !orders.length) {
+      if (btnHeaderDetails) btnHeaderDetails.disabled = true;
+      if (btnHeaderSchedule) btnHeaderSchedule.disabled = true;
+      return;
+    }
+    const firstOrder = orders[0];
+    const approvedOrder = orders.find((o) => isSchedulable(o.status));
+
+    if (btnHeaderDetails) {
+      btnHeaderDetails.disabled = false;
+      btnHeaderDetails.onclick = () =>
+        (window.location.href = `/recicladora/detalhes-pedido.html?solicitacao_id=${encodeURIComponent(
+          firstOrder.id,
+        )}`);
+    }
+    if (btnHeaderSchedule) {
+      if (approvedOrder) {
+        btnHeaderSchedule.disabled = false;
+        btnHeaderSchedule.onclick = () =>
+          (window.location.href = `/recicladora/agendamento-coleta.html?solicitacao_id=${encodeURIComponent(
+            approvedOrder.id,
+          )}`);
+      } else {
+        btnHeaderSchedule.disabled = true;
+      }
+    }
+  }
+
   function renderOrders(orders, orgName) {
     if (!orders || !orders.length) {
-      if (ordersTableBody) ordersTableBody.innerHTML = "<tr><td colspan=4>Não há pedidos de coleta para esta ONG.</td></tr>";
+      if (ordersTableBody)
+        ordersTableBody.innerHTML =
+          "<tr><td colspan=4>Não há pedidos de coleta para esta ONG.</td></tr>";
       if (mobileOrderList)
         mobileOrderList.innerHTML =
-          "<div class=\"mobile-order-card\">Nenhum pedido de coleta encontrado.</div>";
+          '<div class="mobile-order-card">Nenhum pedido de coleta encontrado.</div>';
       updateHeader(orgName, 0);
+      updateHeaderButtons([]);
       return;
     }
 
@@ -126,37 +178,127 @@
         .join("");
 
     updateHeader(orgName, orders.length);
+    updateHeaderButtons(orders);
   }
 
-  async function loadOrders() {
+  function updateRoute(orgId, orgName) {
+    const nextParams = new URLSearchParams(window.location.search);
+    nextParams.set("org_id", orgId);
+    nextParams.set("org_name", orgName || "ONG");
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}?${nextParams.toString()}`,
+    );
+  }
+
+  function renderOrgSwitcher(selectedOrgId) {
+    if (!orgSwitcher) return;
+    if (!availableOrgs.length) {
+      orgSwitcher.innerHTML = "";
+      return;
+    }
+
+    orgSwitcher.innerHTML = availableOrgs
+      .map((org) => {
+        const isActive = String(org.id) === String(selectedOrgId);
+        return `
+          <button
+            type="button"
+            class="org-chip${isActive ? " is-active" : ""}"
+            data-org-id="${esc(org.id)}"
+            data-org-name="${esc(org.name || "ONG")}">
+            ${esc(org.name || "ONG")}
+          </button>
+        `;
+      })
+      .join("");
+
+    orgSwitcher.querySelectorAll(".org-chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        const nextOrgId = button.getAttribute("data-org-id");
+        const nextOrgName = button.getAttribute("data-org-name") || "ONG";
+        if (!nextOrgId || String(nextOrgId) === String(selectedOrgId)) return;
+        updateRoute(nextOrgId, nextOrgName);
+        loadOrders();
+      });
+    });
+  }
+
+  async function resolveOrganizationFromRoute() {
     const params = new URLSearchParams(window.location.search);
     const orgId = params.get("org_id");
     const orgName = params.get("org_name")
       ? decodeURIComponent(params.get("org_name"))
-      : "ONG";
+      : "";
+
+    if (orgId) {
+      return { orgId, orgName: orgName || "ONG" };
+    }
+
+    const fallbackOrg =
+      availableOrgs.find((org) => (parseInt(org.request_count, 10) || 0) > 0) ||
+      availableOrgs[0] ||
+      null;
+
+    if (!fallbackOrg) {
+      return null;
+    }
+
+    updateRoute(fallbackOrg.id, fallbackOrg.name || "ONG");
+
+    return {
+      orgId: String(fallbackOrg.id),
+      orgName: fallbackOrg.name || "ONG",
+    };
+  }
+
+  async function loadOrders() {
+    let routeInfo;
+
+    try {
+      const data = await SC.api("/recycler/ongs/solicitacoes");
+      availableOrgs = Array.isArray(data) ? data : data.ongs || [];
+      routeInfo = await resolveOrganizationFromRoute();
+    } catch (err) {
+      console.error("Erro ao resolver ONG da rota:", err);
+    }
+
+    const orgId = routeInfo?.orgId || null;
+    const orgName = routeInfo?.orgName || "ONG";
+
+    renderOrgSwitcher(orgId);
 
     if (!orgId) {
-      if (ordersTableBody) ordersTableBody.innerHTML = "<tr><td colspan=4>Parâmetro organization_id não informado.</td></tr>";
+      if (ordersTableBody)
+        ordersTableBody.innerHTML =
+          "<tr><td colspan=4>Nenhuma ONG disponível para visualizar pedidos.</td></tr>";
       if (mobileOrderList)
         mobileOrderList.innerHTML =
-          "<div class=\"mobile-order-card\">Parâmetro organization_id não informado.</div>";
+          '<div class="mobile-order-card">Nenhuma ONG disponível para visualizar pedidos.</div>';
       if (recyclerMeta)
-        recyclerMeta.textContent = "Informe uma ONG válida para visualizar os pedidos.";
+        recyclerMeta.textContent =
+          "Nenhuma ONG disponível para visualizar os pedidos.";
+      updateHeader(orgName, 0);
       return;
     }
 
     try {
-      const response = await SC.api(`/solicitacoes?organization_id=${encodeURIComponent(orgId)}`);
+      const response = await SC.api(
+        `/solicitacoes?organization_id=${encodeURIComponent(orgId)}`,
+      );
       const orders = Array.isArray(response)
         ? response
         : response.solicitacoes || [];
       renderOrders(orders, orgName);
     } catch (err) {
       console.error("Erro ao carregar pedidos da ONG:", err);
-      if (ordersTableBody) ordersTableBody.innerHTML = "<tr><td colspan=4>Erro ao carregar pedidos.</td></tr>";
+      if (ordersTableBody)
+        ordersTableBody.innerHTML =
+          "<tr><td colspan=4>Erro ao carregar pedidos.</td></tr>";
       if (mobileOrderList)
         mobileOrderList.innerHTML =
-          "<div class=\"mobile-order-card\">Erro ao carregar pedidos da ONG.</div>";
+          '<div class="mobile-order-card">Erro ao carregar pedidos da ONG.</div>';
       if (recyclerMeta)
         recyclerMeta.textContent = "Erro ao carregar pedidos desta ONG.";
       updateHeader(orgName, 0);
