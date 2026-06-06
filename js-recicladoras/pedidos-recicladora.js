@@ -25,20 +25,25 @@
 
   function getStatusBadge(status) {
     const normalized = String(status || "").toLowerCase();
-    if (
-      normalized === "concluida" ||
-      normalized === "concluída" ||
-      normalized === "coleta_agendada"
-    )
-      return "badge badge-success";
+    if (normalized === "concluida") return "badge badge-primary";
+    if (normalized === "coleta_agendada") return "badge badge-success";
     if (normalized === "pendente") return "badge badge-warning";
     if (normalized === "recusada") return "badge badge-danger";
     return "badge badge-secondary";
   }
 
+  function getStatusLabel(status) {
+    const normalized = String(status || "pendente").toLowerCase();
+    if (normalized === "coleta_agendada") return "Agendada";
+    if (normalized === "concluida") return "Concluída";
+    if (normalized === "pendente") return "Pendente";
+    if (normalized === "recusada") return "Recusada";
+    return String(status || "Pendente");
+  }
+
   function isSchedulable(status) {
     const normalized = String(status || "").toLowerCase();
-    return normalized === "concluida" || normalized === "concluída";
+    return normalized === "concluida";
   }
 
   function esc(value) {
@@ -47,7 +52,7 @@
 
   function buildOrderActions(orderId, isApproved) {
     const detailsButton = `
-      <button class="btn btn-ghost btn-sm" type="button" onclick="window.location.href='/recicladora/detalhes-pedido.html?solicitacao_id=${encodeURIComponent(
+      <button class="btn btn-primary btn-sm" type="button" onclick="window.location.href='/recicladora/detalhes-pedido.html?solicitacao_id=${encodeURIComponent(
         orderId,
       )}'">Detalhes</button>
     `;
@@ -60,7 +65,13 @@
     `
       : "";
 
-    return `<div class="order-actions">${detailsButton}${scheduleButton}</div>`;
+    return {
+      details: `<div class="order-actions">${detailsButton}</div>`,
+      schedule: scheduleButton
+        ? `<div class="order-actions">${scheduleButton}</div>`
+        : '<span class="order-meta">-</span>',
+      mobile: `<div class="order-actions">${detailsButton}${scheduleButton}</div>`,
+    };
   }
 
   function buildOrderRow(order, index, orgName) {
@@ -70,6 +81,7 @@
       : "pendente";
     const isApproved = isSchedulable(statusText);
     const orderNumber = `Pedido ${index + 1}`;
+    const actions = buildOrderActions(order.id, isApproved);
 
     return `
       <tr>
@@ -78,11 +90,14 @@
           <div class="order-meta">${esc(description)}</div>
         </td>
         <td>
-          <span class="${getStatusBadge(statusText)}">${esc(order.status || "Pendente")}</span>
+          <span class="${getStatusBadge(statusText)}">${esc(getStatusLabel(order.status))}</span>
         </td>
         <td>${esc(orgName)}</td>
         <td style="text-align:center;">
-          ${buildOrderActions(order.id, isApproved)}
+          ${actions.details}
+        </td>
+        <td style="text-align:center;">
+          ${actions.schedule}
         </td>
       </tr>
     `;
@@ -94,6 +109,7 @@
       ? String(order.status).toLowerCase()
       : "pendente";
     const isApproved = isSchedulable(statusText);
+    const actions = buildOrderActions(order.id, isApproved);
 
     return `
       <div class="mobile-order-card">
@@ -101,11 +117,12 @@
           <div>
             <div class="order-title">Pedido ${index + 1}</div>
             <div class="order-meta">${esc(description)}</div>
+            <div class="order-meta">ONG: ${esc(orgName)}</div>
           </div>
-          <span class="${getStatusBadge(statusText)}">${esc(order.status || "Pendente")}</span>
+          <span class="${getStatusBadge(statusText)}">${esc(getStatusLabel(order.status))}</span>
         </div>
         <div class="mobile-order-actions">
-          ${buildOrderActions(order.id, isApproved)}
+          ${actions.mobile}
         </div>
       </div>
     `;
@@ -132,7 +149,7 @@
       return;
     }
     const firstOrder = orders[0];
-    const approvedOrder = orders.find((o) => isSchedulable(o.status));
+    const approvedOrders = orders.filter((o) => isSchedulable(o.status));
 
     if (btnHeaderDetails) {
       btnHeaderDetails.disabled = false;
@@ -142,12 +159,15 @@
         )}`);
     }
     if (btnHeaderSchedule) {
-      if (approvedOrder) {
+      if (approvedOrders.length) {
+        const params = new URLSearchParams();
+        approvedOrders.forEach((order) => {
+          params.append("solicitacao_id", order.id);
+        });
+
         btnHeaderSchedule.disabled = false;
         btnHeaderSchedule.onclick = () =>
-          (window.location.href = `/recicladora/agendamento-coleta.html?solicitacao_id=${encodeURIComponent(
-            approvedOrder.id,
-          )}`);
+          (window.location.href = `/recicladora/agendamento-coleta.html?${params.toString()}`);
       } else {
         btnHeaderSchedule.disabled = true;
       }
@@ -158,7 +178,7 @@
     if (!orders || !orders.length) {
       if (ordersTableBody)
         ordersTableBody.innerHTML =
-          "<tr><td colspan=4>Não há pedidos de coleta para esta ONG.</td></tr>";
+          "<tr><td colspan=5>Não há pedidos de coleta para esta ONG.</td></tr>";
       if (mobileOrderList)
         mobileOrderList.innerHTML =
           '<div class="mobile-order-card">Nenhum pedido de coleta encontrado.</div>';
@@ -272,7 +292,7 @@
     if (!orgId) {
       if (ordersTableBody)
         ordersTableBody.innerHTML =
-          "<tr><td colspan=4>Nenhuma ONG disponível para visualizar pedidos.</td></tr>";
+          "<tr><td colspan=5>Nenhuma ONG disponível para visualizar pedidos.</td></tr>";
       if (mobileOrderList)
         mobileOrderList.innerHTML =
           '<div class="mobile-order-card">Nenhuma ONG disponível para visualizar pedidos.</div>';
@@ -295,7 +315,7 @@
       console.error("Erro ao carregar pedidos da ONG:", err);
       if (ordersTableBody)
         ordersTableBody.innerHTML =
-          "<tr><td colspan=4>Erro ao carregar pedidos.</td></tr>";
+          "<tr><td colspan=5>Erro ao carregar pedidos.</td></tr>";
       if (mobileOrderList)
         mobileOrderList.innerHTML =
           '<div class="mobile-order-card">Erro ao carregar pedidos da ONG.</div>';
