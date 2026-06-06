@@ -19,6 +19,7 @@ const CREATE_TABLE = `
     data_revisao     DATE         DEFAULT NULL,
     revisor          VARCHAR(255) DEFAULT NULL,
     obs              TEXT         DEFAULT NULL,
+    items            TEXT         DEFAULT NULL,
     created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_org (organization_id)
@@ -27,6 +28,18 @@ const CREATE_TABLE = `
 
 async function ensureTable() {
   await pool.query(CREATE_TABLE);
+
+  const dbName = process.env.DB_NAME || "stockcontrol";
+  const [columns] = await pool.query(
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'solicitacoes' AND COLUMN_NAME = 'items'",
+    [dbName],
+  );
+
+  if (!columns.length) {
+    await pool.query(
+      "ALTER TABLE solicitacoes ADD COLUMN items TEXT DEFAULT NULL",
+    );
+  }
 }
 
 function getOrgId(req) {
@@ -73,13 +86,18 @@ router.post("/", async (req, res) => {
       prioridade,
       data_solicitacao,
       obs,
+      items,
     } = req.body;
+    const itemsPayload = items ? JSON.stringify(items) : null;
+    if (process.env.DEBUG_SOLICITACOES && items) {
+      console.debug("[solicitacoes] POST payload items:", items);
+    }
     const newId =
       id || `sol_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     await pool.execute(
       `INSERT INTO solicitacoes
-         (id, organization_id, tipo, item, quantidade, solicitante, email, status, prioridade, data_solicitacao, obs)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, organization_id, tipo, item, quantidade, solicitante, email, status, prioridade, data_solicitacao, obs, items)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newId,
         orgId,
@@ -92,6 +110,7 @@ router.post("/", async (req, res) => {
         prioridade || "media",
         data_solicitacao || null,
         obs || null,
+        itemsPayload,
       ],
     );
     res.status(201).json({ success: true, id: newId });
@@ -115,11 +134,16 @@ router.put("/:id", async (req, res) => {
       prioridade,
       data_solicitacao,
       obs,
+      items,
     } = req.body;
+    const itemsPayload = items ? JSON.stringify(items) : null;
+    if (process.env.DEBUG_SOLICITACOES && items) {
+      console.debug("[solicitacoes] PUT payload items:", items);
+    }
     await pool.execute(
       `UPDATE solicitacoes
        SET tipo = ?, item = ?, quantidade = ?, solicitante = ?, email = ?,
-           status = COALESCE(?, status), prioridade = ?, data_solicitacao = ?, obs = ?
+           status = COALESCE(?, status), prioridade = ?, data_solicitacao = ?, obs = ?, items = COALESCE(?, items)
        WHERE id = ?`,
       [
         tipo || null,
@@ -131,6 +155,7 @@ router.put("/:id", async (req, res) => {
         prioridade || "media",
         data_solicitacao || null,
         obs || null,
+        itemsPayload,
         req.params.id,
       ],
     );
@@ -249,22 +274,91 @@ router.get("/:id/detalhes", async (req, res) => {
 
     const solicitacao = solicRows[0];
 
-    const [items] = await pool.query(
-      `SELECT 
-        i.id, i.product_name, i.quantity, i.weight_kg, i.estimated_value, i.currency,
-        sl.name as storage_location,
-        c.name as category_name,
-        b.name as brand_name,
-        m.name as model_name
-       FROM items i
-       LEFT JOIN storage_locations sl ON sl.id = i.storage_location_id
-       LEFT JOIN categories c ON c.id = i.category_id
-       LEFT JOIN brands b ON b.id = i.brand_id
-       LEFT JOIN models m ON m.id = i.model_id
-       WHERE i.organization_id = ? AND i.is_active = 1
-       ORDER BY i.product_name`,
-      [solicitacao.organization_id],
-    );
+    let items = [];
+    if (solicitacao.items) {
+      if (Array.isArray(solicitacao.items)) {
+        items = solicitacao.items;
+      } else if (typeof solicitacao.items === "string") {
+        try {
+          const parsed = JSON.parse(solicitacao.items);
+          if (Array.isArray(parsed)) items = parsed;
+        } catch {
+          items = [];
+        }
+      }
+    }
+
+    const normalizeItem = (item) => {
+      const quantity =
+        item.quantity != null
+          ? parseInt(item.quantity, 10)
+          : item.quantidade != null
+          ? parseInt(item.quantidade, 10)
+          : 1;
+
+      return {
+        id: item.id || item.item_id || solicitacao.id,
+        product_name:
+          item.product_name || item.nome_item || item.item || item.tipo || "Item",
+        brand_name: item.brand_name || item.marca || "",
+        model_name: item.model_name || item.modelo || "",
+        storage_location:
+          item.storage_location || item.localizacao || item.storage_location || "",
+        category_name: item.category_name || item.categoria || "",
+        weight_kg:
+          item.weight_kg != null
+            ? item.weight_kg
+            : item.peso_kg != null
+            ? item.peso_kg
+            : null,
+        quantity_available:
+          item.quantity_available != null
+            ? item.quantity_available
+            : item.disponivel != null
+            ? item.disponivel
+            : item.total != null
+            ? item.total
+            : null,
+        estimated_value:
+          item.estimated_value != null
+            ? item.estimated_value
+            : item.valor_estimado != null
+            ? item.valor_estimado
+            : item.valor != null
+            ? item.valor
+            : item.value != null
+            ? item.value
+            : null,
+        currency: item.currency || item.moeda || "BRL",
+        quantity: Number.isNaN(quantity) ? 1 : quantity,
+        description: item.description || item.obs || item.descricao || "",
+      };
+    };
+
+    if (!items.length) {
+      const itemDescription = solicitacao.item || solicitacao.tipo || "Solicitação";
+      items = [
+        {
+          id: solicitacao.id,
+          product_name: itemDescription,
+          brand_name: "",
+          model_name: "",
+          storage_location: "",
+          category_name: "",
+          weight_kg: null,
+          estimated_value: null,
+          currency: "BRL",
+          quantity: solicitacao.quantidade || 1,
+          description: solicitacao.obs || "",
+        },
+      ];
+    } else {
+      items = items.map(normalizeItem);
+    }
+
+    if (process.env.DEBUG_SOLICITACOES) {
+      console.debug("[solicitacoes] GET detalhes items:", items);
+    }
 
     res.json({
       success: true,

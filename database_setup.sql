@@ -317,6 +317,7 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
   data_revisao     DATE            DEFAULT NULL,
   revisor          VARCHAR(255)    DEFAULT NULL,
   obs              TEXT            DEFAULT NULL,
+  items            TEXT            DEFAULT NULL,
   created_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_solicitacoes_org FOREIGN KEY (organization_id) REFERENCES organizations(id)

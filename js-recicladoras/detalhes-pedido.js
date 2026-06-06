@@ -11,7 +11,6 @@
   const orgMeta = document.getElementById("orgMeta");
   const orderCode = document.getElementById("orderCode");
   const productsCount = document.getElementById("productsCount");
-  const totalWeight = document.getElementById("totalWeight");
   const totalValue = document.getElementById("totalValue");
   const valueCurrency = document.getElementById("valueCurrency");
   const statusBadge = document.getElementById("statusBadge");
@@ -29,10 +28,91 @@
   }
 
   function formatCurrency(value, currency) {
-    if (!value) return "-";
+    if (value == null || value === "") return "-";
     const num = parseFloat(value);
     if (isNaN(num)) return "-";
     return `${currency === "USD" ? "$" : "R$"} ${num.toFixed(2)}`;
+  }
+
+  function parseNumeric(value) {
+    if (value == null || value === "") return NaN;
+    if (typeof value === "number") return value;
+    let str = String(value).trim();
+    if (!str) return NaN;
+
+    // Remove currency symbols and non-numeric chars except digits, dot, comma, minus
+    str = str.replace(/[^0-9\.,-]+/g, "");
+    if (!str) return NaN;
+
+    const hasComma = str.includes(",");
+    const hasDot = str.includes(".");
+    if (hasComma && !hasDot) {
+      str = str.replace(/,/g, ".");
+    } else if (hasComma && hasDot) {
+      const lastComma = str.lastIndexOf(",");
+      const lastDot = str.lastIndexOf(".");
+      if (lastComma > lastDot) {
+        str = str.replace(/\./g, "").replace(",", ".");
+      } else {
+        str = str.replace(/,/g, "");
+      }
+    }
+
+    return parseFloat(str);
+  }
+
+  function getItemQuantity(item) {
+    const rawQty = item.quantity ?? item.quantidade ?? item.total ?? item.qtd ?? 1;
+    const qty = parseNumeric(rawQty);
+    return Number.isFinite(qty) && qty >= 0 ? qty : 1;
+  }
+
+  function getItemAvailableQuantity(item) {
+    const rawAvail =
+      item.quantity_available ??
+      item.disponivel ??
+      item.disponivel_total ??
+      item.available_quantity ??
+      item.qtdDisponivel ??
+      item.quantity ??
+      item.quantidade;
+    const avail = parseNumeric(rawAvail);
+    return Number.isFinite(avail) && avail > 0 ? avail : null;
+  }
+
+  function getItemValue(item) {
+    const totalValue = parseNumeric(
+      item.estimated_value ??
+        item.valor_estimado ??
+        item.valor ??
+        item.value ??
+        item.valor_total ??
+        item.total_value ??
+        0,
+    );
+
+    const availableQty = parseNumeric(
+      item.quantity_available ??
+        item.disponivel ??
+        item.disponivel_total ??
+        item.available_quantity ??
+        item.qtdDisponivel ??
+        item.quantity ??
+        item.quantidade ??
+        item.total ??
+        0,
+    );
+
+    const requestQty = parseNumeric(
+      item.quantity ?? item.quantidade ?? item.total ?? item.qtd ?? 1,
+    );
+
+    if (!Number.isFinite(requestQty) || requestQty <= 0) return 0;
+    if (Number.isFinite(totalValue) && totalValue > 0 && Number.isFinite(availableQty) && availableQty > 0) {
+      return (totalValue / availableQty) * requestQty;
+    }
+
+    return Number.isFinite(totalValue) ? totalValue * requestQty : 0;
   }
 
   function getStatusColor(status) {
@@ -45,8 +125,12 @@
   }
 
   function buildItemRow(item, index) {
-    const location = item.storage_location || "Sem localização";
-    const value = formatCurrency(item.estimated_value, item.currency);
+    const productName =
+      item.product_name || item.nome_item || item.item || item.tipo || "Item";
+    const location = item.storage_location || item.localizacao || "Sem localização";
+    const quantity = parseNumeric(item.quantity ?? item.quantidade ?? item.total ?? item.qtd ?? 1);
+    const itemValue = getItemValue(item);
+    const value = formatCurrency(itemValue, item.currency || item.moeda);
     const weightText = item.weight_kg ? `${item.weight_kg} kg` : "-";
 
     return `
@@ -55,38 +139,31 @@
           <div class="product-cell">
             <div class="product-icon">${index + 1}</div>
             <div>
-              <div class="product-title">${esc(item.product_name)}</div>
-              <div class="product-description">${esc(item.brand_name || "")} ${esc(item.model_name || "")}</div>
+              <div class="product-title">${esc(productName)}</div>
+              <div class="product-description">${esc(item.brand_name || item.marca || "")} ${esc(item.model_name || item.modelo || "")}</div>
             </div>
           </div>
         </td>
         <td>${esc(location)}</td>
         <td>${esc(weightText)}</td>
         <td>${esc(value)}</td>
-        <td>${item.quantity || 1} unidade${item.quantity === 1 ? "" : "s"}</td>
+        <td>${esc(quantity)} unidade${quantity === 1 ? "" : "s"}</td>
       </tr>
     `;
   }
 
   function calculateTotals(items) {
-    let totalWeightValue = 0;
     let totalValueValue = 0;
     let currency = "BRL";
 
     items.forEach((item) => {
-      if (item.weight_kg) {
-        totalWeightValue += parseFloat(item.weight_kg) || 0;
-      }
-      if (item.estimated_value) {
-        totalValueValue += parseFloat(item.estimated_value) || 0;
-      }
+      totalValueValue += getItemValue(item);
       if (item.currency) {
         currency = item.currency;
       }
     });
 
     return {
-      weight: totalWeightValue,
       value: totalValueValue,
       currency,
     };
@@ -127,7 +204,6 @@
 
     const totals = calculateTotals(items || []);
     if (productsCount) productsCount.textContent = (items || []).length;
-    if (totalWeight) totalWeight.textContent = `${totals.weight.toFixed(3)} kg`;
     if (totalValue)
       totalValue.textContent = formatCurrency(totals.value, totals.currency);
     if (valueCurrency) valueCurrency.textContent = `em ${totals.currency}`;
@@ -166,6 +242,7 @@
       const response = await SC.api(
         `/solicitacoes/${encodeURIComponent(solicitacaoId)}/detalhes`,
       );
+      console.debug("[detalhes-pedido] response:", response);
 
       if (!response.success) {
         throw new Error(response.message || "Erro ao carregar dados");

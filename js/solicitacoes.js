@@ -267,7 +267,26 @@ function initSolicitacoes() {
 
   function requestPayloadFromLocal(req) {
     const user = currentUser();
-    return {
+    const normalizePayloadItem = (item) => ({
+      ...item,
+      item_id: item.item_id || item.id || null,
+      nome_item: item.nome_item || item.nome || item.item || item.tipo || "",
+      quantity_available:
+        item.quantity_available ??
+        item.disponivel ??
+        item.total ??
+        item.quantity ??
+        null,
+      estimated_value:
+        item.estimated_value ??
+        item.valor_estimado ??
+        item.valor ??
+        item.value ??
+        null,
+      currency: item.currency ?? item.moeda ?? "BRL",
+    });
+
+    const payload = {
       id: req.id,
       organization_id: user.organization_id,
       tipo: req.tipo || null,
@@ -279,7 +298,16 @@ function initSolicitacoes() {
       prioridade: req.urgencia || "media",
       data_solicitacao: req.necessario_ate || null,
       obs: req.justificativa || "",
+      items: Array.isArray(req.items)
+        ? req.items.map(normalizePayloadItem)
+        : null,
     };
+
+    if (payload.items) {
+      console.debug("[solicitacoes] request payload items:", payload.items);
+    }
+
+    return payload;
   }
 
   // ── Date filtering ────────────────────────────────────────────────────────
@@ -795,18 +823,29 @@ function initSolicitacoes() {
       }
     }
 
+    const quantityAvailable =
+      row.quantity_available ??
+      row.disponivel ??
+      row.quantity ??
+      row.total ??
+      null;
+    const estimatedValue =
+      row.estimated_value ??
+      row.valor_estimado ??
+      row.valor ??
+      row.value ??
+      null;
+
     return [
       {
         item_id: row.item_id || null,
         nome_item: row.nome_item || row.item || row.tipo || "–",
         patrimonio: row.patrimonio || "",
         quantidade: row.quantidade != null ? row.quantidade : 1,
-        disponivel:
-          row.disponivel ??
-          row.quantity_available ??
-          row.quantity ??
-          row.total ??
-          0,
+        disponivel: quantityAvailable,
+        quantity_available: quantityAvailable,
+        estimated_value: estimatedValue,
+        currency: row.currency ?? row.moeda ?? "BRL",
       },
     ];
   }
@@ -915,6 +954,21 @@ function initSolicitacoes() {
     );
     if (existing) {
       existing.quantidade = Math.min(existing.quantidade + qty, available);
+      existing.disponivel = available;
+      existing.quantity_available = available;
+      existing.estimated_value =
+        existing.estimated_value ??
+        state.selectedItem.estimated_value ??
+        state.selectedItem.valor_estimado ??
+        state.selectedItem.valor ??
+        state.selectedItem.value ??
+        existing.estimated_value ??
+        null;
+      existing.currency =
+        existing.currency ??
+        state.selectedItem.currency ??
+        state.selectedItem.moeda ??
+        "BRL";
     } else {
       state.selectedItems.push({
         item_id: state.selectedItem.id,
@@ -922,6 +976,14 @@ function initSolicitacoes() {
         patrimonio: state.selectedItem.patrimonio || "",
         quantidade: qty,
         disponivel: available,
+        quantity_available: available,
+        estimated_value:
+          state.selectedItem.estimated_value ??
+          state.selectedItem.valor_estimado ??
+          state.selectedItem.valor ??
+          state.selectedItem.value ??
+          null,
+        currency: state.selectedItem.currency ?? state.selectedItem.moeda ?? "BRL",
       });
     }
     if (reqQty) reqQty.value = "1";
@@ -987,6 +1049,14 @@ function initSolicitacoes() {
           patrimonio: currentItem.patrimonio || "",
           quantidade: qty,
           disponivel: currentAvailable,
+          quantity_available: currentAvailable,
+          estimated_value:
+            currentItem.estimated_value ??
+            currentItem.valor_estimado ??
+            currentItem.valor ??
+            currentItem.value ??
+            null,
+          currency: currentItem.currency ?? currentItem.moeda ?? "BRL",
         });
       }
     }
