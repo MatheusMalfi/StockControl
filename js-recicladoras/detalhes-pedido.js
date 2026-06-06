@@ -37,7 +37,8 @@
 
   function getStatusColor(status) {
     const normalized = String(status || "").toLowerCase();
-    if (normalized === "aprovada") return "badge-success";
+    if (normalized === "concluída" || normalized === "coleta_agendada")
+      return "badge-success";
     if (normalized === "pendente") return "badge-warning";
     if (normalized === "recusada") return "badge-danger";
     return "badge-secondary";
@@ -46,7 +47,7 @@
   function buildItemRow(item, index) {
     const location = item.storage_location || "Sem localização";
     const value = formatCurrency(item.estimated_value, item.currency);
-    const weightText = item.weight_kg ? `${item.weight_kg} kg` : "N/A";
+    const weightText = item.weight_kg ? `${item.weight_kg} kg` : "-";
 
     return `
       <tr>
@@ -93,7 +94,9 @@
 
   function renderSolicitacao(solicitacao, items) {
     const statusText = solicitacao.status || "pendente";
-    const isApproved = String(statusText).toLowerCase() === "aprovada";
+    const normalizedStatus = String(statusText).toLowerCase();
+    const isApproved =
+      normalizedStatus === "concluida" || normalizedStatus === "concluída";
 
     if (pageTitle)
       pageTitle.textContent = `Detalhe do Pedido #${solicitacao.id.substring(0, 8)}`;
@@ -102,10 +105,8 @@
 
     if (orgInitial) orgInitial.textContent = getInitial(solicitacao.org_name);
     if (orgName) orgName.textContent = solicitacao.org_name;
-    if (orgMeta)
-      orgMeta.textContent = `Controle de Estoque • Pedido de coleta`;
-    if (orderCode)
-      orderCode.textContent = `${solicitacao.id.substring(0, 8)}`;
+    if (orgMeta) orgMeta.textContent = `Controle de Estoque • Pedido de coleta`;
+    if (orderCode) orderCode.textContent = `${solicitacao.id.substring(0, 8)}`;
 
     if (statusBadge) {
       statusBadge.className = `badge ${getStatusColor(statusText)}`;
@@ -126,12 +127,10 @@
 
     const totals = calculateTotals(items || []);
     if (productsCount) productsCount.textContent = (items || []).length;
-    if (totalWeight)
-      totalWeight.textContent = `${totals.weight.toFixed(3)} kg`;
+    if (totalWeight) totalWeight.textContent = `${totals.weight.toFixed(3)} kg`;
     if (totalValue)
       totalValue.textContent = formatCurrency(totals.value, totals.currency);
-    if (valueCurrency)
-      valueCurrency.textContent = `em ${totals.currency}`;
+    if (valueCurrency) valueCurrency.textContent = `em ${totals.currency}`;
 
     if (scheduleBtn && scheduleBtn2) {
       if (isApproved) {
