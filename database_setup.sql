@@ -303,6 +303,29 @@ CREATE TABLE IF NOT EXISTS recycler_order_items (
   CONSTRAINT fk_roi_cat   FOREIGN KEY (category_id)       REFERENCES categories(id)      ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS solicitacoes (
+  id               VARCHAR(36)     NOT NULL PRIMARY KEY,
+  organization_id  BIGINT UNSIGNED NOT NULL,
+  tipo             VARCHAR(50)     DEFAULT NULL,
+  item             VARCHAR(255)    DEFAULT NULL,
+  quantidade       INT             NOT NULL DEFAULT 1,
+  solicitante      VARCHAR(255)    DEFAULT NULL,
+  email            VARCHAR(255)    DEFAULT NULL,
+  status           VARCHAR(50)     NOT NULL DEFAULT 'pendente',
+  prioridade       VARCHAR(50)     NOT NULL DEFAULT 'media',
+  data_solicitacao DATE            DEFAULT NULL,
+  data_revisao     DATE            DEFAULT NULL,
+  revisor          VARCHAR(255)    DEFAULT NULL,
+  obs              TEXT            DEFAULT NULL,
+  created_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_solicitacoes_org FOREIGN KEY (organization_id) REFERENCES organizations(id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX idx_solicitacoes_org (organization_id),
+  INDEX idx_solicitacoes_status (status),
+  INDEX idx_solicitacoes_data_revisao (data_revisao)
+) ENGINE=InnoDB;
+
 -- ============================================================
 -- AUDITORIA, NOTIFICAÇÕES E CONFIGURAÇÕES
 -- ============================================================
@@ -708,18 +731,6 @@ ON DUPLICATE KEY UPDATE label_pt = new_row.label_pt, color_hex = new_row.color_h
 
 INSERT INTO categories (name) VALUES
   ('Notebook'), ('Gabinete'), ('Monitor'), ('Periféricos'), ('Outros')
-AS new_row
-ON DUPLICATE KEY UPDATE name = new_row.name;
-
-INSERT INTO organizations (org_type, name, cnpj, email, phone, mobile, address_line1, city, state, postal_code, notes)
-VALUES ('RECYCLER', 'Impacto Metais', '00.000.000/0000-00', 'contato@impactometais.com.br',
-        '(11) 0000-0000', '(11) 90000-0000', 'Rua Exemplo, 123', 'São Paulo', 'SP', '00000-000',
-        'Coletora/parceira para descarte de resíduos eletrônicos')
-AS new_row
-ON DUPLICATE KEY UPDATE name = new_row.name;
-
-INSERT INTO organizations (org_type, name, cnpj, email)
-VALUES ('ONG', 'Sua ONG', '11.111.111/0001-11', 'contato@suaong.org')
 AS new_row
 ON DUPLICATE KEY UPDATE name = new_row.name;
 
