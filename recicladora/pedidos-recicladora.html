@@ -93,11 +93,41 @@
       margin-top: 2px;
     }
 
+    .org-switcher {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      margin-top: var(--space-3);
+    }
+
+    .org-chip {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+      color: var(--color-text-secondary);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .org-chip:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .org-chip.is-active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #fff;
+    }
+
     .order-actions {
       display: flex;
       align-items: center;
       gap: var(--space-2);
-      justify-content: flex-end;
+      justify-content: center;
       flex-wrap: wrap;
     }
 
@@ -171,15 +201,16 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">Pedidos</h1>
-          <p class="page-subtitle" id="pageSubtitle">Pedidos pendentes de coleta</p>
-        </div>
-
-        <div style="display:flex; gap:var(--space-2);">
-          <button class="btn btn-secondary" onclick="window.location.href='/recicladora/recicladora.html'" type="button">
-            Voltar
-          </button>
-        </div>
+        <p class="page-subtitle" id="pageSubtitle">Pedidos pendentes de coleta</p>
+        <div class="org-switcher" id="orgSwitcher"></div>
       </div>
+
+      <div style="display:flex; gap:var(--space-2);">
+        <button class="btn btn-secondary" onclick="window.location.href='/recicladora/recicladora.html'" type="button">
+          Voltar
+        </button>
+      </div>
+    </div>
 
     <div class="grid grid-3" style="margin-top:var(--space-5);">
 
@@ -204,7 +235,10 @@
       <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <h2 class="card-title">Lista de Pedidos</h2>
-          <a href="/recicladora/agendamento-coleta.html" class="btn btn-primary btn-sm">Agendar coleta</a>
+          <div style="display: flex; gap: 2px;">
+            <button id="btnHeaderDetails" class="btn btn-primary btn-sm">Detalhes do pedido</button>
+            <button id="btnHeaderSchedule" class="btn btn-primary btn-sm">Agendar coleta</button>
+          </div>
         </div>
 
         <div class="table-wrapper orders-table-wrapper" style="border:none; border-radius:0;">
@@ -214,12 +248,11 @@
                 <th>Pedido</th>
                 <th>Status</th>
                 <th>Descrição</th>
-                <th style="text-align:right;">Ações</th>
+                <th>Ações</th>
               </tr>
             </thead>
 
-            <tbody id="ordersTableBody">
-            </tbody>
+            <tbody id="ordersTableBody"></tbody>
           </table>
         </div>
 
