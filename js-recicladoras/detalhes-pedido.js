@@ -37,11 +37,20 @@
 
   function getStatusColor(status) {
     const normalized = String(status || "").toLowerCase();
-    if (normalized === "concluída" || normalized === "coleta_agendada")
-      return "badge-success";
+    if (normalized === "concluida") return "badge-primary";
+    if (normalized === "coleta_agendada") return "badge-success";
     if (normalized === "pendente") return "badge-warning";
     if (normalized === "recusada") return "badge-danger";
     return "badge-secondary";
+  }
+
+  function getStatusLabel(status) {
+    const normalized = String(status || "pendente").toLowerCase();
+    if (normalized === "coleta_agendada") return "Agendada";
+    if (normalized === "concluida") return "Concluída";
+    if (normalized === "pendente") return "Pendente";
+    if (normalized === "recusada") return "Recusada";
+    return String(status || "Pendente");
   }
 
   function buildItemRow(item, index) {
@@ -96,7 +105,7 @@
     const statusText = solicitacao.status || "pendente";
     const normalizedStatus = String(statusText).toLowerCase();
     const isApproved =
-      normalizedStatus === "concluida" || normalizedStatus === "concluída";
+      normalizedStatus === "concluida";
 
     if (pageTitle)
       pageTitle.textContent = `Detalhe do Pedido #${solicitacao.id.substring(0, 8)}`;
@@ -110,8 +119,7 @@
 
     if (statusBadge) {
       statusBadge.className = `badge ${getStatusColor(statusText)}`;
-      statusBadge.textContent =
-        statusText.charAt(0).toUpperCase() + statusText.slice(1);
+      statusBadge.textContent = getStatusLabel(statusText);
     }
 
     if (itemsTableBody) {
