@@ -5,6 +5,8 @@
   }
 
   const elements = {
+    backToDetailsBtn: document.getElementById("backToDetailsBtn"),
+    cancelScheduleBtn: document.getElementById("cancelScheduleBtn"),
     orderDisplay: document.getElementById("orderIdDisplay"),
     orderSummary: document.getElementById("orderIdSummary"),
     orgName: document.querySelector(".recycler-name"),
@@ -22,6 +24,14 @@
 
   function normalizeStatus(status) {
     return String(status || "").toLowerCase();
+  }
+
+  function buildDetailsHref() {
+    const solId = new URLSearchParams(window.location.search).get(
+      "solicitacao_id",
+    );
+    if (!solId) return "detalhes-pedido.html";
+    return `detalhes-pedido.html?solicitacao_id=${encodeURIComponent(solId)}`;
   }
 
   async function loadRequestData() {
@@ -109,6 +119,18 @@
     tomorrow.setDate(now.getDate() + 1);
     elements.dateInput.min = today;
     elements.dateInput.value = tomorrow.toISOString().split("T")[0];
+  }
+
+  if (elements.backToDetailsBtn) {
+    elements.backToDetailsBtn.onclick = () => {
+      window.location.href = buildDetailsHref();
+    };
+  }
+
+  if (elements.cancelScheduleBtn) {
+    elements.cancelScheduleBtn.onclick = () => {
+      window.location.href = buildDetailsHref();
+    };
   }
 
   if (elements.form) {
