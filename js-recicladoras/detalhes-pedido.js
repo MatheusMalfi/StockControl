@@ -177,8 +177,7 @@
   function renderSolicitacao(solicitacao, items) {
     const statusText = solicitacao.status || "pendente";
     const normalizedStatus = String(statusText).toLowerCase();
-    const isApproved =
-      normalizedStatus === "concluida";
+    const isSchedulable = normalizedStatus === "aprovada";
 
     if (pageTitle)
       pageTitle.textContent = `Detalhe do Pedido #${solicitacao.id.substring(0, 8)}`;
@@ -213,7 +212,7 @@
     if (valueCurrency) valueCurrency.textContent = "em BRL";
 
     if (scheduleBtn && scheduleBtn2) {
-      if (isApproved) {
+      if (isSchedulable) {
         scheduleBtn.style.display = "block";
         scheduleBtn2.style.display = "block";
         scheduleBtn.onclick = () =>

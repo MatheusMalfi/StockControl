@@ -1,8 +1,19 @@
 "use strict";
 const express = require("express");
+const nodemailer = require("nodemailer");
 const pool = require("../db");
 
 const router = express.Router();
+
+function createTransporter() {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT, 10) || 587,
+    secure: false,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+}
 
 const CREATE_TABLE = `
   CREATE TABLE IF NOT EXISTS solicitacoes (
@@ -321,9 +332,15 @@ router.patch("/:id/agendar-coleta", async (req, res) => {
     if (!data_coleta) {
       return res.status(400).json({ message: "data_coleta é obrigatória." });
     }
+    if (!obs || !String(obs).trim()) {
+      return res.status(400).json({ message: "obs é obrigatória." });
+    }
 
     const [[solicitacao]] = await pool.query(
-      "SELECT id, status, obs FROM solicitacoes WHERE id = ? LIMIT 1",
+      `SELECT s.id, s.status, s.obs, o.name AS org_name, o.email AS org_email
+       FROM solicitacoes s
+       JOIN organizations o ON o.id = s.organization_id
+       WHERE s.id = ? LIMIT 1`,
       [req.params.id],
     );
 
@@ -332,19 +349,16 @@ router.patch("/:id/agendar-coleta", async (req, res) => {
     }
 
     const statusAtual = String(solicitacao.status || "").toLowerCase();
-    if (statusAtual !== "concluida" && statusAtual !== "concluída") {
+    if (statusAtual !== "aprovada") {
       return res.status(400).json({
-        message: "Apenas solicitações concluídas podem ser agendadas.",
+        message: "Apenas solicitações aprovadas podem ser agendadas.",
       });
     }
 
-    const dataFormatada = new Date(
-      `${data_coleta}T00:00:00`,
-    ).toLocaleDateString("pt-BR");
-    const note = [
-      `COLETA AGENDADA PARA ${dataFormatada}`,
-      obs ? `Obs: ${obs}` : "",
-    ]
+    const dataFormatada = new Date(`${data_coleta}T00:00:00`).toLocaleDateString(
+      "pt-BR",
+    );
+    const note = [`COLETA AGENDADA PARA ${dataFormatada}`, `Obs: ${obs}`]
       .filter(Boolean)
       .join("\n");
     const mergedObs = [solicitacao.obs || "", note].filter(Boolean).join("\n");
@@ -355,6 +369,43 @@ router.patch("/:id/agendar-coleta", async (req, res) => {
        WHERE id = ?`,
       [data_coleta, mergedObs, req.params.id],
     );
+
+    if (solicitacao.org_email) {
+      const transporter = createTransporter();
+      if (transporter) {
+        try {
+          await transporter.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: solicitacao.org_email,
+            subject: `Coleta agendada para pedido ${solicitacao.id}`,
+            text: `Olá ${solicitacao.org_name || "responsável"},
+
+Seu pedido ${solicitacao.id} foi agendado para coleta em ${dataFormatada}.
+
+Observação: ${obs}
+
+Atenciosamente,
+Equipe StockControl`,
+            html: `
+              <div style="font-family:Inter,sans-serif;color:#111;">
+                <h2>Coleta agendada</h2>
+                <p>Olá <strong>${solicitacao.org_name || "responsável"}</strong>,</p>
+                <p>Seu pedido <strong>${solicitacao.id}</strong> foi agendado para coleta em <strong>${dataFormatada}</strong>.</p>
+                <p><strong>Observação:</strong></p>
+                <p>${String(obs).replace(/\n/g, "<br />")}</p>
+                <p>Obrigado,<br/>Equipe StockControl</p>
+              </div>
+            `,
+          });
+        } catch (mailErr) {
+          console.error("Erro ao enviar e-mail de agendamento:", mailErr);
+        }
+      } else {
+        console.log(
+          "SMTP não configurado: e-mail de agendamento não será enviado.",
+        );
+      }
+    }
 
     res.json({ success: true });
   } catch (err) {
@@ -369,7 +420,7 @@ router.get("/:id/detalhes", async (req, res) => {
     const solicitacaoId = req.params.id;
 
     const [solicRows] = await pool.query(
-      `SELECT s.*, o.name as org_name
+      `SELECT s.*, o.name AS org_name, o.email AS org_email
        FROM solicitacoes s
        JOIN organizations o ON o.id = s.organization_id
        WHERE s.id = ? LIMIT 1`,

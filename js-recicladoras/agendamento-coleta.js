@@ -10,11 +10,12 @@
     orderDisplay: document.getElementById("orderIdDisplay"),
     orderSummary: document.getElementById("orderIdSummary"),
     orgName: document.querySelector(".recycler-name"),
+    orgSubtitle: document.getElementById("orgSubtitle"),
     orgInitial: document.querySelector(".recycler-avatar"),
-    summaryOrg: document.querySelectorAll(".summary-value")[1],
-    summaryItems: document.querySelectorAll(".summary-value")[2],
-    summaryWeight: document.querySelectorAll(".summary-value")[3],
-    summaryQty: document.querySelectorAll(".summary-value")[4],
+    summaryOrg: document.getElementById("summaryOrg"),
+    summaryItems: document.getElementById("summaryItems"),
+    summaryWeight: document.getElementById("summaryWeight"),
+    summaryQty: document.getElementById("summaryQty"),
     dateInput: document.getElementById("data-retirada"),
     obsInput: document.getElementById("observacoes"),
     form: document.getElementById("scheduleForm"),
@@ -81,7 +82,7 @@
 
       if (!schedulableRequests.length) {
         SC.toast(
-          "Nenhuma solicitação concluída disponível para agendamento.",
+          "Nenhuma solicitação aprovada disponível para agendamento.",
           "warning",
         );
         setFormDisabled(true);
@@ -105,10 +106,15 @@
         elements.orderSummary.textContent = orderLabel;
       }
 
-      if (elements.orgName)
+      if (elements.orgName) {
         elements.orgName.textContent = sameOrg
           ? primaryOrgName
           : `${currentRequests.length} ONGs`;
+      }
+      if (elements.orgSubtitle)
+        elements.orgSubtitle.textContent = primaryRequest.org_email
+          ? primaryRequest.org_email
+          : "Empresa responsável pelo pedido";
       if (elements.orgInitial)
         elements.orgInitial.textContent = sameOrg
           ? primaryOrgName[0].toUpperCase()
@@ -186,6 +192,11 @@
 
       if (!date) {
         SC.toast("Selecione a data de retirada.", "warning");
+        return;
+      }
+
+      if (!obs) {
+        SC.toast("A observação é obrigatória.", "warning");
         return;
       }
 

@@ -172,6 +172,11 @@
         border: 1px solid var(--color-border-light);
       }
 
+      .required {
+        color: var(--color-danger, #dc2626);
+        margin-left: 0.25rem;
+      }
+
       .info-icon {
         width: 34px;
         height: 34px;
@@ -287,9 +292,9 @@
             <div class="recycler-card">
               <div class="recycler-avatar">I</div>
               <div>
-                <div class="recycler-name">JEDA</div>
-                <div class="recycler-subtitle">
-                  Empresa responsável pelo pedido
+                <div class="recycler-name">Solicitante</div>
+                <div class="recycler-subtitle" id="orgSubtitle">
+                  Dados do pedido em carregamento...
                 </div>
               </div>
             </div>
@@ -314,13 +319,14 @@
 
               <div class="form-group">
                 <label class="form-label" for="observacoes"
-                  >Observações à empresa</label
+                  >Observações à empresa<span class="required">*</span></label
                 >
                 <textarea
                   id="observacoes"
                   name="observacoes"
                   class="form-control"
                   rows="6"
+                  required
                   placeholder="Descreva instruções especiais, restrições de acesso, contato no local…"
                 ></textarea>
                 <span class="form-hint"
@@ -366,22 +372,22 @@
 
               <div class="summary-row">
                 <span class="summary-label">Empresa</span>
-                <span class="summary-value">JEDA</span>
+                <span class="summary-value" id="summaryOrg">Solicitante</span>
               </div>
 
               <div class="summary-row">
                 <span class="summary-label">Produtos</span>
-                <span class="summary-value">3 itens</span>
+                <span class="summary-value" id="summaryItems">3 itens</span>
               </div>
 
               <div class="summary-row">
                 <span class="summary-label">Peso total</span>
-                <span class="summary-value">16,700 kg</span>
+                <span class="summary-value" id="summaryWeight">16,700 kg</span>
               </div>
 
               <div class="summary-row">
                 <span class="summary-label">Quantidade total</span>
-                <span class="summary-value">43 unidades</span>
+                <span class="summary-value" id="summaryQty">43 unidades</span>
               </div>
             </div>
           </div>
