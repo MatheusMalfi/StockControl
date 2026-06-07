@@ -5,6 +5,7 @@
 
 USE stockcontrol;
 
+SET SQL_SAFE_UPDATES = 0;
 -- 1. Adiciona coluna email_verified na tabela users (se não existir)
 ALTER TABLE users
   ADD COLUMN email_verified TINYINT NOT NULL DEFAULT 0
