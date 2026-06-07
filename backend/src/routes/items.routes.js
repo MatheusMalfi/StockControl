@@ -28,8 +28,8 @@ router.get("/", async (req, res) => {
     }
 
     if (search) {
-      conditions.push("i.product_name LIKE ?");
-      params.push(`%${search}%`);
+      conditions.push("(i.product_name LIKE ? OR i.serial_number LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`);
     }
     if (category) {
       conditions.push("cat.id = ?");

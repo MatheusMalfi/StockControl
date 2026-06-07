@@ -265,72 +265,155 @@ function initSolicitacoes() {
     }
   }
 
-  function requestPayloadFromLocal(req) {
-  const user = currentUser();
-
-  const normalizePayloadItem = (item) => {
-    const estimatedProfit =
-      item.estimated_profit != null
-        ? Number(item.estimated_profit)
-        : calculateItemProfit(item);
-
-    return {
-      ...item,
-      item_id: item.item_id || item.id || null,
-      nome_item: item.nome_item || item.nome || item.item || item.tipo || "",
-      quantity_available:
-        item.quantity_available ??
+    function normalizeItemForRequest(item) {
+    const available = parseNumber(
+      item.quantity_available ??
         item.disponivel ??
-        item.total ??
         item.quantity_available_stock ??
-        null,
-      estimated_value:
-        item.estimated_value ??
+        item.quantidade_estoque ??
+        item.quantity ??
+        item.total ??
+        0,
+    );
+
+    const estimatedValue = parseNumber(
+      item.estimated_value ??
         item.valor_estimado ??
         item.valor ??
         item.value ??
         item.valor_total ??
         item.total_value ??
-        null,
-      estimated_profit: Number.isFinite(estimatedProfit)
-        ? estimatedProfit
-        : 0,
-      estimated_profit_currency:
-        item.estimated_profit_currency ?? item.currency ?? item.moeda ?? "BRL",
+        0,
+    );
+
+    const totalQty = parseNumber(
+      item.quantity ??
+        item.total ??
+        item.quantidade_estoque ??
+        available ??
+        0,
+    );
+
+    return {
+      ...item,
+      id: item._backend_id ?? item.item_id ?? item.id,
+      local_id: item.local_id ?? item.id ?? null,
+      nome:
+        item.product_name ??
+        item.nome ??
+        item.nome_item ??
+        item.item ??
+        item.tipo ??
+        "",
+      patrimonio:
+        item.serial_number ??
+        item.patrimonio ??
+        item.asset_tag ??
+        "",
+      disponivel: Number.isFinite(available) ? available : 0,
+      quantity_available: Number.isFinite(available) ? available : 0,
+      total:
+        Number.isFinite(totalQty) && totalQty > 0
+          ? totalQty
+          : Number.isFinite(available)
+          ? available
+          : 0,
+      quantity:
+        Number.isFinite(totalQty) && totalQty > 0
+          ? totalQty
+          : Number.isFinite(available)
+          ? available
+          : 0,
+      estimated_value: Number.isFinite(estimatedValue) ? estimatedValue : 0,
+      valor: Number.isFinite(estimatedValue) ? estimatedValue : 0,
       currency: item.currency ?? item.moeda ?? "BRL",
     };
-  };
-
-  const payloadItems = Array.isArray(req.items)
-    ? req.items.map(normalizePayloadItem)
-    : null;
-
-  const estimatedProfitTotal = calculateRequestProfit(
-    payloadItems || req.items || [],
-  );
-
-  const payload = {
-    id: req.id,
-    organization_id: user.organization_id,
-    tipo: req.tipo || null,
-    item: req.nome_item || req.patrimonio || req.tipo || "",
-    quantidade: req.quantidade || 1,
-    solicitante: req.solicitante || currentUserName(),
-    email: user.email || null,
-    status: req.status || "pendente",
-    prioridade: req.urgencia || "media",
-    data_solicitacao: req.necessario_ate || null,
-    obs: req.justificativa || "",
-    items: payloadItems,
-    estimated_profit_total: estimatedProfitTotal,
-  };
-
-  if (payload.items) {
-    console.debug("[solicitacoes] request payload items:", payload.items);
   }
 
-  return payload;
-}
+    function requestPayloadFromLocal(req) {
+    const user = currentUser();
+
+    const normalizePayloadItem = (item) => {
+      const quantidadeDescartar = parseNumber(
+        item.quantidade ??
+          item.quantity_to_discard ??
+          item.quantity_requested ??
+          item.qtd ??
+          item.quantity ??
+          1,
+      );
+
+      const quantidadeEstoque = parseNumber(
+        item.quantity_available ??
+          item.disponivel ??
+          item.quantity_available_stock ??
+          item.quantidade_estoque ??
+          item.total ??
+          0,
+      );
+
+      const valorEstimado = parseNumber(
+        item.estimated_value ??
+          item.valor_estimado ??
+          item.valor ??
+          item.value ??
+          item.valor_total ??
+          item.total_value ??
+          0,
+      );
+
+      const normalized = {
+        ...item,
+        item_id: item.item_id || item.id || null,
+        nome_item: item.nome_item || item.nome || item.item || item.tipo || "",
+        quantidade:
+          Number.isFinite(quantidadeDescartar) && quantidadeDescartar > 0
+            ? quantidadeDescartar
+            : 1,
+        disponivel: Number.isFinite(quantidadeEstoque)
+          ? quantidadeEstoque
+          : null,
+        quantity_available: Number.isFinite(quantidadeEstoque)
+          ? quantidadeEstoque
+          : null,
+        estimated_value: Number.isFinite(valorEstimado) ? valorEstimado : null,
+        estimated_profit_currency:
+          item.estimated_profit_currency ?? item.currency ?? item.moeda ?? "BRL",
+        currency: item.currency ?? item.moeda ?? "BRL",
+      };
+
+      normalized.estimated_profit = calculateItemProfit(normalized);
+      return normalized;
+    };
+
+    const payloadItems = Array.isArray(req.items)
+      ? req.items.map(normalizePayloadItem)
+      : null;
+
+    const estimatedProfitTotal = calculateRequestProfit(payloadItems || []);
+
+    const payload = {
+      id: req.id,
+      organization_id: user.organization_id,
+      tipo: req.tipo || null,
+      item: req.nome_item || req.patrimonio || req.tipo || "",
+      quantidade: req.quantidade || 1,
+      solicitante: req.solicitante || currentUserName(),
+      email: user.email || null,
+      status: req.status || "pendente",
+      prioridade: req.urgencia || "media",
+      data_solicitacao: req.necessario_ate || null,
+      obs: req.justificativa || "",
+      items: payloadItems,
+      estimated_profit_total: estimatedProfitTotal,
+    };
+
+    if (payload.items) {
+      console.debug("[solicitacoes] request payload items:", payload.items);
+    }
+
+    return payload;
+  }
 
   // ── Date filtering ────────────────────────────────────────────────────────
   function inDateRange(r) {
@@ -668,22 +751,51 @@ function initSolicitacoes() {
     $("btnEmptyNew") &&
       $("btnEmptyNew").addEventListener("click", () => openNew());
 
-    reqItemSearch &&
+        reqItemSearch &&
       reqItemSearch.addEventListener(
         "input",
-        SC.debounce(() => {
-          const q = (reqItemSearch.value || "").trim().toLowerCase();
+        SC.debounce(async () => {
+          const q = (reqItemSearch.value || "").trim();
           if (!q) {
             reqItemDrop && reqItemDrop.classList.remove("is-open");
             return;
           }
-          const items = dbGet(KEYS.ITEMS)
-            .filter(
-              (it) =>
-                (it.nome || "").toLowerCase().includes(q) ||
-                (it.patrimonio || "").toLowerCase().includes(q),
-            )
-            .slice(0, 8);
+
+          const user = currentUser();
+          let items = [];
+
+          if (user.organization_id) {
+            try {
+              const params = new URLSearchParams({
+                organization_id: user.organization_id,
+                search: q,
+                page: "1",
+                limit: "8",
+              });
+
+              const data = await SC.api(`/items?${params}`);
+              const apiItems = Array.isArray(data)
+                ? data
+                : data.items || data.data || [];
+
+              items = apiItems.map(normalizeItemForRequest);
+            } catch {
+              items = [];
+            }
+          }
+
+          if (!items.length) {
+            const qLower = q.toLowerCase();
+            items = dbGet(KEYS.ITEMS)
+              .map(normalizeItemForRequest)
+              .filter(
+                (it) =>
+                  (it.nome || "").toLowerCase().includes(qLower) ||
+                  (it.patrimonio || "").toLowerCase().includes(qLower),
+              )
+              .slice(0, 8);
+          }
+
           renderItemDrop(items);
         }, 250),
       );
@@ -816,13 +928,16 @@ function initSolicitacoes() {
     });
   }
 
-  function selectItem(item) {
-    state.selectedItem = item;
-    if (reqChipName) reqChipName.textContent = item.nome;
+    function selectItem(item) {
+    const normalized = normalizeItemForRequest(item);
+
+    state.selectedItem = normalized;
+
+    if (reqChipName) reqChipName.textContent = normalized.nome;
     if (reqChipMeta)
-      reqChipMeta.textContent = `${item.patrimonio || ""} · Disponível: ${item.disponivel ?? "?"}`;
+      reqChipMeta.textContent = `${normalized.patrimonio || ""} · Disponível: ${normalized.disponivel ?? "?"}`;
     if (reqQtyHint)
-      reqQtyHint.textContent = `Disponível: ${item.disponivel ?? "?"}`;
+      reqQtyHint.textContent = `Disponível: ${normalized.disponivel ?? "?"}`;
     if (reqItemChip) reqItemChip.style.display = "flex";
     if (reqItemSearchWrap) reqItemSearchWrap.style.display = "none";
     if (btnAddReqItem) btnAddReqItem.style.display = "inline-flex";
@@ -854,7 +969,7 @@ function initSolicitacoes() {
   return Number.isFinite(n) ? n : NaN;
 }
 
-  function calculateItemProfit(item) {
+    function calculateItemProfit(item) {
     const estimatedValue = parseNumber(
       item.estimated_value ??
         item.valor_estimado ??
@@ -864,37 +979,45 @@ function initSolicitacoes() {
         item.total_value ??
         0,
     );
-    const availableQty = parseNumber(
+
+    // Quantidade real existente no estoque.
+    // Não coloque "quantidade" aqui, porque "quantidade" é o quanto será descartado.
+    const stockQty = parseNumber(
       item.quantity_available ??
         item.disponivel ??
+        item.quantity_available_stock ??
+        item.quantidade_estoque ??
         item.total ??
-        item.quantity ??
-        item.quantidade ??
         0,
     );
-    const qty = parseNumber(item.quantidade ?? item.quantity ?? item.total ?? item.qtd ?? 0);
+
+    const discardQty = parseNumber(
+      item.quantidade ??
+        item.quantity_to_discard ??
+        item.quantity_requested ??
+        item.qtd ??
+        item.quantity ??
+        0,
+    );
 
     if (
       !Number.isFinite(estimatedValue) ||
-      !Number.isFinite(availableQty) ||
-      !Number.isFinite(qty) ||
-      availableQty <= 0 ||
-      qty <= 0
+      !Number.isFinite(stockQty) ||
+      !Number.isFinite(discardQty) ||
+      stockQty <= 0 ||
+      discardQty <= 0
     ) {
       return 0;
     }
 
-    return (estimatedValue / availableQty) * qty;
+    return Number(((estimatedValue / stockQty) * discardQty).toFixed(2));
   }
 
   function calculateRequestProfit(items) {
-  if (!Array.isArray(items)) return 0;
+    if (!Array.isArray(items)) return 0;
 
-  return items.reduce((sum, item) => {
-    const profit = parseNumber(item.estimated_profit);
-    return sum + (Number.isFinite(profit) ? profit : calculateItemProfit(item));
-  }, 0);
-}
+    return items.reduce((sum, item) => sum + calculateItemProfit(item), 0);
+  }
 
   function parseRequestItems(row) {
     if (Array.isArray(row.items)) return row.items;
@@ -968,9 +1091,14 @@ function initSolicitacoes() {
   function normalizeRequestRow(row) {
     const items = parseRequestItems(row);
     const summary = summarizeRequestItems(items);
-    const estimatedProfitTotal = Number.isFinite(Number(row.estimated_profit_total))
-      ? Number(row.estimated_profit_total)
-      : calculateRequestProfit(items);
+    const calculatedProfitTotal = calculateRequestProfit(items);
+    const savedProfitTotal = parseNumber(row.estimated_profit_total);
+    const estimatedProfitTotal =
+      calculatedProfitTotal > 0
+        ? calculatedProfitTotal
+        : Number.isFinite(savedProfitTotal)
+        ? savedProfitTotal
+        : 0;
     return {
       id: row.id,
       item_id: row.item_id || null,
@@ -1458,7 +1586,7 @@ function initSolicitacoes() {
 
     const color = avatarColor(r.solicitante);
     const ini = initials(r.solicitante);
-    const itemDetails =
+        const itemDetails =
       r.items && Array.isArray(r.items) && r.items.length > 0
         ? `
         <div style="grid-column:1/-1;">
@@ -1466,17 +1594,18 @@ function initSolicitacoes() {
           <dd style="margin:0; font-size:.875rem;">
             <ul style="margin:0; padding-left:1rem; color:var(--color-text-secondary);">
               ${r.items
-                .map(
-                  (it) => `
+                .map((it) => {
+                  const itemProfit = calculateItemProfit(it);
+                  return `
                     <li style="margin-bottom:.35rem;">
-                      <strong>${esc(it.nome_item)}</strong> ${esc(it.patrimonio || "")} — ${parseInt(it.quantidade, 10) || 0} un. — ${
-                        Number.isFinite(Number(it.estimated_profit)) && Number(it.estimated_profit) > 0
-                          ? SC.fmtCurrency(Number(it.estimated_profit))
+                      <strong>${esc(it.nome_item || it.nome || it.product_name || "Item")}</strong> ${esc(it.patrimonio || it.serial_number || "")} — ${parseInt(it.quantidade ?? it.quantity ?? 0, 10) || 0} un. — ${
+                        itemProfit > 0
+                          ? SC.fmtCurrency(itemProfit)
                           : "—"
                       }
                     </li>
-                  `,
-                )
+                  `;
+                })
                 .join("")}
             </ul>
           </dd>
@@ -1484,9 +1613,14 @@ function initSolicitacoes() {
       `
         : "";
 
-      const estimatedProfitTotal = Number.isFinite(Number(r.estimated_profit_total))
-      ? Number(r.estimated_profit_total)
-      : calculateRequestProfit(r.items || []);
+    const calculatedDetailProfit = calculateRequestProfit(r.items || []);
+    const savedDetailProfit = parseNumber(r.estimated_profit_total);
+    const estimatedProfitTotal =
+      calculatedDetailProfit > 0
+        ? calculatedDetailProfit
+        : Number.isFinite(savedDetailProfit)
+        ? savedDetailProfit
+        : 0;
         state.detailId = id;
         modalDetailBody.innerHTML = `
       <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5);">

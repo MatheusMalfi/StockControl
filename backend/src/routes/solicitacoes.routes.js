@@ -128,10 +128,8 @@ function calculateItemProfit(item) {
 
 function calculateEstimatedProfitTotal(items, fallbackValue) {
   if (Array.isArray(items) && items.length) {
-    return items.reduce((sum, item) => {
-      const profit = parseNumber(item.estimated_profit);
-      return sum + (Number.isFinite(profit) ? profit : calculateItemProfit(item));
-    }, 0);
+    const total = items.reduce((sum, item) => sum + calculateItemProfit(item), 0);
+    return Number(total.toFixed(2));
   }
 
   const fallback = parseNumber(fallbackValue);
@@ -493,38 +491,25 @@ router.get("/:id/detalhes", async (req, res) => {
             ? item.total_value
             : null,
         currency: item.currency || item.moeda || "BRL",
-        estimated_profit:
-          item.estimated_profit != null
-            ? item.estimated_profit
-            : (() => {
-                const estimatedValue = parseFloat(
-                  item.estimated_value ??
-                    item.valor_estimado ??
-                    item.valor ??
-                    item.value ??
-                    item.valor_total ??
-                    item.total_value ??
-                    0,
-                );
-                const quantityAvailable = parseFloat(
-                  item.quantity_available ??
-                    item.disponivel ??
-                    item.total ??
-                    item.quantity ??
-                    item.quantidade ??
-                    0,
-                );
-                const quantity = parseFloat(
-                  item.quantity ?? item.quantidade ?? item.total ?? item.qtd ?? 0,
-                );
-                return Number.isFinite(estimatedValue) &&
-                  Number.isFinite(quantityAvailable) &&
-                  Number.isFinite(quantity) &&
-                  quantityAvailable > 0 &&
-                  quantity > 0
-                  ? (estimatedValue / quantityAvailable) * quantity
-                  : null;
-              })(),
+        estimated_profit: calculateItemProfit({
+          ...item,
+          quantity_available:
+            item.quantity_available ??
+            item.disponivel ??
+            item.quantity_available_stock ??
+            item.quantidade_estoque ??
+            item.total ??
+            null,
+          quantidade: Number.isNaN(quantity) ? 1 : quantity,
+          estimated_value:
+            item.estimated_value ??
+            item.valor_estimado ??
+            item.valor ??
+            item.value ??
+            item.valor_total ??
+            item.total_value ??
+            null,
+        }),
         estimated_profit_currency:
           item.estimated_profit_currency || item.currency || item.moeda || "BRL",
         quantity: Number.isNaN(quantity) ? 1 : quantity,
