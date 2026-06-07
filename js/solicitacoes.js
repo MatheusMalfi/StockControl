@@ -180,6 +180,7 @@ function initSolicitacoes() {
   const STATUS_LABEL = {
     pendente: "Pendente",
     aprovada: "Aprovada",
+    coleta_agendada: "Coleta agendada",
     recusada: "Recusada",
     concluida: "Concluída",
     cancelada: "Cancelada",
@@ -217,6 +218,13 @@ function initSolicitacoes() {
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "aprovada":
+        return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
+          b("complete", "Concluir", "#2563eb", svgCircleCheck) +
+          b("cancel", "Cancelar", "#dc2626", svgBan)
+        );
+      case "coleta_agendada":
         return (
           b("detail", "Ver detalhes", "inherit", svgEye) +
           b("edit", "Editar", "inherit", svgEdit) +
