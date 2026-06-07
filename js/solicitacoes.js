@@ -1,17 +1,17 @@
 ﻿"use strict";
 
-document.addEventListener("sc:ready", function () {
+function initSolicitacoes() {
   // ── Storage ───────────────────────────────────────────────────────────────
   const KEYS = { ITEMS: "sc_items", REQUESTS: "sc_requests" };
   function dbGet(k) {
     try {
-      return JSON.parse(localStorage.getItem(k)) || [];
+      return JSON.parse(localStorage.getItem(SC.storageKey(k)) || "[]") || [];
     } catch {
       return [];
     }
   }
   function dbSet(k, v) {
-    localStorage.setItem(k, JSON.stringify(v));
+    localStorage.setItem(SC.storageKey(k), JSON.stringify(v));
   }
 
   // ── API helpers ───────────────────────────────────────────────────────────
@@ -45,7 +45,8 @@ document.addEventListener("sc:ready", function () {
     )
       .then((data) => {
         const reqs = Array.isArray(data) ? data : data.solicitacoes || [];
-        dbSet(KEYS.REQUESTS, reqs);
+        const normalized = reqs.map(normalizeRequestRow);
+        dbSet(KEYS.REQUESTS, normalized);
         render();
       })
       .catch(() => {
@@ -67,17 +68,12 @@ document.addEventListener("sc:ready", function () {
     sortDir: "desc",
     filtered: [],
     editId: null,
-    selectedItem: null,
-    reviewId: null,
-    reviewAction: null,
+    detailId: null,
   };
 
-  // ── DOM refs ──────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const $$ = (s) => document.querySelectorAll(s);
 
-  const reqBody = $("reqBody");
-  const reqPagination = $("reqPagination");
   const reqEmptyAll = $("reqEmptyAll");
   const reqEmptyFiltered = $("reqEmptyFiltered");
   const reqSearch = $("reqSearch");
@@ -86,6 +82,7 @@ document.addEventListener("sc:ready", function () {
   const reqDateFrom = $("reqDateFrom");
   const reqDateTo = $("reqDateTo");
   const reqPerPage = $("reqPerPage");
+  const reqBody = $("reqBody");
 
   const kpiTotal = $("kpiTotal");
   const kpiPending = $("kpiPending");
@@ -106,9 +103,12 @@ document.addEventListener("sc:ready", function () {
   const reqUrgency = $("reqUrgency");
   const reqJustification = $("reqJustification");
   const reqNeededBy = $("reqNeededBy");
+  const btnAddReqItem = $("btnAddReqItem");
+  const reqItemsList = $("reqItemsList");
   const btnSaveRequest = $("btnSaveRequest");
   const reqEditId = $("reqEditId");
   const reqFormErr = $("reqFormErr");
+  const btnDetailEditRequest = $("btnDetailEditRequest");
 
   // modal: review
   const reviewSummary = $("reviewSummary");
@@ -180,6 +180,7 @@ document.addEventListener("sc:ready", function () {
   const STATUS_LABEL = {
     pendente: "Pendente",
     aprovada: "Aprovada",
+    coleta_agendada: "Coleta agendada",
     recusada: "Recusada",
     concluida: "Concluída",
     cancelada: "Cancelada",
@@ -210,22 +211,37 @@ document.addEventListener("sc:ready", function () {
     switch (r.status) {
       case "pendente":
         return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("approve", "Aprovar", "#16a34a", svgCheck) +
           b("reject", "Recusar", "#dc2626", svgX) +
-          b("detail", "Ver detalhes", "inherit", svgEye) +
           b("edit", "Editar", "inherit", svgEdit) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "aprovada":
         return (
-          b("complete", "Concluir", "#2563eb", svgCircleCheck) +
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
+          b("complete", "Concluir", "#2563eb", svgCircleCheck) +
+          b("cancel", "Cancelar", "#dc2626", svgBan)
+        );
+      case "coleta_agendada":
+        return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
+          b("complete", "Concluir", "#2563eb", svgCircleCheck) +
           b("cancel", "Cancelar", "#dc2626", svgBan)
         );
       case "recusada":
+        return (
+          b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
+          b("reopen", "Reabrir", "#64748b", svgRefresh) +
+          b("delete", "Excluir", "#dc2626", svgTrash)
+        );
       case "cancelada":
         return (
           b("detail", "Ver detalhes", "inherit", svgEye) +
+          b("edit", "Editar", "inherit", svgEdit) +
           b("reopen", "Reabrir", "#64748b", svgRefresh) +
           b("delete", "Excluir", "#dc2626", svgTrash)
         );
@@ -245,6 +261,166 @@ document.addEventListener("sc:ready", function () {
     } catch {
       return "Admin";
     }
+  }
+
+  function currentUser() {
+    try {
+      const raw =
+        localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+    function normalizeItemForRequest(item) {
+    const available = parseNumber(
+      item.quantity_available ??
+        item.disponivel ??
+        item.quantity_available_stock ??
+        item.quantidade_estoque ??
+        item.quantity ??
+        item.total ??
+        0,
+    );
+
+    const estimatedValue = parseNumber(
+      item.estimated_value ??
+        item.valor_estimado ??
+        item.valor ??
+        item.value ??
+        item.valor_total ??
+        item.total_value ??
+        0,
+    );
+
+    const totalQty = parseNumber(
+      item.quantity ??
+        item.total ??
+        item.quantidade_estoque ??
+        available ??
+        0,
+    );
+
+    return {
+      ...item,
+      id: item._backend_id ?? item.item_id ?? item.id,
+      local_id: item.local_id ?? item.id ?? null,
+      nome:
+        item.product_name ??
+        item.nome ??
+        item.nome_item ??
+        item.item ??
+        item.tipo ??
+        "",
+      patrimonio:
+        item.serial_number ??
+        item.patrimonio ??
+        item.asset_tag ??
+        "",
+      disponivel: Number.isFinite(available) ? available : 0,
+      quantity_available: Number.isFinite(available) ? available : 0,
+      total:
+        Number.isFinite(totalQty) && totalQty > 0
+          ? totalQty
+          : Number.isFinite(available)
+          ? available
+          : 0,
+      quantity:
+        Number.isFinite(totalQty) && totalQty > 0
+          ? totalQty
+          : Number.isFinite(available)
+          ? available
+          : 0,
+      estimated_value: Number.isFinite(estimatedValue) ? estimatedValue : 0,
+      valor: Number.isFinite(estimatedValue) ? estimatedValue : 0,
+      currency: item.currency ?? item.moeda ?? "BRL",
+    };
+  }
+
+    function requestPayloadFromLocal(req) {
+    const user = currentUser();
+
+    const normalizePayloadItem = (item) => {
+      const quantidadeDescartar = parseNumber(
+        item.quantidade ??
+          item.quantity_to_discard ??
+          item.quantity_requested ??
+          item.qtd ??
+          item.quantity ??
+          1,
+      );
+
+      const quantidadeEstoque = parseNumber(
+        item.quantity_available ??
+          item.disponivel ??
+          item.quantity_available_stock ??
+          item.quantidade_estoque ??
+          item.total ??
+          0,
+      );
+
+      const valorEstimado = parseNumber(
+        item.estimated_value ??
+          item.valor_estimado ??
+          item.valor ??
+          item.value ??
+          item.valor_total ??
+          item.total_value ??
+          0,
+      );
+
+      const normalized = {
+        ...item,
+        item_id: item.item_id || item.id || null,
+        nome_item: item.nome_item || item.nome || item.item || item.tipo || "",
+        quantidade:
+          Number.isFinite(quantidadeDescartar) && quantidadeDescartar > 0
+            ? quantidadeDescartar
+            : 1,
+        disponivel: Number.isFinite(quantidadeEstoque)
+          ? quantidadeEstoque
+          : null,
+        quantity_available: Number.isFinite(quantidadeEstoque)
+          ? quantidadeEstoque
+          : null,
+        estimated_value: Number.isFinite(valorEstimado) ? valorEstimado : null,
+        estimated_profit_currency:
+          item.estimated_profit_currency ?? item.currency ?? item.moeda ?? "BRL",
+        currency: item.currency ?? item.moeda ?? "BRL",
+      };
+
+      normalized.estimated_profit = calculateItemProfit(normalized);
+      return normalized;
+    };
+
+    const payloadItems = Array.isArray(req.items)
+      ? req.items.map(normalizePayloadItem)
+      : null;
+
+    const estimatedProfitTotal = calculateRequestProfit(payloadItems || []);
+
+    const payload = {
+      id: req.id,
+      organization_id: user.organization_id,
+      tipo: req.tipo || null,
+      item: req.nome_item || req.patrimonio || req.tipo || "",
+      quantidade: req.quantidade || 1,
+      solicitante: req.solicitante || currentUserName(),
+      email: user.email || null,
+      status: req.status || "pendente",
+      prioridade: req.urgencia || "media",
+      data_solicitacao: req.necessario_ate || null,
+      obs: req.justificativa || "",
+      items: payloadItems,
+      estimated_profit_total: estimatedProfitTotal,
+    };
+
+    if (payload.items) {
+      console.debug("[solicitacoes] request payload items:", payload.items);
+    }
+
+    return payload;
   }
 
   // ── Date filtering ────────────────────────────────────────────────────────
@@ -371,15 +547,25 @@ document.addEventListener("sc:ready", function () {
         const color = avatarColor(r.solicitante);
         const rowCls = r.urgencia === "urgente" ? "row-urg" : "";
         const dateStr = SC.fmtDateTime(r.created_at);
+        const itemLabel =
+          r.items && r.items.length > 1
+            ? `${esc(r.items[0].nome_item)} +${r.items.length - 1} itens`
+            : esc(r.nome_item);
+        const totalQty = r.items
+          ? r.items.reduce(
+              (sum, it) => sum + (parseInt(it.quantidade, 10) || 0),
+              0,
+            )
+          : r.quantidade;
 
         return `
         <tr class="${rowCls}" data-id="${r.id}" style="cursor:pointer; animation:fadeIn .2s ease-out;">
           <td style="white-space:nowrap; font-size:.8125rem; color:var(--color-text-secondary);">${esc(dateStr)}</td>
           <td>
-            <div style="font-weight:500; font-size:.875rem; color:var(--color-text-primary);">${highlight(r.nome_item, q)}</div>
+            <div style="font-weight:500; font-size:.875rem; color:var(--color-text-primary);">${highlight(itemLabel, q)}</div>
             <div style="font-size:.8125rem; color:var(--color-text-muted);">${esc(r.patrimonio || "")}</div>
           </td>
-          <td style="text-align:center; font-weight:600; font-size:.875rem;">${r.quantidade} <span style="font-weight:400; color:var(--color-text-muted); font-size:.75rem;">un.</span></td>
+          <td style="text-align:center; font-weight:600; font-size:.875rem;">${totalQty} <span style="font-weight:400; color:var(--color-text-muted); font-size:.75rem;">un.</span></td>
           <td>
             <div style="display:flex; align-items:center; gap:var(--space-2);">
               <div class="req-av" style="background:${color};">${esc(ini)}</div>
@@ -573,22 +759,51 @@ document.addEventListener("sc:ready", function () {
     $("btnEmptyNew") &&
       $("btnEmptyNew").addEventListener("click", () => openNew());
 
-    reqItemSearch &&
+        reqItemSearch &&
       reqItemSearch.addEventListener(
         "input",
-        SC.debounce(() => {
-          const q = (reqItemSearch.value || "").trim().toLowerCase();
+        SC.debounce(async () => {
+          const q = (reqItemSearch.value || "").trim();
           if (!q) {
             reqItemDrop && reqItemDrop.classList.remove("is-open");
             return;
           }
-          const items = dbGet(KEYS.ITEMS)
-            .filter(
-              (it) =>
-                (it.nome || "").toLowerCase().includes(q) ||
-                (it.patrimonio || "").toLowerCase().includes(q),
-            )
-            .slice(0, 8);
+
+          const user = currentUser();
+          let items = [];
+
+          if (user.organization_id) {
+            try {
+              const params = new URLSearchParams({
+                organization_id: user.organization_id,
+                search: q,
+                page: "1",
+                limit: "8",
+              });
+
+              const data = await SC.api(`/items?${params}`);
+              const apiItems = Array.isArray(data)
+                ? data
+                : data.items || data.data || [];
+
+              items = apiItems.map(normalizeItemForRequest);
+            } catch {
+              items = [];
+            }
+          }
+
+          if (!items.length) {
+            const qLower = q.toLowerCase();
+            items = dbGet(KEYS.ITEMS)
+              .map(normalizeItemForRequest)
+              .filter(
+                (it) =>
+                  (it.nome || "").toLowerCase().includes(qLower) ||
+                  (it.patrimonio || "").toLowerCase().includes(qLower),
+              )
+              .slice(0, 8);
+          }
+
           renderItemDrop(items);
         }, 250),
       );
@@ -603,11 +818,23 @@ document.addEventListener("sc:ready", function () {
           reqItemSearch.focus();
         }
         if (reqQtyHint) reqQtyHint.textContent = "Disponível: —";
+        if (btnAddReqItem) btnAddReqItem.style.display = "none";
       });
+
+    btnAddReqItem &&
+      btnAddReqItem.addEventListener("click", addCurrentItemToList);
 
     reqQty &&
       reqQty.addEventListener("input", () => {
         if ($("errReqQty")) $("errReqQty").style.display = "none";
+      });
+
+    btnDetailEditRequest &&
+      btnDetailEditRequest.addEventListener("click", () => {
+        if (state.detailId) {
+          SC.closeModal("modalDetail");
+          openEdit(state.detailId);
+        }
       });
 
     btnSaveRequest && btnSaveRequest.addEventListener("click", saveRequest);
@@ -616,6 +843,7 @@ document.addEventListener("sc:ready", function () {
   function openNew() {
     state.editId = null;
     state.selectedItem = null;
+    state.selectedItems = [];
     resetReqForm();
     if ($("modalReqTitle")) $("modalReqTitle").textContent = "Nova Solicitação";
     if (btnSaveRequest) btnSaveRequest.textContent = "Enviar Solicitação";
@@ -635,19 +863,17 @@ document.addEventListener("sc:ready", function () {
     if (btnSaveRequest) btnSaveRequest.textContent = "Salvar Alterações";
     if (reqEditId) reqEditId.value = id;
 
-    // pre-select item
-    state.selectedItem = {
-      id: r.item_id,
-      nome: r.nome_item,
-      patrimonio: r.patrimonio,
-      disponivel: null,
-    };
-    if (reqChipName) reqChipName.textContent = r.nome_item;
-    if (reqChipMeta) reqChipMeta.textContent = r.patrimonio;
-    if (reqItemChip) reqItemChip.style.display = "flex";
-    if (reqItemSearchWrap) reqItemSearchWrap.style.display = "none";
+    state.selectedItem = null;
+    state.selectedItems =
+      r.items && Array.isArray(r.items)
+        ? r.items.slice()
+        : parseRequestItems(r);
+    renderSelectedItems();
+    if (reqItemChip) reqItemChip.style.display = "none";
+    if (reqItemSearchWrap) reqItemSearchWrap.style.display = "";
+    if (btnAddReqItem) btnAddReqItem.style.display = "none";
 
-    if (reqQty) reqQty.value = r.quantidade;
+    if (reqQty) reqQty.value = "1";
     if (reqUrgency) reqUrgency.value = r.urgencia;
     if (reqJustification) reqJustification.value = r.justificativa;
     if (reqNeededBy) reqNeededBy.value = r.necessario_ate || "";
@@ -657,6 +883,7 @@ document.addEventListener("sc:ready", function () {
 
   function resetReqForm() {
     state.selectedItem = null;
+    state.selectedItems = [];
     if (reqEditId) reqEditId.value = "";
     if (reqItemSearch) reqItemSearch.value = "";
     if (reqItemDrop) {
@@ -665,6 +892,11 @@ document.addEventListener("sc:ready", function () {
     }
     if (reqItemChip) reqItemChip.style.display = "none";
     if (reqItemSearchWrap) reqItemSearchWrap.style.display = "";
+    if (btnAddReqItem) btnAddReqItem.style.display = "none";
+    if (reqItemsList) {
+      reqItemsList.innerHTML = "";
+      reqItemsList.style.display = "none";
+    }
     if (reqQty) reqQty.value = "1";
     if (reqQtyHint) reqQtyHint.textContent = "Disponível: —";
     if (reqUrgency) reqUrgency.value = "media";
@@ -696,26 +928,315 @@ document.addEventListener("sc:ready", function () {
 
     reqItemDrop.querySelectorAll(".req-drop-row[data-id]").forEach((row) => {
       row.addEventListener("click", () => {
-        const found = items.find((i) => i.id === row.dataset.id);
+        const found = items.find(
+          (i) => String(i.id) === String(row.dataset.id),
+        );
         if (found) selectItem(found);
       });
     });
   }
 
-  function selectItem(item) {
-    state.selectedItem = item;
-    if (reqChipName) reqChipName.textContent = item.nome;
+    function selectItem(item) {
+    const normalized = normalizeItemForRequest(item);
+
+    state.selectedItem = normalized;
+
+    if (reqChipName) reqChipName.textContent = normalized.nome;
     if (reqChipMeta)
-      reqChipMeta.textContent = `${item.patrimonio || ""} · Disponível: ${item.disponivel ?? "?"}`;
+      reqChipMeta.textContent = `${normalized.patrimonio || ""} · Disponível: ${normalized.disponivel ?? "?"}`;
     if (reqQtyHint)
-      reqQtyHint.textContent = `Disponível: ${item.disponivel ?? "?"}`;
+      reqQtyHint.textContent = `Disponível: ${normalized.disponivel ?? "?"}`;
     if (reqItemChip) reqItemChip.style.display = "flex";
     if (reqItemSearchWrap) reqItemSearchWrap.style.display = "none";
+    if (btnAddReqItem) btnAddReqItem.style.display = "inline-flex";
     if (reqItemDrop) {
       reqItemDrop.innerHTML = "";
       reqItemDrop.classList.remove("is-open");
     }
     if ($("errReqItem")) $("errReqItem").style.display = "none";
+    renderSelectedItems();
+  }
+
+  function parseNumber(value) {
+  if (value == null || value === "") return NaN;
+  if (typeof value === "number") return value;
+
+  let str = String(value).trim().replace(/[^0-9,.-]/g, "");
+  if (!str) return NaN;
+
+  const lastComma = str.lastIndexOf(",");
+  const lastDot = str.lastIndexOf(".");
+
+  if (lastComma > lastDot) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else {
+    str = str.replace(/,/g, "");
+  }
+
+  const n = Number(str);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+    function calculateItemProfit(item) {
+    const estimatedValue = parseNumber(
+      item.estimated_value ??
+        item.valor_estimado ??
+        item.valor ??
+        item.value ??
+        item.valor_total ??
+        item.total_value ??
+        0,
+    );
+
+    // Quantidade real existente no estoque.
+    // Não coloque "quantidade" aqui, porque "quantidade" é o quanto será descartado.
+    const stockQty = parseNumber(
+      item.quantity_available ??
+        item.disponivel ??
+        item.quantity_available_stock ??
+        item.quantidade_estoque ??
+        item.total ??
+        0,
+    );
+
+    const discardQty = parseNumber(
+      item.quantidade ??
+        item.quantity_to_discard ??
+        item.quantity_requested ??
+        item.qtd ??
+        item.quantity ??
+        0,
+    );
+
+    if (
+      !Number.isFinite(estimatedValue) ||
+      !Number.isFinite(stockQty) ||
+      !Number.isFinite(discardQty) ||
+      stockQty <= 0 ||
+      discardQty <= 0
+    ) {
+      return 0;
+    }
+
+    return Number(((estimatedValue / stockQty) * discardQty).toFixed(2));
+  }
+
+  function calculateRequestProfit(items) {
+    if (!Array.isArray(items)) return 0;
+
+    return items.reduce((sum, item) => sum + calculateItemProfit(item), 0);
+  }
+
+  function parseRequestItems(row) {
+    if (Array.isArray(row.items)) return row.items;
+    if (typeof row.items === "string") {
+      try {
+        const parsed = JSON.parse(row.items);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // ignore
+      }
+    }
+
+    const quantityAvailable =
+      row.quantity_available ??
+      row.disponivel ??
+      row.quantity ??
+      row.total ??
+      null;
+    const estimatedValue =
+      row.estimated_value ??
+      row.valor_estimado ??
+      row.valor ??
+      row.value ??
+      row.valor_total ??
+      row.total_value ??
+      null;
+
+    const item = {
+      item_id: row.item_id || null,
+      nome_item: row.nome_item || row.item || row.tipo || "–",
+      patrimonio: row.patrimonio || "",
+      quantidade: row.quantidade != null ? row.quantidade : 1,
+      disponivel: quantityAvailable,
+      quantity_available: quantityAvailable,
+      estimated_value: estimatedValue,
+      estimated_profit: row.estimated_profit ?? calculateItemProfit({
+        ...row,
+        quantidade: row.quantidade != null ? row.quantidade : 1,
+        estimated_value: estimatedValue,
+        quantity_available: quantityAvailable,
+      }),
+      currency: row.currency ?? row.moeda ?? "BRL",
+      estimated_profit_currency:
+        row.estimated_profit_currency ?? row.currency ?? row.moeda ?? "BRL",
+    };
+
+    return [item];
+  }
+
+  function summarizeRequestItems(items) {
+    const allQty = items.reduce(
+      (sum, it) => sum + (parseInt(it.quantidade, 10) || 0),
+      0,
+    );
+    if (items.length === 1) {
+      return {
+        nome_item: items[0].nome_item,
+        patrimonio: items[0].patrimonio || "",
+        quantidade: allQty,
+      };
+    }
+    return {
+      nome_item: `${items[0].nome_item} +${items.length - 1} itens`,
+      patrimonio: items[0].patrimonio
+        ? `${items[0].patrimonio} +${items.length - 1}`
+        : `+${items.length - 1} itens`,
+      quantidade: allQty,
+    };
+  }
+
+  function normalizeRequestRow(row) {
+    const items = parseRequestItems(row);
+    const summary = summarizeRequestItems(items);
+    const calculatedProfitTotal = calculateRequestProfit(items);
+    const savedProfitTotal = parseNumber(row.estimated_profit_total);
+    const estimatedProfitTotal =
+      calculatedProfitTotal > 0
+        ? calculatedProfitTotal
+        : Number.isFinite(savedProfitTotal)
+        ? savedProfitTotal
+        : 0;
+    return {
+      id: row.id,
+      item_id: row.item_id || null,
+      nome_item: summary.nome_item,
+      patrimonio: summary.patrimonio,
+      quantidade: summary.quantidade,
+      items,
+      estimated_profit_total: estimatedProfitTotal,
+      urgencia: row.urgencia || row.prioridade || "media",
+      status: row.status || "pendente",
+      solicitante: row.solicitante || row.email || "Usuário",
+      setor: row.setor || "",
+      justificativa: row.justificativa || row.obs || "",
+      necessario_ate: row.necessario_ate || row.data_solicitacao || null,
+      created_at: row.created_at || new Date().toISOString(),
+      revisao: row.revisao || row.data_revisao || null,
+      revisor: row.revisor || null,
+    };
+  }
+
+  function renderSelectedItems() {
+    if (!reqItemsList) return;
+    if (!state.selectedItems || !state.selectedItems.length) {
+      reqItemsList.innerHTML = "";
+      reqItemsList.style.display = "none";
+      return;
+    }
+    reqItemsList.style.display = "flex";
+    reqItemsList.innerHTML = state.selectedItems
+      .map(
+        (item, idx) => `
+          <div class="req-selected-item" style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); padding:var(--space-2) var(--space-3); background:var(--color-surface-alt); border:1px solid var(--color-border); border-radius:var(--radius-sm);">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; color:var(--color-text-primary);">${esc(item.nome_item)}</div>
+              <div style="font-size:.8125rem; color:var(--color-text-muted);">${esc(item.patrimonio || "")} · ${item.quantidade} unidade(s) · Disponível: ${item.disponivel ?? "?"}</div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" data-req-item-remove="${idx}">Remover</button>
+          </div>
+        `,
+      )
+      .join("");
+    reqItemsList.querySelectorAll("[data-req-item-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.reqItemRemove);
+        if (!Number.isNaN(idx) && state.selectedItems[idx]) {
+          state.selectedItems.splice(idx, 1);
+          renderSelectedItems();
+        }
+      });
+    });
+  }
+
+  function addCurrentItemToList() {
+    if (!state.selectedItem) {
+      if ($("errReqItem")) {
+        $("errReqItem").textContent = "Selecione um item.";
+        $("errReqItem").style.display = "";
+      }
+      return;
+    }
+    const qty = parseInt(reqQty ? reqQty.value : "0", 10) || 0;
+    const available =
+      state.selectedItem.disponivel ??
+      state.selectedItem.quantity_available ??
+      state.selectedItem.quantity ??
+      state.selectedItem.total ??
+      0;
+    if (qty < 1 || qty > available) {
+      if ($("errReqQty")) {
+        $("errReqQty").textContent =
+          `Quantidade inválida. Disponível: ${available}`;
+        $("errReqQty").style.display = "";
+      }
+      return;
+    }
+    const existing = state.selectedItems.find(
+      (it) => it.item_id === state.selectedItem.id,
+    );
+    if (existing) {
+      existing.quantidade = Math.min(existing.quantidade + qty, available);
+      existing.disponivel = available;
+      existing.quantity_available = available;
+      existing.estimated_value =
+        existing.estimated_value ??
+        state.selectedItem.estimated_value ??
+        state.selectedItem.valor_estimado ??
+        state.selectedItem.valor ??
+        state.selectedItem.value ??
+        state.selectedItem.valor_total ??
+        state.selectedItem.total_value ??
+        existing.estimated_value ??
+        null;
+      existing.currency =
+        existing.currency ??
+        state.selectedItem.currency ??
+        state.selectedItem.moeda ??
+        "BRL";
+      existing.estimated_profit = calculateItemProfit(existing);
+      existing.estimated_profit_currency =
+        existing.estimated_profit_currency ?? existing.currency;
+    } else {
+      const selectedItem = {
+        item_id: state.selectedItem.id,
+        nome_item: state.selectedItem.nome,
+        patrimonio: state.selectedItem.patrimonio || "",
+        quantidade: qty,
+        disponivel: available,
+        quantity_available: available,
+        estimated_value:
+          state.selectedItem.estimated_value ??
+          state.selectedItem.valor_estimado ??
+          state.selectedItem.valor ??
+          state.selectedItem.value ??
+          state.selectedItem.valor_total ??
+          state.selectedItem.total_value ??
+          null,
+        currency: state.selectedItem.currency ?? state.selectedItem.moeda ?? "BRL",
+      };
+      selectedItem.estimated_profit = calculateItemProfit(selectedItem);
+      selectedItem.estimated_profit_currency =
+        state.selectedItem.estimated_profit_currency ?? selectedItem.currency;
+      state.selectedItems.push(selectedItem);
+    }
+    if (reqQty) reqQty.value = "1";
+    state.selectedItem = null;
+    if (reqItemChip) reqItemChip.style.display = "none";
+    if (reqItemSearchWrap) reqItemSearchWrap.style.display = "";
+    if (reqItemSearch) reqItemSearch.value = "";
+    if (btnAddReqItem) btnAddReqItem.style.display = "none";
+    renderSelectedItems();
   }
 
   function saveRequest() {
@@ -729,61 +1250,169 @@ document.addEventListener("sc:ready", function () {
       ok = false;
     };
 
-    if (!state.selectedItem) showErr("errReqItem", "Selecione um item.");
-    const qty = parseInt(reqQty ? reqQty.value : 0);
-    if (!qty || qty < 1) showErr("errReqQty", "Quantidade inválida.");
+    const qty = parseInt(reqQty ? reqQty.value : "0", 10) || 0;
     const just = reqJustification ? reqJustification.value.trim() : "";
+    const selectedItems = Array.isArray(state.selectedItems)
+      ? state.selectedItems.slice()
+      : [];
+    const currentItem = state.selectedItem;
+    const hasCurrent = !!currentItem;
+    const currentAvailable = hasCurrent
+      ? (currentItem.disponivel ??
+        currentItem.quantity_available ??
+        currentItem.quantity ??
+        currentItem.total ??
+        0)
+      : 0;
+
+    if (!hasCurrent && !selectedItems.length) {
+      showErr("errReqItem", "Selecione ao menos um item.");
+    }
+    if (hasCurrent && (!qty || qty < 1 || qty > currentAvailable)) {
+      showErr(
+        "errReqQty",
+        `Quantidade inválida. Disponível: ${currentAvailable}`,
+      );
+    }
     if (!just) showErr("errReqJustification", "Justificativa é obrigatória.");
     if (!ok) return;
 
+    if (hasCurrent) {
+      const existing = selectedItems.find(
+        (it) => it.item_id === currentItem.id,
+      );
+      if (existing) {
+        existing.quantidade = Math.min(
+          existing.quantidade + qty,
+          currentAvailable,
+        );
+        existing.estimated_profit = calculateItemProfit(existing);
+        existing.estimated_profit_currency =
+          existing.estimated_profit_currency ?? existing.currency;
+      } else {
+        const newItem = {
+          item_id: currentItem.id,
+          nome_item: currentItem.nome,
+          patrimonio: currentItem.patrimonio || "",
+          quantidade: qty,
+          disponivel: currentAvailable,
+          quantity_available: currentAvailable,
+          estimated_value:
+            currentItem.estimated_value ??
+            currentItem.valor_estimado ??
+            currentItem.valor ??
+            currentItem.value ??
+            currentItem.valor_total ??
+            currentItem.total_value ??
+            null,
+          currency: currentItem.currency ?? currentItem.moeda ?? "BRL",
+        };
+        newItem.estimated_profit = calculateItemProfit(newItem);
+        newItem.estimated_profit_currency =
+          currentItem.estimated_profit_currency ?? newItem.currency;
+        selectedItems.push(newItem);
+      }
+    }
+
+    if (!selectedItems.length) {
+      showErr("errReqItem", "Selecione ao menos um item.");
+      return;
+    }
+
+    const requestSummary = summarizeRequestItems(selectedItems);
     const reqs = dbGet(KEYS.REQUESTS);
-    const user = currentUserName();
+    const user = currentUser();
+    const userName = currentUserName();
 
     if (state.editId) {
       const idx = reqs.findIndex((r) => r.id === state.editId);
       if (idx !== -1) {
-        reqs[idx] = {
-          ...reqs[idx],
-          item_id: state.selectedItem.id,
-          nome_item: state.selectedItem.nome,
-          patrimonio: state.selectedItem.patrimonio || "",
-          quantidade: qty,
-          urgencia: reqUrgency ? reqUrgency.value : "media",
+        const existing = reqs[idx];
+        const updated = {
+          ...existing,
+          items: selectedItems,
+          item_id: selectedItems[0]?.item_id || existing.item_id,
+          nome_item: requestSummary.nome_item,
+          patrimonio: requestSummary.patrimonio,
+          quantidade: requestSummary.quantidade,
+          urgencia: reqUrgency
+            ? reqUrgency.value
+            : existing.urgencia || "media",
           justificativa: just,
-          necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
+          necessario_ate: reqNeededBy
+            ? reqNeededBy.value || null
+            : existing.necessario_ate || null,
+            estimated_profit_total: calculateRequestProfit(selectedItems),
         };
+
+        const requiresReapproval =
+          existing.status === "aprovada" || existing.status === "recusada";
+        if (requiresReapproval) {
+          updated.status = "pendente";
+          updated.revisor = null;
+          updated.revisao = null;
+        }
+
+        reqs[idx] = updated;
         dbSet(KEYS.REQUESTS, reqs);
-        _solApi("PUT", `/api/solicitacoes/${state.editId}`, reqs[idx]).catch(
-          () => {},
-        );
+        if (user.organization_id) {
+          _solApi(
+            "PUT",
+            `/api/solicitacoes/${state.editId}`,
+            requestPayloadFromLocal(updated),
+          ).catch(() => {});
+        }
         SC.closeModal("modalNewRequest");
-        SC.toastSuccess("Solicitação atualizada.");
+        SC.toastSuccess(
+          requiresReapproval
+            ? "Solicitação modificada e retornou para pendente, aguardando nova revisão."
+            : "Solicitação atualizada.",
+        );
         render();
       }
-    } else {
-      const newReq = {
-        id: "req_" + Date.now(),
-        item_id: state.selectedItem.id,
-        nome_item: state.selectedItem.nome,
-        patrimonio: state.selectedItem.patrimonio || "",
-        quantidade: qty,
-        urgencia: reqUrgency ? reqUrgency.value : "media",
-        status: "pendente",
-        solicitante: user,
-        setor: "—",
-        justificativa: just,
-        necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
-        created_at: new Date().toISOString(),
-        revisao: null,
-        revisor: null,
-      };
-      reqs.unshift(newReq);
-      dbSet(KEYS.REQUESTS, reqs);
-      _solApi("POST", "/api/solicitacoes", newReq).catch(() => {});
-      SC.closeModal("modalNewRequest");
-      SC.toastSuccess("Solicitação enviada com sucesso!");
-      render();
+      return;
     }
+
+    // Salva todos os patrimônios e item_ids (arrays) para uso no log de auditoria
+    const allPatrimonios = selectedItems
+      .map((it) => it.patrimonio)
+      .filter(Boolean);
+    const allItemIds = selectedItems.map((it) => it.item_id).filter(Boolean);
+    const newReq = {
+      id: `req_${Date.now()}`,
+      items: selectedItems,
+      item_id:
+        selectedItems.length === 1 ? selectedItems[0].item_id : allItemIds,
+      nome_item: requestSummary.nome_item,
+      patrimonio:
+        selectedItems.length === 1
+          ? selectedItems[0].patrimonio
+          : allPatrimonios,
+      quantidade: requestSummary.quantidade,
+      urgencia: reqUrgency ? reqUrgency.value : "media",
+      status: "pendente",
+      solicitante: userName,
+      setor: "—",
+      justificativa: just,
+      necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
+      estimated_profit_total: calculateRequestProfit(selectedItems),
+      created_at: new Date().toISOString(),
+      revisao: null,
+      revisor: null,
+    };
+
+    reqs.unshift(newReq);
+    dbSet(KEYS.REQUESTS, reqs);
+    if (user.organization_id) {
+      _solApi(
+        "POST",
+        "/api/solicitacoes",
+        requestPayloadFromLocal(newReq),
+      ).catch(() => {});
+    }
+    SC.closeModal("modalNewRequest");
+    SC.toastSuccess("Solicitação enviada com sucesso!");
+    render();
   }
 
   // ── Review modal (Approve / Reject) ───────────────────────────────────────
@@ -851,8 +1480,9 @@ document.addEventListener("sc:ready", function () {
     reqs[idx].revisor = currentUserName();
     dbSet(KEYS.REQUESTS, reqs);
     _solApi("PATCH", `/api/solicitacoes/${state.reviewId}/revisar`, {
-      action,
-      revisao: comment,
+      status: reqs[idx].status,
+      revisor: reqs[idx].revisor,
+      obs: comment,
     }).catch(() => {});
 
     SC.closeModal("modalReview");
@@ -872,7 +1502,7 @@ document.addEventListener("sc:ready", function () {
   function showConfirm(
     message,
     onConfirm,
-    { title = "Confirmar", variant = "warning" } = {},
+    { title = "Confirme a ação", variant = "warning" } = {},
   ) {
     const el = document.getElementById("modalConfirmarSolMensagem");
     const elTitle = document.getElementById("modalConfirmarSolTitulo");
@@ -889,13 +1519,11 @@ document.addEventListener("sc:ready", function () {
       icon.innerHTML = CONFIRM_ICONS[variant] || CONFIRM_ICONS.warning;
     }
     btn.className = `btn ${variant === "success" ? "btn-success" : variant === "danger" ? "btn-danger" : "btn-primary"}`;
-    const handler = () => {
-      btn.removeEventListener("click", handler);
+    btn.onclick = () => {
+      btn.onclick = null;
       SC.closeModal("modalConfirmarSol");
       onConfirm();
     };
-    btn.removeEventListener("click", handler);
-    btn.addEventListener("click", handler);
     SC.openModal("modalConfirmarSol");
   }
 
@@ -966,8 +1594,43 @@ document.addEventListener("sc:ready", function () {
 
     const color = avatarColor(r.solicitante);
     const ini = initials(r.solicitante);
+        const itemDetails =
+      r.items && Array.isArray(r.items) && r.items.length > 0
+        ? `
+        <div style="grid-column:1/-1;">
+          <dt style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-muted); margin-bottom:3px;">Itens</dt>
+          <dd style="margin:0; font-size:.875rem;">
+            <ul style="margin:0; padding-left:1rem; color:var(--color-text-secondary);">
+              ${r.items
+                .map((it) => {
+                  const itemProfit = calculateItemProfit(it);
+                  return `
+                    <li style="margin-bottom:.35rem;">
+                      <strong>${esc(it.nome_item || it.nome || it.product_name || "Item")}</strong> ${esc(it.patrimonio || it.serial_number || "")} — ${parseInt(it.quantidade ?? it.quantity ?? 0, 10) || 0} un. — ${
+                        itemProfit > 0
+                          ? SC.fmtCurrency(itemProfit)
+                          : "—"
+                      }
+                    </li>
+                  `;
+                })
+                .join("")}
+            </ul>
+          </dd>
+        </div>
+      `
+        : "";
 
-    modalDetailBody.innerHTML = `
+    const calculatedDetailProfit = calculateRequestProfit(r.items || []);
+    const savedDetailProfit = parseNumber(r.estimated_profit_total);
+    const estimatedProfitTotal =
+      calculatedDetailProfit > 0
+        ? calculatedDetailProfit
+        : Number.isFinite(savedDetailProfit)
+        ? savedDetailProfit
+        : 0;
+        state.detailId = id;
+        modalDetailBody.innerHTML = `
       <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5);">
         ${staBadge(r.status)}
         ${urgBadge(r.urgencia)}
@@ -978,6 +1641,10 @@ document.addEventListener("sc:ready", function () {
         ${dt("Item", `<strong>${esc(r.nome_item)}</strong>`)}
         ${dt("Patrimônio", esc(r.patrimonio || "—"))}
         ${dt("Quantidade", `<strong>${r.quantidade} un.</strong>`)}
+        ${dt(
+          "Valor estimado de lucro",
+          `<strong>${SC.fmtCurrency(estimatedProfitTotal)}</strong>`,
+        )}
         ${dt("Data", SC.fmtDateTime(r.created_at))}
         ${dt(
           "Solicitante",
@@ -991,10 +1658,15 @@ document.addEventListener("sc:ready", function () {
         )}
         ${r.necessario_ate ? dt("Necessário até", SC.fmtDate(r.necessario_ate)) : ""}
         <div style="grid-column:1/-1;">${dt("Justificativa", `<em style="color:var(--color-text-secondary);">"${esc(r.justificativa)}"</em>`)}</div>
+        ${itemDetails}
         ${r.revisor ? dt("Revisado por", esc(r.revisor)) : ""}
         ${r.revisao ? `<div style="grid-column:1/-1;">${dt("Comentário da revisão", `<em style="color:var(--color-text-secondary);">"${esc(r.revisao)}"</em>`)}</div>` : ""}
       </dl>`;
 
+    if (btnDetailEditRequest) {
+      btnDetailEditRequest.style.display =
+        r.status !== "concluida" ? "inline-flex" : "none";
+    }
     SC.openModal("modalDetail");
   }
 
@@ -1006,4 +1678,10 @@ document.addEventListener("sc:ready", function () {
   wireNewModal();
   wireReviewModal();
   render();
-});
+}
+
+if (window.SC && window.SC.ready) {
+  initSolicitacoes();
+} else {
+  document.addEventListener("sc:ready", initSolicitacoes);
+}

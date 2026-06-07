@@ -1,6 +1,6 @@
 "use strict";
 const express = require("express");
-const pool    = require("../db");
+const pool = require("../db");
 
 const router = express.Router();
 
@@ -8,11 +8,23 @@ const CREATE_NOTIF = `
   CREATE TABLE IF NOT EXISTS notificacoes (
     id              VARCHAR(36)  NOT NULL PRIMARY KEY,
     organization_id INT          NOT NULL,
+
     titulo          VARCHAR(255) DEFAULT NULL,
-    mensagem        TEXT         DEFAULT NULL,
-    tipo            VARCHAR(50)  DEFAULT 'info',
-    lida            TINYINT(1)   NOT NULL DEFAULT 0,
-    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    mensagem        TEXT DEFAULT NULL,
+
+    tipo            VARCHAR(50) DEFAULT 'info',
+    subtipo         VARCHAR(100) DEFAULT NULL,
+
+    item_id         VARCHAR(100) DEFAULT NULL,
+    item_nome       VARCHAR(255) DEFAULT NULL,
+
+    prioridade      VARCHAR(50) DEFAULT NULL,
+
+    lida            TINYINT(1) NOT NULL DEFAULT 0,
+    arquivada       TINYINT(1) NOT NULL DEFAULT 0,
+
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
     INDEX idx_org (organization_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 `;
@@ -29,13 +41,57 @@ const CREATE_RULES = `
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 `;
 
+async function ensureColumn(tableName, columnDefinition) {
+  try {
+    await pool.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnDefinition}`);
+  } catch (err) {
+    if (err && (err.code === "ER_DUP_FIELDNAME" || err.errno === 1060)) {
+      return;
+    }
+    throw err;
+  }
+}
+
 async function ensureTables() {
   await pool.query(CREATE_NOTIF);
   await pool.query(CREATE_RULES);
+
+  await ensureColumn("notificacoes", "titulo VARCHAR(255) DEFAULT NULL");
+  await ensureColumn("notificacoes", "mensagem TEXT DEFAULT NULL");
+  await ensureColumn("notificacoes", "tipo VARCHAR(50) DEFAULT 'info'");
+  await ensureColumn("notificacoes", "subtipo VARCHAR(100) DEFAULT NULL");
+  await ensureColumn("notificacoes", "item_id VARCHAR(100) DEFAULT NULL");
+  await ensureColumn("notificacoes", "item_nome VARCHAR(255) DEFAULT NULL");
+  await ensureColumn("notificacoes", "prioridade VARCHAR(50) DEFAULT NULL");
+  await ensureColumn("notificacoes", "lida TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("notificacoes", "arquivada TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn(
+    "notificacoes",
+    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
+  );
+
+  await ensureColumn(
+    "notif_rules",
+    "estoque_baixo TINYINT(1) NOT NULL DEFAULT 1",
+  );
+  await ensureColumn("notif_rules", "descarte TINYINT(1) NOT NULL DEFAULT 1");
+  await ensureColumn(
+    "notif_rules",
+    "doacao_pendente TINYINT(1) NOT NULL DEFAULT 1",
+  );
+  await ensureColumn("notif_rules", "email TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("notif_rules", "minimo INT NOT NULL DEFAULT 5");
 }
 
 function getOrgId(req) {
   return req.query.organization_id || req.body?.organization_id;
+}
+
+function parseCreatedAt(input) {
+  if (!input) return new Date();
+  const dt = new Date(input);
+  if (Number.isNaN(dt.getTime())) return new Date();
+  return dt;
 }
 
 /* GET /api/notificacoes */
@@ -43,9 +99,12 @@ router.get("/", async (req, res) => {
   try {
     await ensureTables();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const [notifs] = await pool.query(
-      "SELECT * FROM notificacoes WHERE organization_id = ? ORDER BY created_at DESC LIMIT 200",
+      "SELECT * FROM notificacoes WHERE organization_id = ? AND arquivada = 0 ORDER BY created_at DESC LIMIT 200",
       [orgId],
     );
     const [rules] = await pool.query(
@@ -64,19 +123,63 @@ router.post("/sync", async (req, res) => {
   try {
     await ensureTables();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
-    const notifs = Array.isArray(req.body.notificacoes) ? req.body.notificacoes : [];
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
+    const rawNotifs = Array.isArray(req.body)
+      ? req.body
+      : Array.isArray(req.body?.notificacoes)
+        ? req.body.notificacoes
+        : [];
+    const notifs = Array.isArray(rawNotifs) ? rawNotifs : [];
 
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
-      await conn.execute("DELETE FROM notificacoes WHERE organization_id = ?", [orgId]);
+      await conn.execute("DELETE FROM notificacoes WHERE organization_id = ?", [
+        orgId,
+      ]);
       for (const n of notifs) {
-        const id = n.id || `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const id =
+          n.id || `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const createdAt = parseCreatedAt(n.criadaEm || n.created_at);
         await conn.execute(
-          `INSERT INTO notificacoes (id, organization_id, titulo, mensagem, tipo, lida)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [id, orgId, n.titulo || null, n.mensagem || null, n.tipo || "info", n.lida ? 1 : 0],
+          `INSERT INTO notificacoes (
+      id,
+      organization_id,
+      titulo,
+      mensagem,
+      tipo,
+      subtipo,
+      item_id,
+      item_nome,
+      prioridade,
+      lida,
+      arquivada,
+      created_at
+   )
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id,
+            orgId,
+
+            n.titulo || null,
+            n.mensagem || null,
+
+            n.tipo || "info",
+            n.subtipo || null,
+
+            n.itemId || null,
+            n.itemNome || null,
+
+            n.prioridade || null,
+
+            n.lida ? 1 : 0,
+            n.arquivada ? 1 : 0,
+
+            createdAt,
+          ],
         );
       }
       await conn.commit();
@@ -98,7 +201,10 @@ router.put("/rules", async (req, res) => {
   try {
     await ensureTables();
     const orgId = getOrgId(req);
-    if (!orgId) return res.status(400).json({ message: "organization_id é obrigatório." });
+    if (!orgId)
+      return res
+        .status(400)
+        .json({ message: "organization_id é obrigatório." });
     const { estoqueBaixo, descarte, doacaoPendente, email, minimo } = req.body;
     await pool.execute(
       `INSERT INTO notif_rules (organization_id, estoque_baixo, descarte, doacao_pendente, email, minimo)
@@ -109,8 +215,14 @@ router.put("/rules", async (req, res) => {
          doacao_pendente = VALUES(doacao_pendente),
          email         = VALUES(email),
          minimo        = VALUES(minimo)`,
-      [orgId, estoqueBaixo ? 1 : 0, descarte ? 1 : 0,
-       doacaoPendente ? 1 : 0, email ? 1 : 0, minimo ?? 5],
+      [
+        orgId,
+        estoqueBaixo ? 1 : 0,
+        descarte ? 1 : 0,
+        doacaoPendente ? 1 : 0,
+        email ? 1 : 0,
+        minimo ?? 5,
+      ],
     );
     res.json({ success: true });
   } catch (err) {

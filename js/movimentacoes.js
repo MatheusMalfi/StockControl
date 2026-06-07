@@ -1,26 +1,168 @@
 "use strict";
-
-document.addEventListener("DOMContentLoaded", function () {
-
+document.addEventListener("sc:ready", function () {
   // ── Storage ───────────────────────────────────────────────────────────────
-  const KEYS = { ITEMS: "sc_items", MOVEMENTS: "sc_movements" };
+  const KEYS = {
+    ITEMS: "sc_items",
+    MOVEMENTS: "sc_movements",
+    DELETED: "sc_movements_deleted",
+  };
 
   function dbGet(key) {
-    try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+    try {
+      return JSON.parse(localStorage.getItem(SC.storageKey(key)) || "[]") || [];
+    } catch {
+      return [];
+    }
   }
-  function dbSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+  function dbSet(key, val) {
+    localStorage.setItem(SC.storageKey(key), JSON.stringify(val));
+  }
 
   // ── API helpers ───────────────────────────────────────────────────────────
   function _movToken() {
-    return localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+    return (
+      localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token")
+    );
   }
   function _movApi(method, url, body) {
     const token = _movToken();
     return fetch(url, {
       method,
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       ...(body != null ? { body: JSON.stringify(body) } : {}),
-    }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+    }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+  }
+
+  function getStoredUser() {
+    try {
+      return (
+        JSON.parse(
+          localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user") ||
+            "{}",
+        ) || {}
+      );
+    } catch {
+      return {};
+    }
+  }
+
+  function loadItems() {
+    const user = getStoredUser();
+    const qs = user.organization_id
+      ? `?organization_id=${user.organization_id}&limit=1000`
+      : "?limit=1000";
+    return _movApi("GET", `/api/items${qs}`)
+      .then((data) => {
+        const items = Array.isArray(data)
+          ? data
+          : data.items || data.itens || [];
+        if (items.length) {
+          const mapped = items.map((it) => ({
+            id: it.id,
+            nome: it.product_name || it.nome || "—",
+            patrimonio: it.serial_number || it.patrimonio || "",
+            categoria: it.category_name || it.categoria || "",
+            disponivel:
+              it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
+            total: it.quantity ?? it.total ?? 0,
+            quantity_available:
+              it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
+          }));
+          dbSet(KEYS.ITEMS, mapped);
+          return mapped;
+        }
+        return [];
+      })
+      .catch(() => []);
+  }
+
+  function normalizeServerMovement(m) {
+    // Garantir quantidade válida (rejeitar valores negativos ou zero)
+    const qty = m.quantidade ?? m.quantity ?? 0;
+    const validQty = typeof qty === "number" && qty > 0 ? qty : 1;
+
+    return {
+      id: m.id,
+      item_id: m.item_id || m.product_id || null,
+      nome: m.nome || m.produto || m.product_name || "—",
+      patrimonio: m.patrimonio || m.origem || "",
+      tipo: (m.tipo || "").toUpperCase(),
+      quantidade: validQty,
+      responsavel: m.responsavel || m.responsible || "—",
+      created_at: m.created_at || m.data || new Date().toISOString(),
+      destino: m.destino || null,
+      notas: m.notas || m.obs || m.notes || null,
+    };
+  }
+
+  function dbGetDeleted() {
+    try {
+      return (
+        JSON.parse(localStorage.getItem(SC.storageKey(KEYS.DELETED)) || "[]") ||
+        []
+      );
+    } catch {
+      return [];
+    }
+  }
+  function dbSetDeleted(arr) {
+    try {
+      localStorage.setItem(SC.storageKey(KEYS.DELETED), JSON.stringify(arr));
+    } catch {}
+  }
+  function addDeletedId(id) {
+    const arr = dbGetDeleted().map(String);
+    if (!arr.includes(String(id))) {
+      arr.push(String(id));
+      dbSetDeleted(arr);
+    }
+  }
+  function removeDeletedId(id) {
+    const arr = dbGetDeleted().filter((x) => String(x) !== String(id));
+    dbSetDeleted(arr);
+  }
+
+  function isValidMovement(m) {
+    // Validar quantidade: não permitir valores negativos, zero ou inválidos
+    const qty = m.quantidade ?? m.quantity ?? 0;
+    if (typeof qty !== "number" || qty <= 0) return false;
+
+    // Validar tipo
+    const validTypes = [
+      "ENTRADA",
+      "SAIDA",
+      "DOACAO",
+      "DESCARTE",
+      "TRANSFERENCIA",
+    ];
+    if (!validTypes.includes((m.tipo || "").toUpperCase())) return false;
+
+    // Validar que tem um ID válido
+    if (!m.id) return false;
+
+    return true;
+  }
+
+  function mergeMovements(serverMovs) {
+    const localMovs = dbGet(KEYS.MOVEMENTS);
+    const deleted = new Set(dbGetDeleted().map(String));
+    const map = new Map();
+    (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
+      if (isValidMovement(m)) {
+        map.set(String(m.id), m);
+      }
+    });
+    (Array.isArray(serverMovs) ? serverMovs : []).forEach((m) => {
+      const id = String(m.id);
+      if (deleted.has(id)) return; // skip server entries that were deleted locally
+      if (!isValidMovement(m)) return; // skip invalid server entries
+      map.set(id, normalizeServerMovement(m));
+    });
+    return Array.from(map.values());
   }
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -39,47 +181,47 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
-  const $ = id => document.getElementById(id);
-  const $$ = sel => document.querySelectorAll(sel);
+  const $ = (id) => document.getElementById(id);
+  const $$ = (sel) => document.querySelectorAll(sel);
 
-  const movBody        = $("movBody");
-  const movEmpty       = $("movEmpty");
-  const movPagination  = $("movPagination");
-  const movSearch      = $("movSearch");
-  const typeFilter     = $("typeFilter");
-  const dateFrom       = $("dateFrom");
-  const dateTo         = $("dateTo");
-  const exportBtn      = $("exportBtn");
-  const newMovBtn      = $("newMovBtn");
+  const movBody = $("movBody");
+  const movEmpty = $("movEmpty");
+  const movPagination = $("movPagination");
+  const movSearch = $("movSearch");
+  const typeFilter = $("typeFilter");
+  const dateFrom = $("dateFrom");
+  const dateTo = $("dateTo");
+  const exportBtn = $("exportBtn");
+  const newMovBtn = $("newMovBtn");
   const emptyNewMovBtn = $("emptyNewMovBtn");
-  const movPerPage     = $("movPerPage");
+  const movPerPage = $("movPerPage");
 
-  const kpiTotal      = $("kpiTotal");
-  const kpiTotalSub   = $("kpiTotalSub");
-  const kpiEntrada    = $("kpiEntrada");
-  const kpiSaida      = $("kpiSaida");
-  const kpiDoacao     = $("kpiDoacao");
-  const kpiDescarte   = $("kpiDescarte");
+  const kpiTotal = $("kpiTotal");
+  const kpiTotalSub = $("kpiTotalSub");
+  const kpiEntrada = $("kpiEntrada");
+  const kpiSaida = $("kpiSaida");
+  const kpiDoacao = $("kpiDoacao");
+  const kpiDescarte = $("kpiDescarte");
 
-  const movItemSearch    = $("movItemSearch");
+  const movItemSearch = $("movItemSearch");
   const itemSearchResult = $("itemSearchResult");
   const selectedItemChip = $("selectedItemChip");
   const selectedItemName = $("selectedItemName");
   const selectedItemMeta = $("selectedItemMeta");
-  const changeItemBtn    = $("changeItemBtn");
-  const itemSearchWrap   = $("itemSearchWrap");
-  const movItemId        = $("movItemId");
-  const movQuantity      = $("movQuantity");
-  const movQtyHint       = $("movQtyHint");
-  const movDate          = $("movDate");
-  const movNotes         = $("movNotes");
-  const movDestination   = $("movDestination");
-  const destinationRow   = $("destinationRow");
-  const saveMovBtn       = $("saveMovBtn");
-  const errorMovItem     = $("errorMovItem");
-  const errorMovType     = $("errorMovType");
-  const errorMovQty      = $("errorMovQty");
-  const movDetailBody    = $("movDetailBody");
+  const changeItemBtn = $("changeItemBtn");
+  const itemSearchWrap = $("itemSearchWrap");
+  const movItemId = $("movItemId");
+  const movQuantity = $("movQuantity");
+  const movQtyHint = $("movQtyHint");
+  const movDate = $("movDate");
+  const movNotes = $("movNotes");
+  const movDestination = $("movDestination");
+  const destinationRow = $("destinationRow");
+  const saveMovBtn = $("saveMovBtn");
+  const errorMovItem = $("errorMovItem");
+  const errorMovType = $("errorMovType");
+  const errorMovQty = $("errorMovQty");
+  const movDetailBody = $("movDetailBody");
 
   const movTypeInputs = $$('input[name="movement_type"]');
 
@@ -98,16 +240,26 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function typeLabel(tipo) {
-    const map = { ENTRADA: "Entrada", SAIDA: "Saída", DOACAO: "Doação", DESCARTE: "Descarte", TRANSFERENCIA: "Transferência" };
+    const map = {
+      ENTRADA: "Entrada",
+      SAIDA: "Saída",
+      DOACAO: "Doação",
+      DESCARTE: "Descarte",
+      TRANSFERENCIA: "Transferência",
+    };
     return map[(tipo || "").toUpperCase()] || tipo;
   }
 
   function typeBadgeHtml(tipo) {
     const t = (tipo || "").toUpperCase();
-    const cls = {
-      ENTRADA: "mov-entrada", SAIDA: "mov-saida", DOACAO: "mov-doacao",
-      DESCARTE: "mov-descarte", TRANSFERENCIA: "mov-transferencia",
-    }[t] || "";
+    const cls =
+      {
+        ENTRADA: "mov-entrada",
+        SAIDA: "mov-saida",
+        DOACAO: "mov-doacao",
+        DESCARTE: "mov-descarte",
+        TRANSFERENCIA: "mov-transferencia",
+      }[t] || "";
     return `<span class="mov-type ${cls}"><span class="mov-type-dot"></span>${SC.escHtml(typeLabel(t))}</span>`;
   }
 
@@ -115,35 +267,65 @@ document.addEventListener("DOMContentLoaded", function () {
     const t = (tipo || "").toUpperCase();
     const pos = t === "ENTRADA";
     const neg = ["SAIDA", "DOACAO", "DESCARTE"].includes(t);
-    const cls = pos ? "qty-delta positive" : neg ? "qty-delta negative" : "qty-delta";
+    const cls = pos
+      ? "qty-delta positive"
+      : neg
+        ? "qty-delta negative"
+        : "qty-delta";
     const sign = pos ? "+" : neg ? "−" : "";
     return `<span class="${cls}">${sign}${qty}</span>`;
   }
 
   function initials(name) {
-    return (name || "?").split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+    return (name || "?")
+      .split(" ")
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase();
   }
 
   function currentUserName() {
     try {
-      const raw = localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user");
+      const raw =
+        localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user");
       const u = raw ? JSON.parse(raw) : null;
       return (u && u.name) || "Admin";
-    } catch { return "Admin"; }
+    } catch {
+      return "Admin";
+    }
   }
 
   // ── Period / date filtering ───────────────────────────────────────────────
+  function parseDateInput(value) {
+    if (!value) return null;
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   function inPeriod(mov) {
     const d = new Date(mov.created_at);
+    if (Number.isNaN(d.getTime())) return false;
+
     if (state.dateFrom) {
-      if (d < new Date(state.dateFrom)) return false;
+      const from = parseDateInput(state.dateFrom);
+      if (from && d < from) return false;
     }
+
     if (state.dateTo) {
-      const dt = new Date(state.dateTo);
-      dt.setHours(23, 59, 59, 999);
-      if (d > dt) return false;
+      const to = parseDateInput(state.dateTo);
+      if (to) {
+        to.setHours(23, 59, 59, 999);
+        if (d > to) return false;
+      }
     }
-    if (!state.dateFrom && !state.dateTo && state.period && state.period !== "0") {
+
+    if (
+      !state.dateFrom &&
+      !state.dateTo &&
+      state.period &&
+      state.period !== "0"
+    ) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - parseInt(state.period));
       if (d < cutoff) return false;
@@ -155,16 +337,26 @@ document.addEventListener("DOMContentLoaded", function () {
   function applyFilters() {
     let movs = dbGet(KEYS.MOVEMENTS);
 
+    // Se não houver usuário logado, mostrar apenas movimentações criadas localmente
+    const _user = getStoredUser();
+    if (!_user || !_user.organization_id) {
+      movs = (Array.isArray(movs) ? movs : []).filter((m) => m && m._local);
+    }
+
+    // Filtrar movimentações inválidas
+    movs = movs.filter((m) => isValidMovement(m));
+
     movs = movs.filter(inPeriod);
 
-    if (state.type) movs = movs.filter(m => m.tipo === state.type);
+    if (state.type) movs = movs.filter((m) => m.tipo === state.type);
 
     if (state.search) {
       const q = state.search.toLowerCase();
-      movs = movs.filter(m =>
-        (m.nome        || "").toLowerCase().includes(q) ||
-        (m.patrimonio  || "").toLowerCase().includes(q) ||
-        (m.responsavel || "").toLowerCase().includes(q)
+      movs = movs.filter(
+        (m) =>
+          (m.nome || "").toLowerCase().includes(q) ||
+          (m.patrimonio || "").toLowerCase().includes(q) ||
+          (m.responsavel || "").toLowerCase().includes(q),
       );
     }
 
@@ -178,7 +370,7 @@ document.addEventListener("DOMContentLoaded", function () {
         vb = (b.nome || "").toLowerCase();
       }
       if (va < vb) return state.sortDir === "asc" ? -1 : 1;
-      if (va > vb) return state.sortDir === "asc" ? 1  : -1;
+      if (va > vb) return state.sortDir === "asc" ? 1 : -1;
       return 0;
     });
 
@@ -188,11 +380,11 @@ document.addEventListener("DOMContentLoaded", function () {
   // ── KPIs ──────────────────────────────────────────────────────────────────
   function renderKPIs() {
     const movs = state.filtered;
-    const total    = movs.length;
-    const entrada  = movs.filter(m => m.tipo === "ENTRADA").length;
-    const saida    = movs.filter(m => m.tipo === "SAIDA").length;
-    const doacao   = movs.filter(m => m.tipo === "DOACAO").length;
-    const descarte = movs.filter(m => m.tipo === "DESCARTE").length;
+    const total = movs.length;
+    const entrada = movs.filter((m) => m.tipo === "ENTRADA").length;
+    const saida = movs.filter((m) => m.tipo === "SAIDA").length;
+    const doacao = movs.filter((m) => m.tipo === "DOACAO").length;
+    const descarte = movs.filter((m) => m.tipo === "DESCARTE").length;
 
     if (kpiTotal) {
       kpiTotal.classList.remove("skeleton");
@@ -200,15 +392,18 @@ document.addEventListener("DOMContentLoaded", function () {
       kpiTotal.style.height = "";
     }
 
-    const periodLabel = state.period === "0" ? "todos os períodos"
-      : state.period ? `últimos ${state.period} dias`
-      : "período selecionado";
+    const periodLabel =
+      state.period === "0"
+        ? "todos os períodos"
+        : state.period
+          ? `últimos ${state.period} dias`
+          : "período selecionado";
     if (kpiTotalSub) kpiTotalSub.textContent = periodLabel;
 
-    animCount(kpiTotal,    total);
-    animCount(kpiEntrada,  entrada);
-    animCount(kpiSaida,    saida);
-    animCount(kpiDoacao,   doacao);
+    animCount(kpiTotal, total);
+    animCount(kpiEntrada, entrada);
+    animCount(kpiSaida, saida);
+    animCount(kpiDoacao, doacao);
     animCount(kpiDescarte, descarte);
   }
 
@@ -216,30 +411,39 @@ document.addEventListener("DOMContentLoaded", function () {
   function renderTable() {
     if (!movBody) return;
 
-    const total    = state.filtered.length;
-    const perPage  = parseInt(movPerPage ? movPerPage.value : state.perPage) || state.perPage;
+    const total = state.filtered.length;
+    const perPage =
+      parseInt(movPerPage ? movPerPage.value : state.perPage) || state.perPage;
     const totalPages = Math.max(1, Math.ceil(total / perPage));
     if (state.page > totalPages) state.page = totalPages;
 
     if (!total) {
       movBody.innerHTML = "";
-      movEmpty     && (movEmpty.style.display = "");
+      movEmpty && (movEmpty.style.display = "");
       movPagination && (movPagination.style.display = "none");
       return;
     }
 
-    movEmpty     && (movEmpty.style.display = "none");
+    movEmpty && (movEmpty.style.display = "none");
     movPagination && (movPagination.style.display = "flex");
 
-    const slice = state.filtered.slice((state.page - 1) * perPage, state.page * perPage);
+    const slice = state.filtered.slice(
+      (state.page - 1) * perPage,
+      state.page * perPage,
+    );
 
-    movBody.innerHTML = slice.map(m => {
-      const ini      = initials(m.responsavel);
-      const obs      = m.notas ? (m.notas.length > 45 ? m.notas.slice(0, 45) + "…" : m.notas) : "";
-      const oriDest  = m.destino
-        ? `<span>${SC.escHtml(m.destino)}</span>`
-        : `<span style="color:var(--color-text-muted);">—</span>`;
-      return `
+    movBody.innerHTML = slice
+      .map((m) => {
+        const ini = initials(m.responsavel);
+        const obs = m.notas
+          ? m.notas.length > 45
+            ? m.notas.slice(0, 45) + "…"
+            : m.notas
+          : "";
+        const oriDest = m.destino
+          ? `<span>${SC.escHtml(m.destino)}</span>`
+          : `<span style="color:var(--color-text-muted);">—</span>`;
+        return `
         <tr data-id="${m.id}">
           <td style="white-space:nowrap; color:var(--color-text-secondary); font-size:0.8125rem;">${SC.fmtDateTime(m.created_at)}</td>
           <td>${typeBadgeHtml(m.tipo)}</td>
@@ -271,22 +475,30 @@ document.addEventListener("DOMContentLoaded", function () {
             </button>
           </td>
         </tr>`;
-    }).join("");
+      })
+      .join("");
 
-    movBody.querySelectorAll(".btn-row-detail").forEach(btn =>
-      btn.addEventListener("click", () => openDetail(btn.dataset.id))
-    );
-    movBody.querySelectorAll(".btn-row-delete").forEach(btn =>
-      btn.addEventListener("click", () => deleteMovement(btn.dataset.id))
-    );
+    movBody
+      .querySelectorAll(".btn-row-detail")
+      .forEach((btn) =>
+        btn.addEventListener("click", () => openDetail(btn.dataset.id)),
+      );
+    movBody
+      .querySelectorAll(".btn-row-delete")
+      .forEach((btn) =>
+        btn.addEventListener("click", () => deleteMovement(btn.dataset.id)),
+      );
 
     SC.renderPagination({
       containerId: "movPagControls",
-      infoId:      "movPagInfo",
-      page:        state.page,
+      infoId: "movPagInfo",
+      page: state.page,
       perPage,
       total,
-      onPageChange: p => { state.page = p; renderTable(); },
+      onPageChange: (p) => {
+        state.page = p;
+        renderTable();
+      },
     });
   }
 
@@ -299,13 +511,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ── Sort headers ──────────────────────────────────────────────────────────
   function wireSortHeaders() {
-    $$("th[data-sort]").forEach(th => {
+    $$("th[data-sort]").forEach((th) => {
       th.style.cursor = "pointer";
       th.addEventListener("click", () => {
         const col = th.dataset.sort;
-        state.sortDir = (state.sortBy === col && state.sortDir === "desc") ? "asc" : "desc";
-        state.sortBy  = col;
-        state.page    = 1;
+        state.sortDir =
+          state.sortBy === col && state.sortDir === "desc" ? "asc" : "desc";
+        state.sortBy = col;
+        state.page = 1;
         render();
       });
     });
@@ -313,74 +526,91 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ── Filters wiring ────────────────────────────────────────────────────────
   function wireFilters() {
-    movSearch && movSearch.addEventListener("input", SC.debounce(() => {
-      state.search = movSearch.value.trim();
-      state.page   = 1;
-      render();
-    }, 300));
+    movSearch &&
+      movSearch.addEventListener(
+        "input",
+        SC.debounce(() => {
+          state.search = movSearch.value.trim();
+          state.page = 1;
+          render();
+        }, 300),
+      );
 
-    typeFilter && typeFilter.addEventListener("change", () => {
-      state.type = typeFilter.value;
-      state.page = 1;
-      render();
-    });
+    typeFilter &&
+      typeFilter.addEventListener("change", () => {
+        state.type = typeFilter.value;
+        state.page = 1;
+        render();
+      });
 
-    dateFrom && dateFrom.addEventListener("change", () => {
-      state.dateFrom = dateFrom.value;
-      state.period   = "";
-      $$(".period-tab").forEach(t => t.classList.remove("active"));
-      state.page = 1;
-      render();
-    });
+    dateFrom &&
+      dateFrom.addEventListener("change", () => {
+        state.dateFrom = dateFrom.value;
+        state.period = "";
+        $$(".period-tab").forEach((t) => t.classList.remove("active"));
+        state.page = 1;
+        render();
+      });
 
-    dateTo && dateTo.addEventListener("change", () => {
-      state.dateTo = dateTo.value;
-      state.period = "";
-      $$(".period-tab").forEach(t => t.classList.remove("active"));
-      state.page = 1;
-      render();
-    });
+    dateTo &&
+      dateTo.addEventListener("change", () => {
+        state.dateTo = dateTo.value;
+        state.period = "";
+        $$(".period-tab").forEach((t) => t.classList.remove("active"));
+        state.page = 1;
+        render();
+      });
 
-    $$(".period-tab").forEach(tab => {
+    $$(".period-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
-        state.period   = tab.dataset.period;
+        state.period = tab.dataset.period;
         state.dateFrom = "";
-        state.dateTo   = "";
+        state.dateTo = "";
         if (dateFrom) dateFrom.value = "";
-        if (dateTo)   dateTo.value   = "";
-        $$(".period-tab").forEach(t => t.classList.remove("active"));
+        if (dateTo) dateTo.value = "";
+        $$(".period-tab").forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
         state.page = 1;
         render();
       });
     });
 
-    movPerPage && movPerPage.addEventListener("change", () => {
-      state.perPage = parseInt(movPerPage.value) || 25;
-      state.page    = 1;
-      render();
-    });
+    movPerPage &&
+      movPerPage.addEventListener("change", () => {
+        state.perPage = parseInt(movPerPage.value) || 25;
+        state.page = 1;
+        render();
+      });
   }
 
   // ── Export CSV ────────────────────────────────────────────────────────────
   function exportCSV() {
-    const cols = ["Data", "Tipo", "Item", "Patrimônio", "Quantidade", "Responsável", "Destino/Beneficiário", "Observações"];
-    const rows = state.filtered.map(m => [
+    const cols = [
+      "Data",
+      "Tipo",
+      "Item",
+      "Patrimônio",
+      "Quantidade",
+      "Responsável",
+      "Destino/Beneficiário",
+      "Observações",
+    ];
+    const rows = state.filtered.map((m) => [
       SC.fmtDateTime(m.created_at),
       typeLabel(m.tipo),
-      m.nome        || "",
-      m.patrimonio  || "",
-      m.quantidade  ?? "",
+      m.nome || "",
+      m.patrimonio || "",
+      m.quantidade ?? "",
       m.responsavel || "",
-      m.destino     || "",
-      m.notas       || "",
+      m.destino || "",
+      m.notas || "",
     ]);
     const csv = [cols, ...rows]
-      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
     a.href = url;
     a.download = `movimentacoes_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
@@ -390,76 +620,139 @@ document.addEventListener("DOMContentLoaded", function () {
   // ── New movement modal ────────────────────────────────────────────────────
   function openNewMovModal() {
     resetMovForm();
+    if (!dbGet(KEYS.ITEMS).length) {
+      loadItems();
+    }
     SC.openModal("newMovModal");
   }
 
   function resetMovForm() {
     state.selectedItem = null;
-    if (movItemId)   movItemId.value   = "";
+    if (movItemId) movItemId.value = "";
     if (movItemSearch) movItemSearch.value = "";
     if (itemSearchResult) {
       itemSearchResult.innerHTML = "";
       itemSearchResult.classList.remove("is-open");
     }
     if (selectedItemChip) selectedItemChip.style.display = "none";
-    if (itemSearchWrap)   itemSearchWrap.style.display   = "";
-    movTypeInputs.forEach(r => { r.checked = false; });
-    if (movQuantity)   movQuantity.value = "1";
-    if (movQtyHint)    movQtyHint.textContent = "Disponível: —";
-    const now = new Date(); now.setSeconds(0, 0);
-    if (movDate)       movDate.value = now.toISOString().slice(0, 16);
-    if (movNotes)      movNotes.value = "";
+    if (itemSearchWrap) itemSearchWrap.style.display = "";
+    movTypeInputs.forEach((r) => {
+      r.checked = false;
+    });
+    if (movQuantity) movQuantity.value = "1";
+    if (movQtyHint) movQtyHint.textContent = "Disponível: —";
+    const now = new Date();
+    now.setSeconds(0, 0);
+    if (movDate) movDate.value = now.toISOString().slice(0, 16);
+    if (movNotes) movNotes.value = "";
     if (movDestination) movDestination.value = "";
     if (destinationRow) destinationRow.style.display = "none";
-    if (errorMovItem)  errorMovItem.style.display = "none";
-    if (errorMovType)  errorMovType.style.display = "none";
-    if (errorMovQty)   errorMovQty.style.display  = "none";
+    if (errorMovItem) errorMovItem.style.display = "none";
+    if (errorMovType) errorMovType.style.display = "none";
+    if (errorMovQty) errorMovQty.style.display = "none";
   }
 
   function wireNewMovModal() {
-    newMovBtn      && newMovBtn.addEventListener("click", openNewMovModal);
+    newMovBtn && newMovBtn.addEventListener("click", openNewMovModal);
     emptyNewMovBtn && emptyNewMovBtn.addEventListener("click", openNewMovModal);
 
-    movItemSearch && movItemSearch.addEventListener("input", SC.debounce(() => {
-      const q = (movItemSearch.value || "").trim().toLowerCase();
-      if (!q) {
-        if (itemSearchResult) itemSearchResult.classList.remove("is-open");
-        return;
-      }
-      const items = dbGet(KEYS.ITEMS)
-        .filter(it =>
-          (it.nome       || "").toLowerCase().includes(q) ||
-          (it.patrimonio || "").toLowerCase().includes(q)
-        )
-        .slice(0, 8);
-      renderItemResults(items);
-    }, 250));
+    movItemSearch &&
+      movItemSearch.addEventListener(
+        "input",
+        SC.debounce(() => {
+          const q = (movItemSearch.value || "").trim().toLowerCase();
+          if (!q) {
+            if (itemSearchResult) itemSearchResult.classList.remove("is-open");
+            return;
+          }
+          const items = dbGet(KEYS.ITEMS)
+            .filter(
+              (it) =>
+                (it.nome || "").toLowerCase().includes(q) ||
+                (it.patrimonio || "").toLowerCase().includes(q),
+            )
+            .slice(0, 8);
+          renderItemResults(items);
+        }, 250),
+      );
 
-    changeItemBtn && changeItemBtn.addEventListener("click", () => {
-      state.selectedItem = null;
-      if (movItemId)       movItemId.value   = "";
-      if (selectedItemChip) selectedItemChip.style.display = "none";
-      if (itemSearchWrap)   itemSearchWrap.style.display   = "";
-      if (movItemSearch)  { movItemSearch.value = ""; movItemSearch.focus(); }
-      if (movQtyHint)      movQtyHint.textContent = "Disponível: —";
-    });
+    changeItemBtn &&
+      changeItemBtn.addEventListener("click", () => {
+        state.selectedItem = null;
+        if (movItemId) movItemId.value = "";
+        if (selectedItemChip) selectedItemChip.style.display = "none";
+        if (itemSearchWrap) itemSearchWrap.style.display = "";
+        if (movItemSearch) {
+          movItemSearch.value = "";
+          movItemSearch.focus();
+        }
+        if (movQtyHint) movQtyHint.textContent = "Disponível: —";
+      });
 
-    movTypeInputs.forEach(r => {
+    movTypeInputs.forEach((r) => {
       r.addEventListener("change", () => {
         const show = ["DOACAO", "TRANSFERENCIA"].includes(r.value);
         if (destinationRow) destinationRow.style.display = show ? "" : "none";
         if (movDestination) {
-          movDestination.placeholder = r.value === "DOACAO"
-            ? "Nome do donatário ou organização"
-            : "Destino da transferência";
+          movDestination.placeholder =
+            r.value === "DOACAO"
+              ? "Nome do donatário ou organização"
+              : "Destino da transferência";
         }
         if (errorMovType) errorMovType.style.display = "none";
+
+        // Validar quantidade ao mudar tipo
+        if (errorMovQty) errorMovQty.style.display = "none";
+        if (state.selectedItem && movQuantity) {
+          const qty = parseInt(movQuantity.value || 0);
+          const disponivel =
+            state.selectedItem.disponivel ??
+            state.selectedItem.quantity_available ??
+            state.selectedItem.quantity ??
+            state.selectedItem.total ??
+            0;
+
+          if (
+            ["SAIDA", "DOACAO", "DESCARTE"].includes(r.value) &&
+            qty > disponivel
+          ) {
+            if (errorMovQty) {
+              errorMovQty.style.display = "";
+              errorMovQty.textContent = `Quantidade indisponível. Disponível: ${disponivel}`;
+            }
+          }
+        }
       });
     });
 
-    movQuantity && movQuantity.addEventListener("input", () => {
-      if (errorMovQty) errorMovQty.style.display = "none";
-    });
+    movQuantity &&
+      movQuantity.addEventListener("input", () => {
+        if (errorMovQty) errorMovQty.style.display = "none";
+
+        // Validação em tempo real: verificar se quantidade excede disponível
+        if (state.selectedItem && movTypeInputs) {
+          const typeChecked = [...movTypeInputs].find((r) => r.checked);
+          if (
+            typeChecked &&
+            ["SAIDA", "DOACAO", "DESCARTE"].includes(typeChecked.value)
+          ) {
+            const qty = parseInt(movQuantity.value || 0);
+            const disponivel =
+              state.selectedItem.disponivel ??
+              state.selectedItem.quantity_available ??
+              state.selectedItem.quantity ??
+              state.selectedItem.total ??
+              0;
+
+            if (qty > disponivel) {
+              if (errorMovQty) {
+                errorMovQty.style.display = "";
+                errorMovQty.textContent = `Quantidade indisponível. Disponível: ${disponivel}`;
+              }
+            }
+          }
+        }
+      });
 
     saveMovBtn && saveMovBtn.addEventListener("click", saveMovement);
   }
@@ -474,89 +767,184 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>`;
       return;
     }
-    itemSearchResult.innerHTML = items.map(it => `
+    itemSearchResult.innerHTML = items
+      .map(
+        (it) => `
       <div class="item-result-row" data-id="${SC.escHtml(it.id)}">
         <div>
           <div class="item-result-name">${SC.escHtml(it.nome)}</div>
           <div class="item-result-meta">${SC.escHtml(it.patrimonio)} · ${SC.escHtml(it.categoria || "")} · Disp: ${it.disponivel ?? "?"}</div>
         </div>
-      </div>`).join("");
+      </div>`,
+      )
+      .join("");
 
-    itemSearchResult.querySelectorAll(".item-result-row[data-id]").forEach(row => {
-      row.addEventListener("click", () => {
-        const found = items.find(i => String(i.id) === String(row.dataset.id));
-        if (found) selectItem(found);
+    itemSearchResult
+      .querySelectorAll(".item-result-row[data-id]")
+      .forEach((row) => {
+        row.addEventListener("click", () => {
+          const found = items.find(
+            (i) => String(i.id) === String(row.dataset.id),
+          );
+          if (found) selectItem(found);
+        });
       });
-    });
   }
 
   function selectItem(item) {
     state.selectedItem = item;
-    if (movItemId)       movItemId.value = item.id;
+    if (movItemId) movItemId.value = item.id;
     if (selectedItemName) selectedItemName.textContent = item.nome;
-    if (selectedItemMeta) selectedItemMeta.textContent = `${item.patrimonio} · Disponível: ${item.disponivel ?? "?"}`;
-    if (movQtyHint)      movQtyHint.textContent = `Disponível: ${item.disponivel ?? "?"}`;
+
+    // Tentar várias variantes de propriedade para disponível
+    const disponivel =
+      item.disponivel ??
+      item.quantity_available ??
+      item.quantity ??
+      item.total ??
+      0;
+    const dispText =
+      disponivel > 0
+        ? `${disponivel} disponível${disponivel === 1 ? "" : "s"}`
+        : "Sem estoque";
+
+    if (selectedItemMeta)
+      selectedItemMeta.textContent = `${item.patrimonio} · ${dispText}`;
+    if (movQtyHint)
+      movQtyHint.innerHTML = `Disponível: <strong>${disponivel}</strong>`;
     if (selectedItemChip) selectedItemChip.style.display = "";
-    if (itemSearchWrap)   itemSearchWrap.style.display   = "none";
+    if (itemSearchWrap) itemSearchWrap.style.display = "none";
     if (itemSearchResult) {
       itemSearchResult.innerHTML = "";
       itemSearchResult.classList.remove("is-open");
     }
     if (errorMovItem) errorMovItem.style.display = "none";
+    if (errorMovQty) errorMovQty.style.display = "none";
   }
 
   function saveMovement() {
     let valid = true;
 
     if (!state.selectedItem) {
-      if (errorMovItem) { errorMovItem.style.display = ""; errorMovItem.textContent = "Selecione um item."; }
+      if (errorMovItem) {
+        errorMovItem.style.display = "";
+        errorMovItem.textContent = "Selecione um item.";
+      }
       valid = false;
     }
 
-    const typeChecked = [...movTypeInputs].find(r => r.checked);
+    const typeChecked = [...movTypeInputs].find((r) => r.checked);
     if (!typeChecked) {
-      if (errorMovType) { errorMovType.style.display = ""; errorMovType.textContent = "Selecione o tipo de movimentação."; }
+      if (errorMovType) {
+        errorMovType.style.display = "";
+        errorMovType.textContent = "Selecione o tipo de movimentação.";
+      }
       valid = false;
     }
 
     const qty = parseInt(movQuantity ? movQuantity.value : 0);
     if (!qty || qty < 1) {
-      if (errorMovQty) { errorMovQty.style.display = ""; errorMovQty.textContent = "Quantidade inválida."; }
+      if (errorMovQty) {
+        errorMovQty.style.display = "";
+        errorMovQty.textContent = "Quantidade deve ser maior que zero.";
+      }
       valid = false;
+    }
+
+    // Validar quantidade contra estoque disponível (exceto para ENTRADA)
+    if (valid && state.selectedItem && typeChecked) {
+      const tipo = typeChecked.value;
+      const disponivel =
+        state.selectedItem.disponivel ??
+        state.selectedItem.quantity_available ??
+        state.selectedItem.quantity ??
+        state.selectedItem.total ??
+        0;
+
+      // Para SAIDA, DOACAO e DESCARTE, a quantidade não pode exceder o disponível
+      if (["SAIDA", "DOACAO", "DESCARTE"].includes(tipo) && qty > disponivel) {
+        if (errorMovQty) {
+          errorMovQty.style.display = "";
+          errorMovQty.textContent = `Quantidade indisponível. Disponível: ${disponivel}`;
+        }
+        valid = false;
+      }
     }
 
     if (!valid) return;
 
-    const tipo    = typeChecked.value;
-    const item    = state.selectedItem;
+    const tipo = typeChecked.value;
+    const item = state.selectedItem;
     const dateVal = movDate ? movDate.value : "";
-    const created_at = dateVal ? new Date(dateVal).toISOString() : new Date().toISOString();
+    const created_at = dateVal
+      ? new Date(dateVal).toISOString()
+      : new Date().toISOString();
 
     const newMov = {
-      id:          Date.now(),
-      item_id:     item.id,
-      nome:        item.nome,
-      patrimonio:  item.patrimonio,
+      id: Date.now(),
+      item_id: item.id,
+      nome: item.nome,
+      patrimonio: item.patrimonio,
       tipo,
-      quantidade:  qty,
+      quantidade: qty,
+      _local: true,
       responsavel: currentUserName(),
       created_at,
-      destino:     (movDestination && movDestination.value.trim()) || null,
-      notas:       (movNotes       && movNotes.value.trim())       || null,
+      destino: (movDestination && movDestination.value.trim()) || null,
+      notas: (movNotes && movNotes.value.trim()) || null,
     };
 
     const movs = dbGet(KEYS.MOVEMENTS);
     movs.unshift(newMov);
     dbSet(KEYS.MOVEMENTS, movs);
-    _movApi("POST", "/api/movimentacoes", newMov).catch(() => {});
+
+    const user = getStoredUser();
+    const payload = {
+      id: newMov.id,
+      item_id: newMov.item_id,
+      patrimonio: newMov.patrimonio,
+      organization_id: user.organization_id,
+      tipo: newMov.tipo,
+      produto: newMov.nome,
+      quantidade: newMov.quantidade,
+      responsavel: newMov.responsavel,
+      destino: newMov.destino,
+      origem: newMov.patrimonio,
+      data: newMov.created_at,
+      obs: newMov.notas,
+    };
+
+    _movApi("POST", "/api/movimentacoes", payload)
+      .then((res) => {
+        // If server created/returned a different id, update local cache
+        try {
+          if (res && res.id && String(res.id) !== String(newMov.id)) {
+            const movs2 = dbGet(KEYS.MOVEMENTS).map((m) => {
+              if (String(m.id) === String(newMov.id))
+                return { ...m, id: String(res.id) };
+              return m;
+            });
+            dbSet(KEYS.MOVEMENTS, movs2);
+            // Also update deleted index if present
+            const dels = dbGetDeleted();
+            const changed = dels.map((x) =>
+              String(x) === String(newMov.id) ? String(res.id) : x,
+            );
+            dbSetDeleted(changed);
+          }
+        } catch (_) {}
+      })
+      .catch(() => {
+        /* Falha de backend não impede persistência local */
+      });
 
     // Update item stock
     const items = dbGet(KEYS.ITEMS);
-    const idx   = items.findIndex(it => String(it.id) === String(item.id));
+    const idx = items.findIndex((it) => String(it.id) === String(item.id));
     if (idx !== -1) {
       if (tipo === "ENTRADA") {
         items[idx].disponivel = (items[idx].disponivel || 0) + qty;
-        items[idx].total      = (items[idx].total      || 0) + qty;
+        items[idx].total = (items[idx].total || 0) + qty;
       } else if (["SAIDA", "DOACAO", "DESCARTE"].includes(tipo)) {
         items[idx].disponivel = Math.max(0, (items[idx].disponivel || 0) - qty);
       }
@@ -571,10 +959,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ── Detail modal ──────────────────────────────────────────────────────────
   function openDetail(id) {
-    const m = dbGet(KEYS.MOVEMENTS).find(x => String(x.id) === String(id));
+    const m = dbGet(KEYS.MOVEMENTS).find((x) => String(x.id) === String(id));
     if (!m) return;
 
-    const dt = row => `
+    const dt = (row) => `
       <div>
         <dt style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--color-text-muted); margin-bottom:3px;">${row[0]}</dt>
         <dd style="margin:0;">${row[1]}</dd>
@@ -583,14 +971,32 @@ document.addEventListener("DOMContentLoaded", function () {
     if (movDetailBody) {
       movDetailBody.innerHTML = `
         <dl style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4) var(--space-6); font-size:0.875rem;">
-          ${dt(["Item",         `<strong>${SC.escHtml(m.nome)}</strong>`])}
-          ${dt(["Patrimônio",   SC.escHtml(m.patrimonio || "—")])}
-          ${dt(["Tipo",         typeBadgeHtml(m.tipo)])}
-          ${dt(["Quantidade",   qtyHtml(m.tipo, m.quantidade)])}
-          ${dt(["Responsável",  SC.escHtml(m.responsavel || "—")])}
-          ${dt(["Data / Hora",  SC.fmtDateTime(m.created_at)])}
-          ${m.destino ? `<div style="grid-column:1/-1">${dt(["Destino / Beneficiário", SC.escHtml(m.destino)]).replace("<div>","").replace("</div>","")}</div>` : ""}
-          ${m.notas   ? `<div style="grid-column:1/-1">${dt(["Observações", `<span style="color:var(--color-text-secondary);">${SC.escHtml(m.notas)}</span>`]).replace("<div>","").replace("</div>","")}</div>` : ""}
+          ${dt(["Item", `<strong>${SC.escHtml(m.nome)}</strong>`])}
+          ${dt(["Patrimônio", SC.escHtml(m.patrimonio || "—")])}
+          ${dt(["Tipo", typeBadgeHtml(m.tipo)])}
+          ${dt(["Quantidade", qtyHtml(m.tipo, m.quantidade)])}
+          ${dt(["Responsável", SC.escHtml(m.responsavel || "—")])}
+          ${dt(["Data / Hora", SC.fmtDateTime(m.created_at)])}
+          ${
+            m.destino
+              ? `<div style="grid-column:1/-1">${dt([
+                  "Destino / Beneficiário",
+                  SC.escHtml(m.destino),
+                ])
+                  .replace("<div>", "")
+                  .replace("</div>", "")}</div>`
+              : ""
+          }
+          ${
+            m.notas
+              ? `<div style="grid-column:1/-1">${dt([
+                  "Observações",
+                  `<span style="color:var(--color-text-secondary);">${SC.escHtml(m.notas)}</span>`,
+                ])
+                  .replace("<div>", "")
+                  .replace("</div>", "")}</div>`
+              : ""
+          }
         </dl>`;
     }
     SC.openModal("movDetailModal");
@@ -598,17 +1004,60 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ── Delete movement ───────────────────────────────────────────────────────
   function deleteMovement(id) {
-    if (!confirm("Excluir esta movimentação? Esta ação não pode ser desfeita.")) return;
-    _movApi("DELETE", `/api/movimentacoes/${id}`).catch(() => {});
-    const movs = dbGet(KEYS.MOVEMENTS).filter(m => String(m.id) !== String(id));
-    dbSet(KEYS.MOVEMENTS, movs);
-    SC.toastSuccess("Movimentação removida.");
-    render();
+    // Abre o modal customizado de exclusão
+    openDeleteMovModal(id);
+  }
+
+  // Modal customizado de exclusão de movimentação
+  function openDeleteMovModal(id) {
+    const modal = document.getElementById("deleteMovModal");
+    const desc = document.getElementById("deleteMovDesc");
+    const notes = document.getElementById("deleteMovNotes");
+    const confirmBtn = document.getElementById("deleteMovConfirmBtn");
+    if (!modal || !confirmBtn) return;
+    desc.textContent =
+      "Esta ação removerá a movimentação e não pode ser desfeita.";
+    notes.value = "";
+    confirmBtn.onclick = function () {
+      // Executa a exclusão
+      addDeletedId(id);
+      const user = getStoredUser();
+      const orgQuery = user.organization_id
+        ? `?organization_id=${user.organization_id}`
+        : "";
+      _movApi("DELETE", `/api/movimentacoes/${id}${orgQuery}`).catch(() => {
+        // Failure: keep id in deleted list so merges won't re-add it
+      });
+      const movs = dbGet(KEYS.MOVEMENTS).filter(
+        (m) => String(m.id) !== String(id),
+      );
+      dbSet(KEYS.MOVEMENTS, movs);
+      SC.closeModal("deleteMovModal");
+      SC.toastSuccess("Movimentação removida.");
+      render();
+    };
+    SC.openModal("deleteMovModal");
   }
 
   // ── General buttons ───────────────────────────────────────────────────────
   function wireButtons() {
     exportBtn && exportBtn.addEventListener("click", exportCSV);
+  }
+
+  // Modal de exclusão: ESC fecha, limpar handler ao fechar
+  const deleteMovModal = document.getElementById("deleteMovModal");
+  if (deleteMovModal) {
+    deleteMovModal.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") SC.closeModal("deleteMovModal");
+    });
+    deleteMovModal.addEventListener("click", function (e) {
+      if (e.target === deleteMovModal) SC.closeModal("deleteMovModal");
+    });
+    // Limpa o onclick ao fechar
+    deleteMovModal.addEventListener("modal:close", function () {
+      const btn = document.getElementById("deleteMovConfirmBtn");
+      if (btn) btn.onclick = null;
+    });
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -617,13 +1066,41 @@ document.addEventListener("DOMContentLoaded", function () {
     wireFilters();
     wireNewMovModal();
     wireButtons();
-    const _mou = JSON.parse(localStorage.getItem("sc_user") || sessionStorage.getItem("sc_user") || "{}") || {};
-    _movApi("GET", `/api/movimentacoes${_mou.organization_id ? `?organization_id=${_mou.organization_id}` : ""}`)
-      .then(data => {
-        const movs = Array.isArray(data) ? data : data.movimentacoes || [];
-        if (movs.length) { dbSet(KEYS.MOVEMENTS, movs); render(); }
-      })
-      .catch(() => {});
+
+    // Limpar dados inválidos do localStorage
+    const localMovs = dbGet(KEYS.MOVEMENTS);
+    if (Array.isArray(localMovs) && localMovs.length > 0) {
+      const validMovs = localMovs.filter((m) => isValidMovement(m));
+      if (validMovs.length !== localMovs.length) {
+        dbSet(KEYS.MOVEMENTS, validMovs);
+      }
+    }
+
+    const _mou =
+      JSON.parse(
+        localStorage.getItem("sc_user") ||
+          sessionStorage.getItem("sc_user") ||
+          "{}",
+      ) || {};
+    loadItems();
+    // Só buscar movimentações do servidor se houver usuário/organization_id
+    if (_mou && _mou.organization_id) {
+      _movApi(
+        "GET",
+        `/api/movimentacoes?organization_id=${_mou.organization_id}`,
+      )
+        .then((data) => {
+          const serverMovs = Array.isArray(data)
+            ? data
+            : data.movimentacoes || [];
+          if (serverMovs.length) {
+            const merged = mergeMovements(serverMovs);
+            dbSet(KEYS.MOVEMENTS, merged);
+            render();
+          }
+        })
+        .catch(() => {});
+    }
     render();
   }
 

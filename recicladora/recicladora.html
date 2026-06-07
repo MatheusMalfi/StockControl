@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <script>
+      (function () {
+        try {
+          var rawUser =
+            localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user");
+          var theme = "light";
+
+          if (rawUser) {
+            var user = JSON.parse(rawUser);
+            var orgId = user && user.organization_id;
+
+            if (orgId) {
+              var rawPrefs = localStorage.getItem("sc_preferencias_" + orgId);
+
+              if (rawPrefs) {
+                theme = JSON.parse(rawPrefs).tema || theme;
+              }
+            }
+          }
+
+          if (theme === "auto") {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "escuro"
+              : "claro";
+          }
+
+          document.documentElement.setAttribute(
+            "data-theme",
+            theme === "escuro" ? "dark" : "light",
+          );
+          document.documentElement.style.backgroundColor =
+            theme === "escuro" ? "#0f172a" : "#f8fafc";
+          document.documentElement.style.color =
+            theme === "escuro" ? "#f8fafc" : "#1e293b";
+        } catch (error) {}
+      })();
+    </script>
+
+    <title>Início — StockControl</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+
+    <style>
+      .home-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-5);
+        margin-top: var(--space-5);
+      }
+
+      @media (max-width: 900px) {
+        .home-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .home-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+
+      .partner-card,
+      .history-card {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4);
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        color: var(--color-text-primary);
+        transition: all var(--transition-fast);
+      }
+
+      .partner-card:hover,
+      .history-card:hover {
+        background: var(--color-primary-light);
+        border-color: rgba(37, 99, 235, 0.25);
+        color: var(--color-primary);
+        transform: translateY(-1px);
+      }
+
+      .partner-logo {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .logo-impact {
+        background: var(--color-primary);
+      }
+
+      .logo-recicla {
+        background: var(--color-success-dark);
+      }
+
+      .logo-metal {
+        background: var(--color-info, #0ea5e9);
+      }
+
+      .partner-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .partner-name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.3;
+      }
+
+      .partner-name-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .partner-meta {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+        margin-top: 2px;
+      }
+
+      .count-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: var(--color-danger);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .history-icon {
+        width: 40px;
+        height: 48px;
+        border-radius: var(--radius-md);
+        background: var(--color-danger);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .history-icon::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 0 0 0 var(--radius-sm);
+      }
+
+      .history-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .history-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.3;
+      }
+
+      .history-meta {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+        margin-top: 2px;
+      }
+
+      .card-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      @media (max-width: 560px) {
+        .page-header {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: var(--space-3);
+        }
+
+        .card-header {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: var(--space-2);
+        }
+
+        .card-actions {
+          width: 100%;
+        }
+
+        .card-actions .btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page-content">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Início</h1>
+          <p class="page-subtitle">ONG's parceiras e histórico de coletas</p>
+        </div>
+
+        <div style="display: flex; gap: var(--space-2)">
+          <button
+            class="btn btn-primary"
+            onclick="
+              window.location.href = '/recicladora/pedidos-recicladora.html'
+            "
+            type="button"
+          >
+            Ver pedidos
+          </button>
+        </div>
+      </div>
+
+      <div class="home-grid">
+        <!-- Recicladores Parceiros -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">ONG's Parceiras</h2>
+            <span class="badge badge-danger" id="partnerTotalBadge"
+              >0 solicitações</span
+            >
+          </div>
+
+          <div class="card-body">
+            <div class="home-list" id="partnerList">
+              <div class="partner-card" style="justify-content: center">
+                Carregando ONGs parceiras...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Histórico de Coleta -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Histórico de Coleta</h2>
+
+            <div class="card-actions">
+              <button
+                id="btnHistoryMore"
+                class="btn btn-ghost btn-sm"
+                type="button"
+              >
+                Ver mais
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="home-list">
+              <a
+                href="javascript:void(0)"
+                class="history-card"
+                id="btnHistory2026"
+              >
+                <div class="history-icon">PDF</div>
+
+                <div class="history-info">
+                  <div class="history-title">Histórico de Coleta 2026</div>
+                  <div class="history-meta">
+                    Relatório anual de coletas realizadas
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Modal Histórico de Coleta -->
+    <div id="historyModal" class="modal-backdrop">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            Histórico de Coleta <span id="historyYear">2026</span>
+          </h2>
+          <button class="modal-close" id="closeHistoryModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID Pedido</th>
+                  <th>ONG</th>
+                  <th>Data Coleta</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr>
+                  <td colspan="4" style="text-align: center">
+                    Carregando histórico...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/layout.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js-recicladoras/recicladora.js"></script>
+  </body>
+</html>

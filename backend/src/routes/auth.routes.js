@@ -32,7 +32,7 @@ async function enviarCodigoVerificacao(email, nome, code) {
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: email,
-    subject: "Confirme seu e-mail — StockControl",
+    subject: "Confirme seu e-mail",
     html: `
       <div style="font-family:Inter,sans-serif;max-width:480px;margin:auto;padding:32px;background:#f8fafc;border-radius:12px;">
         <h2 style="color:#1e3a5f;margin:0 0 8px">Bem-vindo ao StockControl!</h2>
@@ -46,8 +46,10 @@ async function enviarCodigoVerificacao(email, nome, code) {
 }
 
 /* ── Validators ─────────────────────────────────────────────── */
-function isGmail(email) {
-  return /^[a-zA-Z0-9._%+\-]+@gmail\.com$/i.test((email || "").trim());
+function isValidEmail(email) {
+  return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/i.test(
+    (email || "").trim(),
+  );
 }
 
 function senhaForte(pwd) {
@@ -84,8 +86,8 @@ router.post("/login", async (req, res) => {
         .json({ mensagem: "E-mail e senha são obrigatórios." });
     }
 
-    if (!isGmail(email)) {
-      return res.status(400).json({ mensagem: "Use um e-mail @gmail.com." });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ mensagem: "Informe um e-mail válido." });
     }
 
     if (!senhaForte(senha)) {
@@ -160,8 +162,8 @@ router.post("/cadastro", async (req, res) => {
       return res.status(400).json({ erro: "Campos obrigatórios ausentes." });
     }
 
-    if (!isGmail(email)) {
-      return res.status(400).json({ erro: "Use um e-mail @gmail.com." });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ erro: "Informe um e-mail válido." });
     }
 
     if (!senhaForte(senha)) {

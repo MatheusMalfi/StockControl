@@ -1,9 +1,9 @@
-/* ============================================================
-   StockControl — configuracoes.css
+﻿/* ============================================================
+   StockControl â€” configuracoes.css
    Settings page: layout, nav, panels, and specialised components
    ============================================================ */
 
-/* ── Settings layout ───────────────────────────────────────── */
+/* â”€â”€ Settings layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .settings-layout {
   display: grid;
   grid-template-columns: 200px 1fr;
@@ -15,7 +15,7 @@
   .settings-layout { grid-template-columns: 1fr; }
 }
 
-/* ── Settings nav ───────────────────────────────────────────── */
+/* â”€â”€ Settings nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .settings-nav {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -69,7 +69,7 @@
   background: var(--color-border);
 }
 
-/* ── Settings panel ─────────────────────────────────────────── */
+/* â”€â”€ Settings panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .settings-panel         { display: none; }
 .settings-panel.active  { display: block; }
 
@@ -102,7 +102,7 @@
 
 .settings-section-body { padding: var(--space-5); }
 
-/* ── Setting row (toggle style) ─────────────────────────────── */
+/* â”€â”€ Setting row (toggle style) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .setting-row {
   display: flex;
   align-items: flex-start;
@@ -129,7 +129,7 @@
   line-height: 1.4;
 }
 
-/* ── Toggle switch — 44 × 24 px ─────────────────────────────── */
+/* â”€â”€ Toggle switch â€” 44 Ã— 24 px â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .toggle-switch {
   position: relative;
   width: 44px;
@@ -175,10 +175,10 @@
   outline-offset: 2px;
 }
 
-/* ── Checkboxes ──────────────────────────────────────────────── */
+/* â”€â”€ Checkboxes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 input[type="checkbox"] { accent-color: #2563eb; }
 
-/* ── Password toggle button ─────────────────────────────────── */
+/* â”€â”€ Password toggle button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .password-toggle {
   position: absolute;
   right: 10px;
@@ -199,8 +199,15 @@ input[type="checkbox"] { accent-color: #2563eb; }
 /* ── Read-only input ─────────────────────────────────────────── */
 input.form-control:read-only,
 textarea.form-control:read-only {
-  background: #f1f5f9;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
   cursor: not-allowed;
+}
+
+html[data-theme="dark"] input.form-control:read-only,
+html[data-theme="dark"] textarea.form-control:read-only {
+  color: #f8fafc;
 }
 
 /* ── Profile avatar editor ───────────────────────────────────── */
@@ -246,7 +253,7 @@ textarea.form-control:read-only {
   color: var(--color-text-muted);
 }
 
-/* ── User table badges ───────────────────────────────────────── */
+/* â”€â”€ User table badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .user-role-badge {
   display: inline-flex;
   align-items: center;
@@ -260,7 +267,7 @@ textarea.form-control:read-only {
 .role-operator { background: var(--color-success-light); color: var(--color-success-dark); }
 .role-viewer   { background: var(--color-surface-alt);   color: var(--color-text-secondary); border: 1px solid var(--color-border); }
 
-/* ── Danger zone ─────────────────────────────────────────────── */
+/* â”€â”€ Danger zone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .danger-zone {
   border: 1px solid rgba(239,68,68,0.3);
   border-radius: var(--radius-xl);
@@ -307,7 +314,7 @@ textarea.form-control:read-only {
   margin-top: 2px;
 }
 
-/* ── Brand tag chips ─────────────────────────────────────────── */
+/* â”€â”€ Brand tag chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tag-list-edit {
   display: flex;
   flex-wrap: wrap;
@@ -344,7 +351,7 @@ textarea.form-control:read-only {
 .tag-add-row              { display: flex; gap: var(--space-2); align-items: center; }
 .tag-add-row input        { flex: 1; }
 
-/* ── Category cards ──────────────────────────────────────────── */
+/* â”€â”€ Category cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .categoria-item {
   display: flex;
   align-items: center;
@@ -375,7 +382,7 @@ textarea.form-control:read-only {
 }
 .categoria-item:hover .categoria-actions { opacity: 1; }
 
-/* ── Location cards ──────────────────────────────────────────── */
+/* â”€â”€ Location cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .localizacao-item {
   display: flex;
   align-items: center;
@@ -417,7 +424,7 @@ textarea.form-control:read-only {
 }
 .localizacao-item:hover .localizacao-actions { opacity: 1; }
 
-/* ── Color picker swatches ───────────────────────────────────── */
+/* â”€â”€ Color picker swatches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .cor-swatch {
   width: 26px;
   height: 26px;
@@ -430,7 +437,7 @@ textarea.form-control:read-only {
 .cor-swatch:hover      { transform: scale(1.15); }
 .cor-swatch.selecionada { border-color: #1e293b; box-shadow: 0 0 0 2px #fff inset; }
 
-/* ── Logo preview ────────────────────────────────────────────── */
+/* â”€â”€ Logo preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .logo-preview-wrap {
   display: flex;
   align-items: center;
@@ -462,7 +469,7 @@ textarea.form-control:read-only {
   text-align: center;
 }
 
-/* ── Dark theme overrides ────────────────────────────────────── */
+/* â”€â”€ Dark theme overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 [data-theme="dark"] {
   --color-bg:            #0f172a;
   --color-surface:       #1e293b;

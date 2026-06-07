@@ -3,6 +3,39 @@ const pool = require("../db");
 
 const router = express.Router();
 
+// GET /api/recycler/ongs/solicitacoes
+// Lista todas as ONGs cadastradas e a quantidade de solicitações de coleta feitas por cada uma
+router.get("/ongs/solicitacoes", async (req, res) => {
+  try {
+    const [ongs] = await pool.query(
+      `SELECT o.id, o.name,
+              COALESCE(s.request_count, 0) AS request_count,
+              COALESCE(p.approved_count, 0) AS approved_count
+       FROM organizations o
+       LEFT JOIN (
+         SELECT organization_id, COUNT(*) AS request_count
+         FROM solicitacoes
+         WHERE status IN ('pendente', 'aprovada')
+         GROUP BY organization_id
+       ) s ON s.organization_id = o.id
+       LEFT JOIN (
+         SELECT organization_id, COUNT(*) AS approved_count
+         FROM solicitacoes
+         WHERE status = 'concluida'
+         GROUP BY organization_id
+       ) p ON p.organization_id = o.id
+       WHERE o.org_type = 'ONG'
+        AND TRIM(LOWER(o.name)) <> 'sua ong'
+       ORDER BY o.name`,
+    );
+
+    res.json({ success: true, ongs });
+  } catch (err) {
+    console.error("Erro em GET /api/recycler/ongs/solicitacoes:", err);
+    res.status(500).json({ message: "Erro ao carregar lista de ONGs." });
+  }
+});
+
 // GET /api/recycler/ongs
 // Lista as ONGs que possuem pedidos com status REQUESTED
 router.get("/ongs", async (req, res) => {
@@ -101,6 +134,27 @@ router.get("/orders/:id", async (req, res) => {
   }
 });
 
+// GET /api/recycler/collections/history
+// Retorna todas as solicitações com status 'coleta_agendada'
+router.get("/collections/history", async (req, res) => {
+  try {
+    const year = parseInt(req.query.year, 10);
+    const [rows] = await pool.query(
+      `SELECT s.id, s.status, s.data_revisao as scheduled_date, o.name as org_name
+       FROM solicitacoes s
+       JOIN organizations o ON o.id = s.organization_id
+       WHERE s.status = 'coleta_agendada'
+       ${year ? "AND YEAR(s.data_revisao) = ?" : ""}
+       ORDER BY s.data_revisao DESC`,
+      year ? [year] : [],
+    );
+    res.json({ success: true, history: rows });
+  } catch (err) {
+    console.error("Erro em GET /api/recycler/collections/history:", err);
+    res.status(500).json({ message: "Erro ao buscar histórico." });
+  }
+});
+
 // POST /api/recycler/orders/:id/confirm
 // Confirma a coleta: atualiza o pedido e registra no disposal_history
 router.post("/orders/:id/confirm", async (req, res) => {
@@ -120,7 +174,9 @@ router.post("/orders/:id/confirm", async (req, res) => {
     }
 
     if (orderRows[0].status !== "REQUESTED") {
-      return res.status(400).json({ message: "Pedido não está em status REQUESTED." });
+      return res
+        .status(400)
+        .json({ message: "Pedido não está em status REQUESTED." });
     }
 
     const { organization_id, recycler_id } = orderRows[0];

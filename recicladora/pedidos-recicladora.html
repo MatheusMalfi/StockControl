@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script>
+    (function() {
+      try {
+        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
+        var theme = 'light';
+
+        if (rawUser) {
+          var user = JSON.parse(rawUser);
+          var orgId = user && user.organization_id;
+
+          if (orgId) {
+            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
+
+            if (rawPrefs) {
+              theme = JSON.parse(rawPrefs).tema || theme;
+            }
+          }
+        }
+
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+        }
+
+        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
+        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
+        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
+      } catch (error) {}
+    })();
+  </script>
+
+  <title>Pedidos — JEDA | StockControl</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/styles/main.css" />
+  <link rel="stylesheet" href="/styles/components.css" />
+
+  <style>
+    .recycler-summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .recycler-logo {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .recycler-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .recycler-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      line-height: 1.3;
+    }
+
+    .recycler-meta {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      margin-top: 3px;
+    }
+
+    .order-title {
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .order-meta {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .orders-grid {
+      margin-top: var(--space-5);
+      grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2.2fr);
+      align-items: start;
+    }
+
+    .orders-main-card {
+      min-width: 0;
+    }
+
+    .orders-main-card .card-header {
+      gap: var(--space-3);
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .orders-main-card .table {
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .orders-main-card .table th,
+    .orders-main-card .table td {
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .orders-main-card .table th:nth-child(1),
+    .orders-main-card .table td:nth-child(1) {
+      width: 22%;
+    }
+
+    .orders-main-card .table th:nth-child(2),
+    .orders-main-card .table td:nth-child(2) {
+      width: 16%;
+    }
+
+    .orders-main-card .table th:nth-child(3),
+    .orders-main-card .table td:nth-child(3) {
+      width: 24%;
+    }
+
+    .orders-main-card .table th:nth-child(4),
+    .orders-main-card .table td:nth-child(4),
+    .orders-main-card .table th:nth-child(5),
+    .orders-main-card .table td:nth-child(5) {
+      width: 19%;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .org-switcher {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      margin-top: var(--space-3);
+    }
+
+    .org-chip {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+      color: var(--color-text-secondary);
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .org-chip:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .org-chip.is-active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #fff;
+    }
+
+    .order-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .mobile-order-list {
+      display: none;
+    }
+
+    .mobile-order-card {
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-alt);
+    }
+
+    .mobile-order-card + .mobile-order-card {
+      margin-top: var(--space-3);
+    }
+
+    .mobile-order-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .mobile-order-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+    }
+
+    .mobile-order-actions .order-actions {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-2);
+    }
+
+    .mobile-order-actions .btn {
+      width: 100%;
+    }
+
+    @media (max-width: 760px) {
+      .orders-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .orders-main-card {
+        min-width: 0;
+      }
+
+      .orders-table-wrapper {
+        display: none;
+      }
+
+      .mobile-order-list {
+        display: block;
+      }
+
+      .page-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+
+      .page-header > div:last-child {
+        width: 100%;
+      }
+
+      .page-header .btn,
+      .header-actions .btn {
+        width: 100%;
+      }
+
+      .header-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .recycler-summary {
+        align-items: flex-start;
+      }
+
+      .mobile-order-header {
+        flex-direction: column;
+      }
+
+      .mobile-order-actions .order-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="page-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Pedidos</h1>
+        <p class="page-subtitle" id="pageSubtitle">Pedidos pendentes de coleta</p>
+        <div class="org-switcher" id="orgSwitcher"></div>
+      </div>
+
+      <div style="display:flex; gap:var(--space-2);">
+        <button class="btn btn-secondary" onclick="window.location.href='/recicladora/recicladora.html'" type="button">
+          Voltar
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-3 orders-grid">
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">ONG</h2>
+          <span class="badge badge-danger" id="orderCountBadge">0 pedidos</span>
+        </div>
+
+        <div class="card-body">
+          <div class="recycler-summary">
+            <div class="recycler-logo" id="recyclerLogo">?</div>
+
+            <div class="recycler-info">
+              <div class="recycler-name" id="recyclerName">-</div>
+              <div class="recycler-meta" id="recyclerMeta">Carregando pedidos...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card orders-main-card">
+        <div class="card-header">
+          <h2 class="card-title">Lista de Pedidos</h2>
+          <div class="header-actions">
+            <button id="btnHeaderDetails" class="btn btn-primary btn-sm">Detalhes do pedido</button>
+            <button id="btnHeaderSchedule" class="btn btn-primary btn-sm">Agendar coleta geral</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper orders-table-wrapper" style="border:none; border-radius:0;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Status</th>
+                <th>ONG</th>
+                <th>Ações</th>
+                <th>Agendar coleta</th>
+              </tr>
+            </thead>
+
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="card-body mobile-order-list" id="mobileOrderList"></div>
+
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/layout.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js-recicladoras/pedidos-recicladora.js"></script>
+</body>
+</html>

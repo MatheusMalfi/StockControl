@@ -21,7 +21,71 @@
   wireToggle("togglePwd", "adminPwd");
   wireToggle("toggleConfirmPwd", "confirmPwd");
 
+  // ── CNPJ helpers ──────────────────────────────────────────────
+  function cnpjValido(raw) {
+    const n = raw.replace(/\D/g, "");
+    if (n.length !== 14 || /^(\d)\1+$/.test(n)) return false;
+    const calc = (len) => {
+      let s = 0,
+        p = len - 7;
+      for (let i = 0; i < len; i++) {
+        s += parseInt(n[i]) * p--;
+        if (p < 2) p = 9;
+      }
+      const r = s % 11;
+      return r < 2 ? 0 : 11 - r;
+    };
+    return calc(12) === parseInt(n[12]) && calc(13) === parseInt(n[13]);
+  }
+
+  let cnpjValidadoNaReceita = false; // cache para não chamar API repetidamente
+
+  async function verificarCnpjReceita(cnpj) {
+    const n = cnpj.replace(/\D/g, "");
+    try {
+      const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${n}`);
+      return r.ok;
+    } catch {
+      // sem internet: aceita se dígitos forem válidos
+      return true;
+    }
+  }
+
   const cnpjInput = document.getElementById("orgCnpj");
+  cnpjInput &&
+    cnpjInput.addEventListener("blur", async () => {
+      const val = cnpjInput.value;
+      if (!val) {
+        cnpjValidadoNaReceita = false;
+        return;
+      }
+      const errorEl = document.getElementById("errorOrgCnpj");
+      if (!cnpjValido(val)) {
+        errorEl.style.display = "block";
+        errorEl.textContent = "CNPJ inválido.";
+        cnpjValidadoNaReceita = false;
+        return;
+      }
+      errorEl.style.display = "none";
+      cnpjInput.disabled = true;
+      const ok = await verificarCnpjReceita(val);
+      cnpjInput.disabled = false;
+      if (!ok) {
+        errorEl.style.display = "block";
+        errorEl.textContent = "CNPJ não encontrado na Receita Federal.";
+        cnpjValidadoNaReceita = false;
+      } else {
+        errorEl.style.display = "none";
+        cnpjValidadoNaReceita = true;
+      }
+    });
+
+  cnpjInput &&
+    cnpjInput.addEventListener("input", () => {
+      cnpjValidadoNaReceita = false;
+      const errorEl = document.getElementById("errorOrgCnpj");
+      if (errorEl) errorEl.style.display = "none";
+    });
   cnpjInput &&
     cnpjInput.addEventListener("input", () => {
       let v = cnpjInput.value.replace(/\D/g, "").slice(0, 14);
@@ -38,6 +102,28 @@
     });
 
   const phoneInput = document.getElementById("orgPhone");
+
+  const DDDS_VALIDOS = new Set([
+    11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24, 27, 28, 31, 32, 33, 34, 35,
+    37, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 51, 53, 54, 55, 61, 62, 63, 64,
+    65, 66, 67, 68, 69, 71, 73, 74, 75, 77, 79, 81, 82, 83, 84, 85, 86, 87, 88,
+    89, 91, 92, 93, 94, 95, 96, 97, 98, 99,
+  ]);
+
+  function telefoneInvalido(d) {
+    const ddd = parseInt(d.slice(0, 2), 10);
+    const numero = d.slice(2);
+    if (!d || d.length < 10) return "O telefone é obrigatório.";
+    if (!DDDS_VALIDOS.has(ddd)) return "DDD inválido.";
+    if (d.length > 11) return "Telefone com número de dígitos inválido.";
+    if (d.length === 11 && d[2] !== "9")
+      return "Celular deve começar com 9 após o DDD.";
+    if (/^(\d)\1+$/.test(numero)) return "Telefone inválido.";
+    if (["12345678", "123456789", "87654321", "987654321"].includes(numero))
+      return "Telefone inválido.";
+    return null;
+  }
+
   phoneInput &&
     phoneInput.addEventListener("input", () => {
       let v = phoneInput.value.replace(/\D/g, "").slice(0, 11);
@@ -46,6 +132,27 @@
         v = v.replace(/^(\d{2})(\d{4,5})(\d*)$/, "($1) $2-$3");
       else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, "($1) $2");
       phoneInput.value = v;
+      const phoneErrorEl = document.getElementById("errorOrgPhone");
+      if (phoneErrorEl) phoneErrorEl.style.display = "none";
+    });
+
+  phoneInput &&
+    phoneInput.addEventListener("blur", () => {
+      const digits = phoneInput.value.replace(/\D/g, "");
+      const phoneErrorEl = document.getElementById("errorOrgPhone");
+      if (!phoneErrorEl) return;
+      if (!digits) {
+        phoneErrorEl.style.display = "block";
+        phoneErrorEl.textContent = "O telefone é obrigatório.";
+        return;
+      }
+      const err = telefoneInvalido(digits);
+      if (err) {
+        phoneErrorEl.style.display = "block";
+        phoneErrorEl.textContent = err;
+      } else {
+        phoneErrorEl.style.display = "none";
+      }
     });
 
   const cepInput = document.getElementById("orgCep");
@@ -113,7 +220,7 @@
   }
 
   function isGmail(v) {
-    return /^[a-zA-Z0-9._%+\-]+@gmail\.com$/i.test(v.trim());
+    return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/i.test(v.trim());
   }
 
   function senhaForte(v) {
@@ -132,6 +239,12 @@
     number: document.getElementById("req-number"),
     special: document.getElementById("req-special"),
   };
+  const reqLabels = {
+    len: "Mínimo 8 caracteres",
+    upper: "Pelo menos 1 letra maiúscula",
+    number: "Pelo menos 1 número",
+    special: "Pelo menos 1 caractere especial (!@#$…)",
+  };
 
   function atualizarChecklist(v) {
     const checks = {
@@ -142,12 +255,17 @@
     };
     Object.entries(checks).forEach(([k, ok]) => {
       const el = reqEls[k];
-      el.textContent = (ok ? "✓ " : "✗ ") + el.textContent.slice(2);
+      el.textContent = (ok ? "✓ " : "✗ ") + reqLabels[k];
       el.style.color = ok ? "#16a34a" : "#94a3b8";
     });
   }
 
   const pwdInput = document.getElementById("adminPwd");
+
+  pwdInput.addEventListener("focus", () => {
+    checklist.style.display = "flex";
+    atualizarChecklist(pwdInput.value);
+  });
 
   pwdInput.addEventListener("input", () => {
     if (checklist.style.display === "flex") {
@@ -171,7 +289,7 @@
     const adminEmail = document.getElementById("adminEmail").value.trim();
     const pwd = pwdInput.value;
     const confirmPwd = document.getElementById("confirmPwd").value;
-    const terms = document.getElementById("acceptTerms").checked;
+    const terms = document.getElementById("acceptTerms")?.checked ?? true;
 
     let valid = true;
 
@@ -224,6 +342,55 @@
       valid = false;
     } else {
       setError("groupTerms", "errorTerms", false);
+    }
+
+    const cnpjVal = document.getElementById("orgCnpj")?.value.trim();
+    const cnpjErrorEl = document.getElementById("errorOrgCnpj");
+    if (!cnpjVal) {
+      if (cnpjErrorEl) {
+        cnpjErrorEl.style.display = "block";
+        cnpjErrorEl.textContent = "O CNPJ é obrigatório.";
+      }
+      valid = false;
+    } else if (!cnpjValido(cnpjVal)) {
+      if (cnpjErrorEl) {
+        cnpjErrorEl.style.display = "block";
+        cnpjErrorEl.textContent = "CNPJ inválido.";
+      }
+      valid = false;
+    } else if (!cnpjValidadoNaReceita) {
+      const ok = await verificarCnpjReceita(cnpjVal);
+      if (!ok) {
+        if (cnpjErrorEl) {
+          cnpjErrorEl.style.display = "block";
+          cnpjErrorEl.textContent = "CNPJ não encontrado na Receita Federal.";
+        }
+        valid = false;
+      } else {
+        cnpjValidadoNaReceita = true;
+      }
+    }
+
+    const phoneVal = document.getElementById("orgPhone")?.value.trim();
+    const phoneErrorEl = document.getElementById("errorOrgPhone");
+    const phoneDigits = phoneVal ? phoneVal.replace(/\D/g, "") : "";
+    if (!phoneDigits) {
+      if (phoneErrorEl) {
+        phoneErrorEl.style.display = "block";
+        phoneErrorEl.textContent = "O telefone é obrigatório.";
+      }
+      valid = false;
+    } else {
+      const err = telefoneInvalido(phoneDigits);
+      if (err) {
+        if (phoneErrorEl) {
+          phoneErrorEl.style.display = "block";
+          phoneErrorEl.textContent = err;
+        }
+        valid = false;
+      } else {
+        if (phoneErrorEl) phoneErrorEl.style.display = "none";
+      }
     }
 
     if (!valid) return;
@@ -309,7 +476,7 @@
     const panel = document.getElementById("verifyPanel");
     panel.style.display = "block";
     document.getElementById("verifyEmailLabel").textContent = email;
-    document.getElementById("verifyError").classList.remove("is-visible");
+    document.getElementById("verifyError").style.display = "none";
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
 
     const digits = document.querySelectorAll(".code-digit");
@@ -353,11 +520,11 @@
     const errMsg = document.getElementById("verifyErrorMsg");
     const btn = document.getElementById("verifyBtn");
 
-    errBanner.classList.remove("is-visible");
+    errBanner.style.display = "none";
 
     if (code.length < 6) {
       errMsg.textContent = "Preencha todos os 6 dígitos do código.";
-      errBanner.classList.add("is-visible");
+      errBanner.style.display = "flex";
       return;
     }
 
@@ -378,7 +545,7 @@
         window.location.href = "/acesso/login/login.html?verified=1";
       } else {
         errMsg.textContent = data.mensagem || "Código inválido ou expirado.";
-        errBanner.classList.add("is-visible");
+        errBanner.style.display = "flex";
         digits.forEach((d) => {
           d.value = "";
         });
@@ -386,7 +553,7 @@
       }
     } catch {
       errMsg.textContent = "Não foi possível conectar ao servidor.";
-      errBanner.classList.add("is-visible");
+      errBanner.style.display = "flex";
     } finally {
       btn.disabled = false;
       btn.classList.remove("is-loading");
@@ -436,4 +603,15 @@
       }, 1000);
     });
   }
+
+  function initCadastroVerificationPanel() {
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get("email");
+    const verify = params.get("verify");
+    if (verify === "1" && email) {
+      mostrarPainelVerificacao(email);
+    }
+  }
+
+  initCadastroVerificationPanel();
 })();

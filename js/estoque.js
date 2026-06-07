@@ -28,7 +28,7 @@
     perPage: 20,
     total: 0,
     search: "",
-    condition: "",
+    condition: "ALL",
     categoryId: "",
     sortBy: "product_name",
     sortDir: "asc",
@@ -124,15 +124,18 @@
   async function loadItems() {
     showSkeleton();
 
-    const params = new URLSearchParams({
+    const paramsObj = {
       organization_id: _orgId,
       page: state.page,
       limit: state.perPage,
       sort: `${state.sortBy}:${state.sortDir}`,
-      ...(state.search && { search: state.search }),
-      ...(state.condition && { condition: state.condition }),
-      ...(state.categoryId && { category: state.categoryId }),
-    });
+    };
+    if (state.search) paramsObj.search = state.search;
+    // Só envia o parâmetro condition se não for 'ALL'
+    if (state.condition && state.condition !== "ALL")
+      paramsObj.condition = state.condition;
+    if (state.categoryId) paramsObj.category = state.categoryId;
+    const params = new URLSearchParams(paramsObj);
 
     try {
       const data = await SC.api(`/items?${params}`);
@@ -161,8 +164,11 @@
 
     hideEmpty();
     tbody.innerHTML = state.items
-      .map(
-        (item) => `
+      .map((item) => {
+        // Só mostra o botão Descartar se a condição for OTIMO ou REPARO
+        const showDiscard =
+          item.condition_code === "OTIMO" || item.condition_code === "REPARO";
+        return `
       <tr data-id="${item.id}" class="${state.selected.has(item.id) ? "selected" : ""}">
         <td class="col-check">
           <input type="checkbox" class="row-check" data-id="${item.id}"
@@ -197,7 +203,7 @@
         <td style="text-align:right; color:var(--color-text-muted);">${item.quantity ?? "—"}</td>
         <td style="font-size:0.8125rem; color:var(--color-text-muted);">${SC.escHtml(item.asset_tag || "—")}</td>
         <td class="col-actions">
-          <div class="table-actions">
+          <div class="table-actions" style="display: flex; gap: 2px; align-items: center; justify-content: flex-end;">
             <button class="btn btn-ghost btn-icon btn-sm btn-view" data-id="${item.id}" data-tooltip="Ver detalhes" aria-label="Ver detalhes">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -209,6 +215,9 @@
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </a>
+            ${
+              showDiscard
+                ? `
             <button class="btn btn-ghost btn-icon btn-sm btn-discard-row" data-id="${item.id}" data-name="${SC.escHtml(item.product_name)}" data-tooltip="Descartar" aria-label="Descartar" style="color:var(--color-danger);">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="3 6 5 6 21 6"/>
@@ -216,10 +225,13 @@
                 <path d="M10 11v6"/><path d="M14 11v6"/>
               </svg>
             </button>
+            `
+                : ""
+            }
           </div>
         </td>
-      </tr>`,
-      )
+      </tr>`;
+      })
       .join("");
 
     /* Wire row events */
@@ -565,7 +577,11 @@
 
       state.activeItemId = item.id;
       if (title) title.textContent = item.product_name || "Item";
-      if (editBtn) editBtn.href = `form-item.html?id=${item.id}`;
+      if (editBtn) {
+        editBtn.onclick = () => {
+          window.location.href = `form-item.html?id=${item.id}`;
+        };
+      }
 
       if (discardBtn) {
         discardBtn.onclick = () => openDiscardModal(item.id, item.product_name);
@@ -612,6 +628,10 @@
            <polyline points="21 15 16 10 5 21"/>
          </svg></div>`;
 
+    const brand = item.brand || item.product_brand || item.brand_name || "";
+    const model = item.model || item.product_model || item.model_name || "";
+    const brandModelText = [brand, model].filter(Boolean).join(" · ") || "—";
+
     return `
       ${photo}
 
@@ -632,11 +652,11 @@
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Marca / Modelo</span>
-          <div class="detail-field-value">${SC.escHtml([item.brand_name, item.model_name].filter(Boolean).join(" · ") || "—")}</div>
+          <div class="detail-field-value">${SC.escHtml(brandModelText)}</div>
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Nº Patrimônio</span>
-          <div class="detail-field-value">${SC.escHtml(item.asset_tag || "—")}</div>
+          <div class="detail-field-value">${SC.escHtml(item.serial_number || item.asset_tag || "—")}</div>
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Localização</span>
@@ -702,23 +722,37 @@
   function openDiscardModal(id, name) {
     state.discardItemId = id;
     const desc = document.getElementById("discardDesc");
+    const reasonSelect = document.getElementById("discardReason");
+    const reasonGroup = document.getElementById("discardReasonGroup");
     if (desc)
       desc.textContent = `Descartar "${name}"? Esta ação registrará o descarte e não pode ser desfeita.`;
+    if (reasonSelect) reasonSelect.value = "";
+    if (reasonGroup) reasonGroup.classList.remove("has-error");
     SC.openModal("discardModal");
   }
 
   function wireDiscardModal() {
     const confirmBtn = document.getElementById("discardConfirmBtn");
+    const reasonSelect = document.getElementById("discardReason");
+    const reasonGroup = document.getElementById("discardReasonGroup");
     if (!confirmBtn) return;
 
+    reasonSelect?.addEventListener("change", () => {
+      if (reasonSelect.value) {
+        reasonGroup?.classList.remove("has-error");
+      }
+    });
+
     confirmBtn.addEventListener("click", async () => {
-      const reason = document.getElementById("discardReason")?.value || "";
+      const reason = reasonSelect?.value || "";
       const notes = document.getElementById("discardNotes")?.value || "";
 
       if (!reason) {
-        SC.toastWarning("Selecione o motivo do descarte.");
+        reasonGroup?.classList.add("has-error");
         return;
       }
+
+      reasonGroup?.classList.remove("has-error");
 
       confirmBtn.classList.add("is-loading");
       confirmBtn.disabled = true;

@@ -1,24 +1,6 @@
 "use strict";
 
 // ════════════════════════════════════════════════════════
-// DADOS MOCK
-// ════════════════════════════════════════════════════════
-const MOCK_ITENS = [
-  { id: '101', nome: 'Notebook Dell XPS 15',           patrimonio: 'PAT-2024-001', condicao: 'otimo',    qtdTotal: 5,  qtdDisponivel: 3,  categoria: 'Informática',       numeroSerie: 'SN-DL-XPS-001' },
-  { id: '102', nome: 'Projetor Epson 3200',            patrimonio: 'PAT-2024-002', condicao: 'reparo',   qtdTotal: 2,  qtdDisponivel: 0,  categoria: 'Audiovisual',        numeroSerie: 'SN-EP-3200-01' },
-  { id: '103', nome: 'Cadeira Herman Miller',          patrimonio: 'PAT-2024-003', condicao: 'otimo',    qtdTotal: 20, qtdDisponivel: 15, categoria: 'Mobiliário',         numeroSerie: '' },
-  { id: '104', nome: 'Switch TP-Link 24 portas',       patrimonio: 'PAT-2024-004', condicao: 'bom',      qtdTotal: 3,  qtdDisponivel: 2,  categoria: 'Informática',        numeroSerie: 'SN-TP-24P-002' },
-  { id: '105', nome: 'Mesa de Escritório 160cm',       patrimonio: 'PAT-2024-005', condicao: 'otimo',    qtdTotal: 10, qtdDisponivel: 8,  categoria: 'Mobiliário',         numeroSerie: '' },
-  { id: '106', nome: 'Monitor LG 27" 4K',              patrimonio: 'PAT-2024-006', condicao: 'otimo',    qtdTotal: 8,  qtdDisponivel: 6,  categoria: 'Informática',        numeroSerie: 'SN-LG-27K-006' },
-  { id: '107', nome: 'Impressora HP LaserJet Pro',     patrimonio: 'PAT-2024-007', condicao: 'reparo',   qtdTotal: 2,  qtdDisponivel: 1,  categoria: 'Informática',        numeroSerie: 'SN-HP-LJ-007' },
-  { id: '108', nome: 'Ar-Condicionado Springer 12000', patrimonio: 'PAT-2024-008', condicao: 'otimo',    qtdTotal: 5,  qtdDisponivel: 5,  categoria: 'Eletrodomésticos',   numeroSerie: 'SN-SP-12K-008' },
-  { id: '109', nome: 'Tablet Samsung Galaxy Tab S8',   patrimonio: 'PAT-2024-009', condicao: 'descarte', qtdTotal: 3,  qtdDisponivel: 0,  categoria: 'Eletrônicos',        numeroSerie: 'SN-SM-S8-009' },
-  { id: '110', nome: 'Telefone IP Cisco 7961',         patrimonio: 'PAT-2024-010', condicao: 'bom',      qtdTotal: 15, qtdDisponivel: 12, categoria: 'Informática',        numeroSerie: 'SN-CS-7961-010' },
-  { id: '111', nome: 'Estabilizador NHS 1400VA',       patrimonio: 'PAT-2024-011', condicao: 'otimo',    qtdTotal: 6,  qtdDisponivel: 4,  categoria: 'Eletrônicos',        numeroSerie: 'SN-NH-14K-011' },
-  { id: '112', nome: 'Webcam Logitech C920',           patrimonio: 'PAT-2024-012', condicao: 'regular',  qtdTotal: 10, qtdDisponivel: 7,  categoria: 'Informática',        numeroSerie: 'SN-LG-C920-012' },
-];
-
-// ════════════════════════════════════════════════════════
 // ESTADO GLOBAL
 // ════════════════════════════════════════════════════════
 const Estado = {
@@ -41,26 +23,25 @@ const Estado = {
 // 1. INICIALIZAÇÃO
 // ════════════════════════════════════════════════════════
 function initEtiquetas() {
-  mostrarSkeleton();
   carregarPreferencias();
+  carregarItens(true);
+  carregarCategorias();
+  bindEventos();
+  renderListaItens(Estado.itens);
+  atualizarBotaoImprimir();
+  agendarPreview();
 
-  setTimeout(() => {
-    carregarItens();
-    carregarCategorias();
-    bindEventos();
-    renderListaItens(Estado.itens);
-    atualizarBotaoImprimir();
-  }, 600);
+  requestAnimationFrame(() => carregarItens());
 }
 
 function _etiqToken() {
   return localStorage.getItem('sc_token') || sessionStorage.getItem('sc_token');
 }
 
-function carregarItens() {
+function carregarItens(useCacheOnly = false) {
   const salvo = localStorage.getItem('estoque_itens');
-  Estado.itens = salvo ? JSON.parse(salvo) : MOCK_ITENS;
-  if (!salvo) localStorage.setItem('estoque_itens', JSON.stringify(MOCK_ITENS));
+  Estado.itens = salvo ? JSON.parse(salvo) : [];
+  if (!salvo) localStorage.setItem('estoque_itens', JSON.stringify([]));
   Estado.itensFiltrados = [...Estado.itens];
 
   const user = window.SC?.currentUser;
@@ -69,6 +50,10 @@ function carregarItens() {
       user.organizationName ||
       user.organization?.name ||
       Estado.orgName;
+  }
+
+  if (useCacheOnly) {
+    return;
   }
 
   const token = _etiqToken();
@@ -85,8 +70,11 @@ function carregarItens() {
         categoria: it.categoria || '',
         numeroSerie: it.numero_serie || it.numeroSerie || '',
       }));
-      if (itens.length) {
-        localStorage.setItem('estoque_itens', JSON.stringify(itens));
+
+      const atualHash = JSON.stringify(Estado.itens);
+      const novoHash = JSON.stringify(itens);
+      if (itens.length && novoHash !== atualHash) {
+        localStorage.setItem('estoque_itens', novoHash);
         Estado.itens = itens;
         Estado.itensFiltrados = [...itens];
         renderListaItens(Estado.itens);

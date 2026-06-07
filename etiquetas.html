@@ -3,31 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function() {
+      try {
+        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
+        var theme = 'light';
+        if (rawUser) {
+          var user = JSON.parse(rawUser);
+          var orgId = user && user.organization_id;
+          if (orgId) {
+            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
+            if (rawPrefs) {
+              theme = JSON.parse(rawPrefs).tema || theme;
+            }
+          }
+        }
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+        }
+        var themeMode = theme === 'escuro' ? 'dark' : 'light';
+        var bg = themeMode === 'dark' ? '#0f172a' : '#f8fafc';
+        var fg = themeMode === 'dark' ? '#f8fafc' : '#1e293b';
+        document.documentElement.setAttribute('data-theme', themeMode);
+        document.documentElement.style.backgroundColor = bg;
+        document.documentElement.style.color = fg;
+        if (document.body) {
+          document.body.style.backgroundColor = bg;
+          document.body.style.color = fg;
+        }
+        var themeSheet = document.createElement('style');
+        themeSheet.textContent = 'html, body { background-color: ' + bg + ' !important; color: ' + fg + ' !important; }';
+        document.head.appendChild(themeSheet);
+      } catch (error) {}
+    })();
+  </script>
   <title>Etiquetas — StockControl</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles/main.css" />
   <link rel="stylesheet" href="/styles/components.css" />
-  <link rel="stylesheet" href="styles/etiquetas.css" />
 </head>
-<body>
+<body style="background:inherit;color:inherit;">
 
   <!-- ── SIDEBAR ──────────────────────────────────────── -->
  
 
   <!-- ── MAIN ─────────────────────────────────────────── -->
   <main class="page-content">
-
-
     <div class="conteudo">
       <div class="page-header">
-        <h1>Gerador de Etiquetas</h1>
-        <p>Selecione itens e imprima etiquetas patrimoniais com QR Code</p>
+        <div>
+          <h1 class="page-title">Gerador de Etiquetas</h1>
+          <p class="page-subtitle">Selecione itens e imprima etiquetas patrimoniais com QR Code</p>
+        </div>
       </div>
-
       <div class="layout-etiquetas">
-
         <!-- ── PAINEL ESQUERDO: lista de itens ─────────── -->
         <div class="painel-lista">
 
@@ -53,27 +84,7 @@
             <span class="contador-selecionados" id="contadorSelecionados">0 selecionados</span>
           </div>
 
-          <div class="lista-itens" id="listaItens">
-            <!-- skeleton inicial -->
-            <div class="skeleton-linha">
-              <div class="skeleton-box sk-check"></div>
-              <div class="skeleton-box sk-icone"></div>
-              <div class="sk-info"><div class="skeleton-box sk-nome"></div><div class="skeleton-box sk-meta"></div></div>
-              <div class="skeleton-box sk-pat"></div>
-            </div>
-            <div class="skeleton-linha">
-              <div class="skeleton-box sk-check"></div>
-              <div class="skeleton-box sk-icone"></div>
-              <div class="sk-info"><div class="skeleton-box sk-nome" style="width:45%"></div><div class="skeleton-box sk-meta" style="width:30%"></div></div>
-              <div class="skeleton-box sk-pat"></div>
-            </div>
-            <div class="skeleton-linha">
-              <div class="skeleton-box sk-check"></div>
-              <div class="skeleton-box sk-icone"></div>
-              <div class="sk-info"><div class="skeleton-box sk-nome" style="width:70%"></div><div class="skeleton-box sk-meta" style="width:50%"></div></div>
-              <div class="skeleton-box sk-pat"></div>
-            </div>
-          </div>
+          <div class="lista-itens" id="listaItens"></div>
 
           <div class="rodape-lista">
             <span id="infoTotal">Carregando…</span>
@@ -153,7 +164,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
   <!-- ── ÁREA DE IMPRESSÃO (oculta na tela, visível no print) ── -->
   <div class="area-impressao" id="areaImpressao">

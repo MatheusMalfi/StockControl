@@ -1,4 +1,10 @@
 (() => {
+  function getPostLoginRedirect(user) {
+    return user && user.org_type === "RECYCLER"
+      ? "/recicladora/recicladora.html"
+      : "/index.html";
+  }
+
   const form = document.getElementById("loginForm");
   const emailInput = document.getElementById("email");
   const passInput = document.getElementById("password");
@@ -17,7 +23,7 @@
     banner.innerHTML =
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
-      "<span>E-mail verificado com sucesso! Faça login para continuar.</span>";
+      "<span>E-mail verificado com sucesso! <br> Faça login para continuar.</span>";
     form.insertAdjacentElement("beforebegin", banner);
     // Remove o parâmetro da URL sem recarregar a página
     history.replaceState(null, "", window.location.pathname);
@@ -39,7 +45,7 @@
   }
 
   function isGmail(v) {
-    return /^[a-zA-Z0-9._%+\-]+@gmail\.com$/i.test(v.trim());
+    return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/i.test(v.trim());
   }
 
   function senhaValida(v) {
@@ -139,6 +145,7 @@
         const storage = document.getElementById("rememberMe").checked
           ? localStorage
           : sessionStorage;
+
         storage.setItem("sc_token", data.token);
         storage.setItem("sc_user", JSON.stringify(data.user ?? {}));
 
@@ -169,7 +176,7 @@
           localStorage.setItem("log_acessos", JSON.stringify(log.slice(0, 20)));
         } catch {}
 
-        window.location.href = "/index.html";
+        window.location.href = getPostLoginRedirect(data.user ?? {});
       } else {
         if (res.status === 403 && data.email_nao_verificado) {
           // Mostra mensagem especial com link para reenviar o código
@@ -188,6 +195,10 @@
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ email: data.email || emailVal }),
                 });
+                window.location.href =
+                  "/cadastro.html?verify=1&email=" +
+                  encodeURIComponent(data.email || emailVal);
+                return;
               } catch {
                 /* silencia */
               }
@@ -220,5 +231,12 @@
 
   const token =
     localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
-  if (token) window.location.href = "/index.html";
+  if (token) {
+    const storedUser = JSON.parse(
+      localStorage.getItem("sc_user") ||
+        sessionStorage.getItem("sc_user") ||
+        "{}",
+    );
+    window.location.href = getPostLoginRedirect(storedUser);
+  }
 })();

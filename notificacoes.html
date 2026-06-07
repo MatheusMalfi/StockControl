@@ -1,226 +1,436 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notificações — StockControl</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/main.css" />
-  <link rel="stylesheet" href="/styles/components.css" />
-  <style>
-    .notif-layout {
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: var(--space-5);
-      align-items: start;
-    }
-    @media (max-width: 1024px) { .notif-layout { grid-template-columns: 1fr; } }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var rawUser =
+            localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user");
+          var theme = "light";
+          if (rawUser) {
+            var user = JSON.parse(rawUser);
+            var orgId = user && user.organization_id;
+            if (orgId) {
+              var rawPrefs = localStorage.getItem("sc_preferencias_" + orgId);
+              if (rawPrefs) {
+                theme = JSON.parse(rawPrefs).tema || theme;
+              }
+            }
+          }
+          if (theme === "auto") {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "escuro"
+              : "claro";
+          }
+          document.documentElement.setAttribute(
+            "data-theme",
+            theme === "escuro" ? "dark" : "light",
+          );
+          document.documentElement.style.backgroundColor =
+            theme === "escuro" ? "#0f172a" : "#f8fafc";
+          document.documentElement.style.color =
+            theme === "escuro" ? "#f8fafc" : "#1e293b";
+        } catch (error) {}
+      })();
+    </script>
+    <title>Notificações — StockControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+    <style>
+      .notif-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: var(--space-5);
+        align-items: start;
+      }
+      @media (max-width: 1024px) {
+        .notif-layout {
+          grid-template-columns: 1fr;
+        }
+      }
 
-    /* ── Notification items ────────────────────────────────────────── */
-    .notif-item {
-      display: flex;
-      gap: 14px;
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      transition: background 0.1s;
-      cursor: pointer;
-      position: relative;
-    }
-    .notif-item:last-child { border-bottom: none; }
-    .notif-item:hover { background: var(--color-surface-alt); }
-    .notif-item.unread {
-      background: #EFF6FF;
-      border-left: 3px solid var(--color-primary);
-      padding-left: calc(var(--space-5) - 3px);
-    }
-    .notif-item.unread:hover { background: #DBEAFE; }
+      /* ── Notification items ────────────────────────────────────────── */
+      .notif-item {
+        display: flex;
+        gap: 14px;
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        transition: background 0.1s;
+        cursor: pointer;
+        position: relative;
+      }
+      .notif-item:last-child {
+        border-bottom: none;
+      }
+      .notif-item:hover {
+        background: var(--color-surface-alt);
+      }
+      .notif-item.unread {
+        background: var(--color-primary-light);
+        border-left: 3px solid var(--color-primary);
+        padding-left: calc(var(--space-5) - 3px);
+      }
+      .notif-item.unread:hover {
+        background: var(--color-primary-light);
+        color: var(--color-text);
+      }
+      .notif-item.unread:hover .notif-title,
+      .notif-item.unread:hover .notif-msg,
+      .notif-item.unread:hover .notif-time {
+        color: var(--color-text);
+      }
 
-    .notif-icon {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .notif-icon-stock    { background: #FEF9C3; color: #854D0E; }
-    .notif-icon-repair   { background: #FEE2E2; color: #991B1B; }
-    .notif-icon-donation { background: #DCFCE7; color: #166534; }
-    .notif-icon-system   { background: var(--color-surface-alt); color: var(--color-text-muted); }
-    .notif-icon-request  { background: #EDE9FE; color: #5B21B6; }
+      .notif-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .notif-icon-stock {
+        background: var(--color-warning-light);
+        color: var(--color-warning-dark);
+      }
+      .notif-icon-repair {
+        background: var(--color-danger-light);
+        color: var(--color-danger-dark);
+      }
+      .notif-icon-donation {
+        background: var(--color-success-light);
+        color: var(--color-success-dark);
+      }
+      .notif-icon-system {
+        background: var(--color-surface-alt);
+        color: var(--color-text-muted);
+      }
+      .notif-icon-request {
+        background: var(--color-primary-light);
+        color: var(--color-primary-dark);
+      }
 
-    .notif-body { flex: 1; min-width: 0; }
+      .notif-body {
+        flex: 1;
+        min-width: 0;
+      }
 
-    .notif-title-row {
-      display: flex; align-items: center;
-      gap: var(--space-2); flex-wrap: wrap;
-    }
-    .notif-title {
-      font-size: 0.8125rem;
-      line-height: 1.4;
-    }
-    .notif-item.unread .notif-title { font-weight: 600; }
+      .notif-title-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+      }
+      .notif-title {
+        font-size: 0.8125rem;
+        line-height: 1.4;
+      }
+      .notif-item.unread .notif-title {
+        font-weight: 600;
+      }
 
-    .notif-msg {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-      margin-top: 2px;
-      line-height: 1.45;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .notif-time {
-      font-size: 0.6875rem;
-      color: var(--color-text-muted);
-      margin-top: 4px;
-    }
+      .notif-msg {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        margin-top: 2px;
+        line-height: 1.45;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .notif-time {
+        font-size: 0.6875rem;
+        color: var(--color-text-muted);
+        margin-top: 4px;
+      }
 
-    /* Priority badges */
-    .notif-priority {
-      font-size: 0.625rem; font-weight: 700;
-      padding: 2px 6px; border-radius: var(--radius-full);
-      text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0;
-    }
-    .notif-priority-critica { background: #FEE2E2; color: #991B1B; }
-    .notif-priority-alta    { background: #FEF3C7; color: #92400E; }
-    .notif-priority-media   { background: #FEF9C3; color: #854D0E; }
+      /* Priority badges */
+      .notif-priority {
+        font-size: 0.625rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: var(--radius-full);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
+      }
+      .notif-priority-critica {
+        background: var(--color-danger-light);
+        color: var(--color-danger-dark);
+      }
+      .notif-priority-alta {
+        background: var(--color-warning-light);
+        color: var(--color-warning-dark);
+      }
+      .notif-priority-media {
+        background: var(--color-warning-light);
+        color: var(--color-warning-dark);
+      }
 
-    /* Unread dot */
-    .notif-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--color-primary);
-      flex-shrink: 0; margin-top: 6px;
-    }
+      /* Unread dot */
+      .notif-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        flex-shrink: 0;
+        margin-top: 6px;
+      }
 
-    /* Action buttons — visible on hover */
-    .notif-item-actions {
-      display: flex; align-items: flex-start;
-      gap: var(--space-1); flex-shrink: 0;
-      opacity: 0; transition: opacity 0.15s;
-    }
-    .notif-item:hover .notif-item-actions { opacity: 1; }
+      /* Action buttons — visible on hover */
+      .notif-item-actions {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-1);
+        flex-shrink: 0;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .notif-item:hover .notif-item-actions {
+        opacity: 1;
+      }
 
-    .notif-action-btn {
-      display: flex; align-items: center; justify-content: center;
-      height: 28px; padding: 0 var(--space-2);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      background: var(--color-surface);
-      color: var(--color-text-secondary);
-      font-size: 0.75rem; font-weight: 500;
-      cursor: pointer; white-space: nowrap;
-      transition: all var(--transition-fast);
-      text-decoration: none;
-    }
-    .notif-action-btn:hover {
-      border-color: var(--color-primary);
-      color: var(--color-primary);
-      background: var(--color-primary-light);
-    }
-    .notif-delete-btn {
-      display: flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px; border-radius: var(--radius-md);
-      border: none; background: transparent;
-      color: var(--color-text-muted); cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    .notif-delete-btn:hover { background: #FEE2E2; color: #991B1B; }
+      .notif-action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 28px;
+        padding: 0 var(--space-2);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        color: var(--color-text-secondary);
+        font-size: 0.75rem;
+        font-weight: 500;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all var(--transition-fast);
+        text-decoration: none;
+      }
+      .notif-action-btn:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+        background: var(--color-primary-light);
+      }
+      .notif-delete-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-md);
+        border: none;
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+      }
+      .notif-delete-btn:hover {
+        background: var(--color-danger-light);
+        color: var(--color-danger-dark);
+      }
 
-    /* ── Rule cards ─────────────────────────────────────────────────── */
-    .rule-card {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4);
-      display: flex; align-items: flex-start;
-      gap: 12px; margin-bottom: 8px;
-      transition: border-color var(--transition-fast);
-    }
-    .rule-card:last-child { margin-bottom: 0; }
-    .rule-card.rule-disabled { opacity: 0.55; }
-    .rule-card-icon { flex-shrink: 0; margin-top: 1px; }
-    .rule-info { flex: 1; }
-    .rule-title { font-size: 0.8125rem; font-weight: 600; }
-    .rule-desc  { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 1px; }
+      /* ── Rule cards ─────────────────────────────────────────────────── */
+      .rule-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 8px;
+        transition: border-color var(--transition-fast);
+      }
+      .rule-card:last-child {
+        margin-bottom: 0;
+      }
+      .rule-card.rule-disabled {
+        opacity: 0.55;
+      }
+      .rule-card-icon {
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .rule-info {
+        flex: 1;
+      }
+      .rule-title {
+        font-size: 0.8125rem;
+        font-weight: 600;
+      }
+      .rule-desc {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        margin-top: 1px;
+      }
 
-    /* Toggle switch */
-    .toggle-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
-    .toggle input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider {
-      position: absolute; cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: var(--color-border);
-      border-radius: 22px; transition: background 0.2s;
-    }
-    .toggle-slider::before {
-      content: "";
-      position: absolute;
-      height: 16px; width: 16px;
-      left: 3px; bottom: 3px;
-      background: #fff; border-radius: 50%;
-      transition: transform 0.2s;
-    }
-    .toggle input:checked + .toggle-slider { background: var(--color-primary); }
-    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+      /* Toggle switch */
+      .toggle-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .toggle {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 22px;
+      }
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--color-border);
+        border-radius: 22px;
+        transition: background 0.2s;
+      }
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        height: 16px;
+        width: 16px;
+        left: 3px;
+        bottom: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform 0.2s;
+      }
+      .toggle input:checked + .toggle-slider {
+        background: var(--color-primary);
+      }
+      .toggle input:checked + .toggle-slider::before {
+        transform: translateX(18px);
+      }
 
-    .threshold-input {
-      display: flex; align-items: center;
-      gap: 6px; margin-top: 6px;
-    }
-    .threshold-input input { width: 70px; }
+      .threshold-input {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .threshold-input input {
+        width: 70px;
+      }
 
-    /* ── Empty state ───────────────────────────────────────────────── */
-    #notif-empty { padding: var(--space-10); border: none; }
+      /* ── Empty state ───────────────────────────────────────────────── */
+      #notif-empty {
+        padding: var(--space-10);
+        border: none;
+      }
 
-    /* ── Scan badge on rules header ──────────────────────────────────── */
-    .rules-alert-count {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-width: 20px; height: 20px; padding: 0 6px;
-      background: var(--color-danger); color: #fff;
-      font-size: 0.6875rem; font-weight: 700;
-      border-radius: var(--radius-full);
-    }
-  </style>
-</head>
-<body>
-
-  <main class="page-content">
+      /* ── Scan badge on rules header ──────────────────────────────────── */
+      .rules-alert-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        background: var(--color-danger);
+        color: #fff;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        border-radius: var(--radius-full);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-content">
       <div class="page-toolbar">
         <div>
           <h1 class="page-title">Notificações</h1>
-          <p class="page-subtitle">Central de alertas e configuração de regras</p>
+          <p class="page-subtitle">
+            Central de alertas e configuração de regras
+          </p>
         </div>
-        <div style="display:flex;gap:var(--space-2);">
+        <div style="display: flex; align-items: center; gap: var(--space-2)">
           <button class="btn btn-secondary btn-sm" id="btnScanAlerts">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 .49-4.95" />
+            </svg>
             Gerar Alertas
           </button>
-          <button class="btn btn-secondary" id="btn-mark-all-read">Marcar todas como lidas</button>
+          <button class="btn btn-secondary btn-sm" id="btn-mark-all-read">
+            Marcar todas como lidas
+          </button>
         </div>
       </div>
 
       <div class="notif-layout">
-
         <!-- ── Left: notification feed ──────────────────────────── -->
         <div>
-          <!-- Tabs -->
-          <div class="tabs" style="margin-bottom:var(--space-4);">
-            <button class="tab active" data-tab="all">Todas <span class="badge" id="tab-badge-all">0</span></button>
-            <button class="tab" data-tab="unread">Não lidas <span class="badge badge-primary" id="tab-badge-unread">0</span></button>
-            <button class="tab" data-tab="stock">Estoque</button>
-            <button class="tab" data-tab="request">Solicitações</button>
-            <button class="tab" data-tab="system">Sistema</button>
+          <!-- Filters -->
+          <div class="filters-bar" style="margin-bottom: var(--space-4)">
+            <span class="filter-label">Filtrar por</span>
+            <button type="button" class="tab filter-chip active" data-tab="all">
+              Todas <span class="badge" id="tab-badge-all">0</span>
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="unread">
+              Não lidas
+              <span class="badge badge-primary" id="tab-badge-unread">0</span>
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="stock">
+              Estoque
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="request">
+              Solicitações
+            </button>
+            <button type="button" class="tab filter-chip" data-tab="system">
+              Sistema
+            </button>
           </div>
 
           <!-- List panel -->
-          <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden;">
+          <div
+            style="
+              background: var(--color-surface);
+              border: 1px solid var(--color-border);
+              border-radius: var(--radius-xl);
+              overflow: hidden;
+            "
+          >
             <div id="notif-list"></div>
-            <div id="notif-empty" class="empty-state" style="display:none;">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".3">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            <div id="notif-empty" class="empty-state" style="display: none">
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                opacity=".3"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
               <p class="empty-state-title">Nenhuma notificação</p>
               <p class="empty-state-text">Tudo em ordem por aqui.</p>
@@ -228,7 +438,11 @@
           </div>
 
           <!-- Pagination -->
-          <div class="pagination" id="notifPagination" style="display:none; margin-top:var(--space-3);">
+          <div
+            class="pagination"
+            id="notifPagination"
+            style="display: none; margin-top: var(--space-3)"
+          >
             <span class="pagination-info" id="notifPagInfo">—</span>
             <div class="pagination-controls" id="notifPagControls"></div>
           </div>
@@ -236,107 +450,290 @@
 
         <!-- ── Right: alert rules ──────────────────────────────── -->
         <div>
-          <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden;">
-            <div style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);display:flex;align-items:center;justify-content:space-between;">
+          <div
+            style="
+              background: var(--color-surface);
+              border: 1px solid var(--color-border);
+              border-radius: var(--radius-xl);
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                padding: var(--space-4) var(--space-5);
+                border-bottom: 1px solid var(--color-border);
+                background: var(--color-surface-alt);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+              "
+            >
               <div>
-                <div style="font-weight:600;font-size:0.875rem;">Regras de Alertas</div>
-                <div style="font-size:0.75rem;color:var(--color-text-muted);margin-top:2px;">Configure quando você quer ser notificado</div>
+                <div style="font-weight: 600; font-size: 0.875rem">
+                  Regras de Alertas
+                </div>
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--color-text-muted);
+                    margin-top: 2px;
+                  "
+                >
+                  Configure quando você quer ser notificado
+                </div>
               </div>
-              <span class="rules-alert-count" id="rulesAlertCount" style="display:none;">0</span>
+              <span
+                class="rules-alert-count"
+                id="rulesAlertCount"
+                style="display: none"
+                >0</span
+              >
             </div>
-            <div style="padding:var(--space-4) var(--space-5);" id="rules-container">
-
+            <div
+              style="padding: var(--space-4) var(--space-5)"
+              id="rules-container"
+            >
               <!-- Estoque baixo -->
               <div class="rule-card" id="ruleCardLowStock">
                 <div class="rule-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#854D0E" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#854D0E"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                    />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
                 </div>
                 <div class="rule-info">
                   <div class="rule-title">Estoque baixo</div>
-                  <div class="rule-desc">Alertar quando quantidade &lt; limite</div>
+                  <div class="rule-desc">
+                    Alertar quando estoque disponível ficar abaixo do limite
+                  </div>
                   <div class="threshold-input">
-                    <label style="font-size:0.75rem;">Limite:</label>
-                    <input type="number" class="form-control" id="rule-stock-threshold" value="5" min="1" style="width:70px;font-size:0.75rem;height:32px;padding:4px 8px;" />
-                    <span style="font-size:0.75rem;color:var(--color-text-muted);">unidades</span>
+                    <label style="font-size: 0.75rem">Limite:</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="rule-stock-threshold"
+                      value="5"
+                      min="1"
+                      style="
+                        width: 70px;
+                        font-size: 0.75rem;
+                        height: 32px;
+                        padding: 4px 8px;
+                      "
+                    />
+                    <span
+                      style="font-size: 0.75rem; color: var(--color-text-muted)"
+                      >unidades</span
+                    >
                   </div>
                 </div>
-                <label class="toggle"><input type="checkbox" id="rule-low-stock" checked /><span class="toggle-slider"></span></label>
+                <label class="toggle"
+                  ><input type="checkbox" id="rule-low-stock" checked /><span
+                    class="toggle-slider"
+                  ></span
+                ></label>
               </div>
 
               <!-- Descarte -->
               <div class="rule-card" id="ruleCardDiscard">
                 <div class="rule-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#991B1B"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
                 </div>
                 <div class="rule-info">
                   <div class="rule-title">Itens para descarte</div>
-                  <div class="rule-desc">Itens marcados como "Descartar" sem movimentação</div>
+                  <div class="rule-desc">
+                    Itens marcados como "Descartar" sem movimentação
+                  </div>
                   <div class="threshold-input">
-                    <label style="font-size:0.75rem;">Após:</label>
-                    <input type="number" class="form-control" id="rule-discard-days" value="30" min="1" style="width:70px;font-size:0.75rem;height:32px;padding:4px 8px;" />
-                    <span style="font-size:0.75rem;color:var(--color-text-muted);">dias</span>
+                    <label style="font-size: 0.75rem">Após:</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="rule-discard-days"
+                      value="30"
+                      min="1"
+                      style="
+                        width: 70px;
+                        font-size: 0.75rem;
+                        height: 32px;
+                        padding: 4px 8px;
+                      "
+                    />
+                    <span
+                      style="font-size: 0.75rem; color: var(--color-text-muted)"
+                      >dias</span
+                    >
                   </div>
                 </div>
-                <label class="toggle"><input type="checkbox" id="rule-discard" checked /><span class="toggle-slider"></span></label>
+                <label class="toggle"
+                  ><input type="checkbox" id="rule-discard" checked /><span
+                    class="toggle-slider"
+                  ></span
+                ></label>
               </div>
 
               <!-- Solicitação -->
               <div class="rule-card" id="ruleCardRequest">
                 <div class="rule-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B21B6" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#5B21B6"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
                 </div>
                 <div class="rule-info">
                   <div class="rule-title">Solicitação pendente</div>
-                  <div class="rule-desc">Alertar gestores quando houver novas solicitações</div>
+                  <div class="rule-desc">
+                    Alertar gestores quando houver novas solicitações
+                  </div>
                 </div>
-                <label class="toggle"><input type="checkbox" id="rule-request" checked /><span class="toggle-slider"></span></label>
+                <label class="toggle"
+                  ><input type="checkbox" id="rule-request" checked /><span
+                    class="toggle-slider"
+                  ></span
+                ></label>
               </div>
 
               <!-- Meta -->
               <div class="rule-card" id="ruleCardGoal">
                 <div class="rule-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#166534"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                    />
+                  </svg>
                 </div>
                 <div class="rule-info">
                   <div class="rule-title">Meta de arrecadação</div>
-                  <div class="rule-desc">Alertar quando a meta estiver próxima do prazo</div>
+                  <div class="rule-desc">
+                    Alertar quando a meta estiver próxima do prazo
+                  </div>
                   <div class="threshold-input">
-                    <label style="font-size:0.75rem;">Faltando:</label>
-                    <input type="number" class="form-control" id="rule-goal-days" value="7" min="1" style="width:70px;font-size:0.75rem;height:32px;padding:4px 8px;" />
-                    <span style="font-size:0.75rem;color:var(--color-text-muted);">dias</span>
+                    <label style="font-size: 0.75rem">Faltando:</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="rule-goal-days"
+                      value="7"
+                      min="1"
+                      style="
+                        width: 70px;
+                        font-size: 0.75rem;
+                        height: 32px;
+                        padding: 4px 8px;
+                      "
+                    />
+                    <span
+                      style="font-size: 0.75rem; color: var(--color-text-muted)"
+                      >dias</span
+                    >
                   </div>
                 </div>
-                <label class="toggle"><input type="checkbox" id="rule-goal" checked /><span class="toggle-slider"></span></label>
+                <label class="toggle"
+                  ><input type="checkbox" id="rule-goal" checked /><span
+                    class="toggle-slider"
+                  ></span
+                ></label>
               </div>
 
               <!-- E-mail -->
               <div class="rule-card" id="ruleCardEmail">
                 <div class="rule-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--color-primary)"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                    />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
                 </div>
                 <div class="rule-info">
                   <div class="rule-title">Notificações por e-mail</div>
                   <div class="rule-desc">Receber resumo diário por e-mail</div>
                 </div>
-                <label class="toggle"><input type="checkbox" id="rule-email" /><span class="toggle-slider"></span></label>
+                <label class="toggle"
+                  ><input type="checkbox" id="rule-email" /><span
+                    class="toggle-slider"
+                  ></span
+                ></label>
               </div>
 
-              <button class="btn btn-primary" id="btn-save-rules" style="width:100%;margin-top:var(--space-3);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <button
+                class="btn btn-primary"
+                id="btn-save-rules"
+                style="width: 100%; margin-top: var(--space-3)"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                  />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
                 Salvar Configurações
               </button>
-
             </div>
           </div>
         </div>
-
-      </div><!-- /notif-layout -->
+      </div>
+      <!-- /notif-layout -->
     </main>
-  <!-- Toast -->
-  <div class="toast-container" id="toastContainer"></div>
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/layout.js"></script>
-  <script src="/js/main.js"></script>
-  <script src="/js/notificacoes.js"></script>
-</body>
+    <script src="/js/layout.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/notificacoes.js"></script>
+  </body>
 </html>

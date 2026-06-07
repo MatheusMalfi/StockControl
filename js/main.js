@@ -71,20 +71,32 @@
      ============================================================ */
   function aplicarTema(tema) {
     const html = document.documentElement;
-    if (tema === 'escuro') {
-      html.setAttribute('data-theme', 'dark');
-    } else if (tema === 'auto') {
-      html.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    if (tema === "escuro") {
+      html.setAttribute("data-theme", "dark");
+    } else if (tema === "auto") {
+      html.setAttribute(
+        "data-theme",
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light",
+      );
     } else {
-      html.setAttribute('data-theme', 'light');
+      html.setAttribute("data-theme", "light");
     }
+  }
+
+  function getCurrentPreferencesStorageKey() {
+    const user = getUser() || {};
+    const orgId =
+      user.organization_id || user.organizationId || user.orgId || "";
+    return orgId ? `sc_preferencias_${orgId}` : "sc_preferencias";
   }
 
   function carregarTemaPreferido() {
     try {
-      const prefsRaw = localStorage.getItem('sc_preferencias');
+      const prefsRaw = localStorage.getItem(getCurrentPreferencesStorageKey());
       const prefs = prefsRaw ? JSON.parse(prefsRaw) : {};
-      const tema = prefs.tema || 'claro';
+      const tema = prefs.tema || "claro";
       aplicarTema(tema);
     } catch {}
   }
@@ -95,6 +107,13 @@
   SC.aplicarTema = aplicarTema;
   SC.carregarTemaPreferido = carregarTemaPreferido;
 
+  SC.storageKey = function (key, orgId) {
+    const user = getUser() || {};
+    const organizationId =
+      orgId || user.organization_id || user.organizationId || user.org;
+    return organizationId ? `${key}_${organizationId}` : key;
+  };
+
   /**
    * SC.api(path, options)
    * Thin wrapper around fetch that:
@@ -104,18 +123,28 @@
    *  - On 401 → clears session and redirects to login
    */
   SC.api = async function (path, options = {}) {
+    const requestOptions = { ...options };
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${getToken()}`,
-      ...(options.headers || {}),
+      ...(requestOptions.headers || {}),
     };
 
     /* FormData bodies must NOT have Content-Type set (browser sets it) */
-    if (options.body instanceof FormData) {
+    if (requestOptions.body instanceof FormData) {
       delete headers["Content-Type"];
+    } else if (
+      requestOptions.body &&
+      typeof requestOptions.body === "object" &&
+      !(requestOptions.body instanceof Blob)
+    ) {
+      requestOptions.body = JSON.stringify(requestOptions.body);
     }
 
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...requestOptions,
+      headers,
+    });
 
     if (res.status === 401) {
       clearSession();
@@ -317,8 +346,8 @@
 
     // Try to load user's avatar from local storage
     const getUserStorageKey = () => {
-      const id = user?.id || user?.user_id || user?.userId || '';
-      return id ? `sc_usuario_${id}` : 'sc_usuario';
+      const id = user?.id || user?.user_id || user?.userId || "";
+      return id ? `sc_usuario_${id}` : "sc_usuario";
     };
     let userAvatar = null;
     try {
@@ -331,67 +360,150 @@
     const sidebarInitials = document.getElementById("sidebarInitials");
     const sidebarUserName = document.getElementById("sidebarUserName");
     const sidebarUserRole = document.getElementById("sidebarUserRole");
-    
+
     if (sidebarInitials) {
       const sidebarAvatar = sidebarInitials.parentElement;
       if (sidebarAvatar && userAvatar) {
-        sidebarInitials.style.display = 'none';
-        let img = sidebarAvatar.querySelector('img');
+        sidebarInitials.style.display = "none";
+        let img = sidebarAvatar.querySelector("img");
         if (!img) {
-          img = document.createElement('img');
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'cover';
-          img.style.borderRadius = 'inherit';
+          img = document.createElement("img");
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          img.style.borderRadius = "inherit";
           sidebarAvatar.appendChild(img);
         }
         img.src = userAvatar;
       } else if (sidebarInitials) {
         sidebarInitials.textContent = initials;
-        sidebarInitials.style.display = '';
+        sidebarInitials.style.display = "";
         if (sidebarAvatar) {
-          const img = sidebarAvatar.querySelector('img');
+          const img = sidebarAvatar.querySelector("img");
           if (img) img.remove();
         }
       }
     }
-    
+
     if (sidebarUserName) sidebarUserName.textContent = user.name || "Usuário";
     if (sidebarUserRole) sidebarUserRole.textContent = roleLabel;
 
     /* Header */
     const headerAvatar = document.getElementById("headerAvatar");
     const headerUserName = document.getElementById("headerUserName");
-    
+
     if (headerAvatar) {
       if (userAvatar) {
-        headerAvatar.textContent = '';
-        let img = headerAvatar.querySelector('img');
+        headerAvatar.textContent = "";
+        let img = headerAvatar.querySelector("img");
         if (!img) {
-          img = document.createElement('img');
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'cover';
-          img.style.borderRadius = 'inherit';
+          img = document.createElement("img");
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          img.style.borderRadius = "inherit";
           headerAvatar.appendChild(img);
         }
         img.src = userAvatar;
       } else {
         headerAvatar.textContent = initials;
-        const img = headerAvatar.querySelector('img');
+        const img = headerAvatar.querySelector("img");
         if (img) img.remove();
       }
     }
-    
+
     if (headerUserName)
       headerUserName.textContent = user.name
         ? user.name.split(" ")[0]
         : "Usuário";
   }
 
+  function isRecyclerUser(user) {
+    if (!user) return false;
+    const type =
+      user.org_type ||
+      user.organization_type ||
+      user.orgType ||
+      user.role ||
+      "";
+    return String(type).toUpperCase() === "RECYCLER";
+  }
+
+  function updateSidebarForRecycler(user) {
+    const navItems = Array.from(
+      document.querySelectorAll("#sidebar .sidebar-nav .nav-item"),
+    );
+    if (!navItems.length) return;
+
+    const currentPage =
+      window.location.pathname.split("/").pop() || "index.html";
+    const isRecycler = isRecyclerUser(user);
+
+    if (!isRecycler) {
+      navItems.forEach((item) => {
+        item.removeAttribute("data-disabled");
+        item.classList.remove("disabled");
+        item.style.pointerEvents = "";
+        item.style.opacity = "";
+        item.removeAttribute("title");
+      });
+      return;
+    }
+
+    const recyclerTargets = [
+      {
+        href: "/recicladora/recicladora.html",
+        page: "recicladora.html",
+        label: "Dashboard",
+      },
+      {
+        href: "/recicladora/pedidos-recicladora.html",
+        page: "pedidos-recicladora.html",
+        label: "Pedidos",
+      },
+      {
+        href: "/recicladora/agendamento-coleta.html",
+        page: "agendamento-coleta.html",
+        label: "Agendar Coleta",
+      },
+    ];
+
+    navItems.forEach((item, index) => {
+      if (index < recyclerTargets.length) {
+        const target = recyclerTargets[index];
+        item.setAttribute("href", target.href);
+        item.dataset.page = target.page;
+        item.classList.toggle("active", currentPage === target.page);
+
+        const label = item.querySelector(".nav-label");
+        if (label) label.textContent = target.label;
+
+        item.classList.remove("disabled");
+        item.style.pointerEvents = "";
+        item.style.opacity = "";
+        item.removeAttribute("title");
+        item.dataset.disabled = "false";
+      } else {
+        item.setAttribute("href", "javascript:void(0)");
+        item.dataset.disabled = "true";
+        item.classList.add("disabled");
+        item.style.pointerEvents = "none";
+        item.style.opacity = "0.45";
+        item.setAttribute(
+          "title",
+          "Opção temporariamente desativada para recicladoras",
+        );
+      }
+    });
+  }
+
   /* Try from session cache first, then fetch */
   const cachedUser = getUser();
-  if (cachedUser) applyUserInfo(cachedUser);
+  if (cachedUser) {
+    SC.currentUser = cachedUser;
+    applyUserInfo(cachedUser);
+    updateSidebarForRecycler(cachedUser);
+  }
 
   SC.api("/users/me")
     .then((data) => {
@@ -403,6 +515,7 @@
       storage.setItem(USER_KEY, JSON.stringify(user));
       applyUserInfo(user);
       SC.currentUser = user;
+      updateSidebarForRecycler(user);
     })
     .catch(() => {
       /* Non-critical: keep showing cached data */
@@ -411,50 +524,197 @@
   /* ============================================================
      NOTIFICATIONS DROPDOWN
      ============================================================ */
-  async function loadNotifications() {
-    const badge = document.getElementById("notifBadge");
-    const listDrop = document.getElementById("notifListDrop");
 
+  function notifEscHtml(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function notifRelTime(iso) {
+    if (!iso) return "";
+    const time = new Date(iso).getTime();
+    if (Number.isNaN(time)) return "";
+
+    const diff = Date.now() - time;
+    const min = Math.floor(diff / 60000);
+
+    if (min < 1) return "Agora";
+    if (min < 60) return `Há ${min} min`;
+
+    const h = Math.floor(min / 60);
+    if (h < 24) return `Há ${h}h`;
+
+    const d = Math.floor(h / 24);
+    if (d < 7) return `Há ${d} dia${d > 1 ? "s" : ""}`;
+
+    return new Date(iso).toLocaleDateString("pt-BR");
+  }
+
+  function normalizeNotif(n) {
+    return {
+      ...n,
+      id: n.id,
+      titulo: n.titulo || n.title || "Notificação",
+      mensagem: n.mensagem || n.message || "",
+      lida: n.lida === true || n.lida === 1 || n.lida === "1",
+      arquivada:
+        n.arquivada === true || n.arquivada === 1 || n.arquivada === "1",
+      criadaEm:
+        n.criadaEm || n.created_at || n.createdAt || new Date().toISOString(),
+    };
+  }
+
+  function getLocalNotifications() {
     try {
-      const _u2 = SC.currentUser || getUser();
-      const _qs = _u2?.organization_id
-        ? `?organization_id=${_u2.organization_id}`
-        : "";
-      const data = await SC.api(`/notificacoes${_qs}`);
-      const notifs = Array.isArray(data)
-        ? data
-        : data.notificacoes || data.notifications || [];
-
-      if (badge) {
-        if (notifs.length > 0) {
-          badge.textContent = notifs.length > 9 ? "9+" : notifs.length;
-          badge.style.display = "flex";
-        } else {
-          badge.style.display = "none";
-        }
-      }
-
-      if (listDrop && notifs.length > 0) {
-        listDrop.innerHTML = notifs
-          .map(
-            (n) => `
-          <div class="dropdown-item" style="white-space:normal; cursor:default; padding:var(--space-3);">
-            <div style="font-size:0.875rem; font-weight:500; color:var(--color-text-primary); margin-bottom:2px;">
-              ${escHtml(n.titulo || n.title || n.mensagem || n.message || "Notificação")}
-            </div>
-            <div style="font-size:0.8125rem; color:var(--color-text-muted);">
-              ${n.created_at ? formatRelTime(n.created_at) : ""}
-            </div>
-          </div>`,
-          )
-          .join("");
-      }
+      const cacheKey = SC.storageKey("sc_notifications");
+      const arr = JSON.parse(localStorage.getItem(cacheKey) || "[]");
+      return Array.isArray(arr) ? arr.map(normalizeNotif) : [];
     } catch {
-      /* Silently fail */
+      return [];
     }
   }
 
+  function saveLocalNotifications(notifs) {
+    try {
+      const cacheKey = SC.storageKey("sc_notifications");
+      localStorage.setItem(cacheKey, JSON.stringify(notifs));
+    } catch {}
+  }
+
+  function getCurrentOrgIdForNotifications() {
+    const user = SC.currentUser || getUser() || {};
+    return (
+      user.organization_id ||
+      user.organizationId ||
+      user.org ||
+      user.orgId ||
+      null
+    );
+  }
+
+  function mergeNotificationState(remoteNotifs) {
+    const localNotifs = getLocalNotifications();
+
+    return remoteNotifs.map((remote) => {
+      const n = normalizeNotif(remote);
+      const local = localNotifs.find((x) => x.id === n.id) || {};
+
+      return {
+        ...n,
+        lida: typeof local.lida === "boolean" ? local.lida : n.lida,
+        arquivada:
+          typeof local.arquivada === "boolean" ? local.arquivada : n.arquivada,
+      };
+    });
+  }
+
+  function updateNotificationsUI(notifs) {
+    const badge = document.getElementById("notifBadge");
+    const listDrop = document.getElementById("notifListDrop");
+
+    const activeNotifs = (Array.isArray(notifs) ? notifs : [])
+      .map(normalizeNotif)
+      .filter((n) => !n.arquivada);
+
+    const unreadNotifs = activeNotifs.filter((n) => !n.lida);
+    const unread = unreadNotifs.length;
+
+    if (badge) {
+      if (unread > 0) {
+        badge.textContent = unread > 9 ? "9+" : unread;
+        badge.style.display = "flex";
+      } else {
+        badge.textContent = "0";
+        badge.style.display = "none";
+      }
+    }
+
+    if (listDrop) {
+      const current = unreadNotifs.slice(0, 5);
+
+      if (!current.length) {
+        listDrop.innerHTML = `
+          <div style="padding:var(--space-4);text-align:center;color:var(--color-text-muted);font-size:0.875rem;">
+            Tudo lido
+          </div>`;
+      } else {
+        listDrop.innerHTML =
+          current
+            .map(
+              (n) => `
+          <a href="/notificacoes.html" class="dropdown-item" style="white-space:normal;padding:var(--space-3);">
+            <div style="font-size:0.875rem;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              ${notifEscHtml(n.titulo)}
+            </div>
+            <div style="font-size:0.8125rem;color:var(--color-text-muted);">
+              ${notifRelTime(n.criadaEm)}
+            </div>
+          </a>
+        `,
+            )
+            .join("") +
+          `<div class="dropdown-separator"></div>
+         <a href="/notificacoes.html" class="dropdown-item" style="text-align:center;font-size:0.8125rem;">Ver todas</a>`;
+      }
+    }
+  }
+
+  async function loadNotifications() {
+    // 1. Primeiro atualiza pelo localStorage.
+    // Isso faz o sino aparecer nas outras páginas mesmo se o backend demorar/falhar.
+    const localNotifs = getLocalNotifications();
+    updateNotificationsUI(localNotifs);
+
+    // 2. Depois tenta atualizar pelo backend.
+    try {
+      const orgId = getCurrentOrgIdForNotifications();
+
+      if (!orgId) return;
+
+      const data = await SC.api(
+        `/notificacoes?organization_id=${encodeURIComponent(orgId)}`,
+      );
+
+      const rawNotifs = Array.isArray(data)
+        ? data
+        : data.notificacoes || data.notifications || [];
+
+      const remoteNotifs = Array.isArray(rawNotifs)
+        ? mergeNotificationState(rawNotifs)
+        : [];
+
+      // Se o backend retornou notificações, salva localmente e atualiza a tela.
+      // Se retornou vazio, mantém o localStorage para não apagar o sino indevidamente.
+      if (remoteNotifs.length > 0) {
+        saveLocalNotifications(remoteNotifs);
+        updateNotificationsUI(remoteNotifs);
+      }
+    } catch {
+      // Se o backend falhar, continua usando localStorage.
+      updateNotificationsUI(getLocalNotifications());
+    }
+  }
+
+  SC.loadNotifications = loadNotifications;
+
   loadNotifications();
+
+  setInterval(loadNotifications, 30000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) loadNotifications();
+  });
+
+  window.addEventListener("storage", (e) => {
+    if (e.key && e.key.includes("sc_notifications")) {
+      loadNotifications();
+    }
+  });
 
   /* ============================================================
      LOGOUT
@@ -498,34 +758,99 @@
   };
   const escHtml = SC.escHtml;
 
+  function getSavedDateFormat() {
+    try {
+      const raw = localStorage.getItem(getCurrentPreferencesStorageKey());
+      const prefs = raw ? JSON.parse(raw) : {};
+      return prefs.formatoData || "DD/MM/AAAA";
+    } catch {
+      return "DD/MM/AAAA";
+    }
+  }
+
+  function formatDateByPattern(date, pattern) {
+    const pad = (value) => String(value).padStart(2, "0");
+    const day = pad(date.getDate());
+    const month = pad(date.getMonth() + 1);
+    const year = date.getFullYear();
+
+    switch (pattern) {
+      case "MM/DD/AAAA":
+        return `${month}/${day}/${year}`;
+      case "AAAA-MM-DD":
+        return `${year}-${month}-${day}`;
+      default:
+        return `${day}/${month}/${year}`;
+    }
+  }
+
+  function parseDateValue(value) {
+    if (!value) return null;
+    if (value instanceof Date)
+      return Number.isNaN(value.getTime()) ? null : value;
+    if (typeof value !== "string") return null;
+
+    const trimmed = value.trim();
+    const isoDate = new Date(trimmed);
+    if (!Number.isNaN(isoDate.getTime())) return isoDate;
+
+    const pattern = getSavedDateFormat();
+    const dateTimeSplit = trimmed.split(" ");
+    const datePart = dateTimeSplit[0];
+    const timePart = dateTimeSplit[1] || null;
+
+    let match;
+    if ((match = datePart.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/))) {
+      const [, year, month, day] = match.map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    if ((match = datePart.match(/^([0-9]{2})\/([0-9]{2})\/([0-9]{4})$/))) {
+      const [_, a, b, c] = match;
+      const n1 = Number(a);
+      const n2 = Number(b);
+      const n3 = Number(c);
+      if (pattern === "MM/DD/AAAA") {
+        return new Date(n3, n1 - 1, n2);
+      }
+      return new Date(n3, n2 - 1, n1);
+    }
+
+    if (
+      timePart &&
+      (match = trimmed.match(
+        /^([0-9]{2})\/([0-9]{2})\/([0-9]{4})\s+([0-9]{2}):([0-9]{2})$/,
+      ))
+    ) {
+      const [, a, b, c, h, m] = match.map(Number);
+      if (pattern === "MM/DD/AAAA") {
+        return new Date(c, a - 1, b, h, m);
+      }
+      return new Date(c, b - 1, a, h, m);
+    }
+
+    return null;
+  }
+
   /** Format ISO date string to local short date */
   SC.fmtDate = function (iso) {
     if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return iso;
-    }
+    const d = parseDateValue(iso);
+    if (!d) return iso;
+    return formatDateByPattern(d, getSavedDateFormat());
   };
 
   /** Format ISO date+time */
   SC.fmtDateTime = function (iso) {
     if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return iso;
-    }
+    const d = parseDateValue(iso);
+    if (!d) return iso;
+    const datePart = formatDateByPattern(d, getSavedDateFormat());
+    const timePart = d.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${datePart} ${timePart}`;
   };
 
   /** Relative time label */

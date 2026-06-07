@@ -1,4 +1,42 @@
-"use strict";
+// ── Máscara BRL para Valor Estimado ─────────────────────────────────────
+function maskBRLInput(input) {
+  if (!input) return;
+  input.addEventListener("input", function () {
+    let v = input.value.replace(/\D/g, "");
+    v = (parseInt(v, 10) || 0).toString();
+    while (v.length < 3) v = "0" + v;
+    let reais = v.slice(0, -2);
+    let centavos = v.slice(-2);
+    reais = reais.replace(/^0+/, "") || "0";
+    reais = reais.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+    input.value = `R$ ${reais},${centavos}`;
+  });
+  input.addEventListener("blur", function () {
+    if (!input.value) input.value = "R$ 0,00";
+  });
+}
+
+function parseBRLToNumber(value) {
+  if (value == null || value === "") return NaN;
+  if (typeof value === "number") return value;
+
+  let str = String(value).trim().replace(/[^0-9,.-]/g, "");
+  if (!str) return NaN;
+
+  const lastComma = str.lastIndexOf(",");
+  const lastDot = str.lastIndexOf(".");
+
+  if (lastComma > lastDot) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else {
+    str = str.replace(/,/g, "");
+  }
+
+  const n = Number(str);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+("use strict");
 
 (function bootstrap() {
   if (!window.SC || !window.SC.ready) {
@@ -82,19 +120,20 @@
     Outros: {},
   };
 
-  const COND_MAP = { OTIMO: "otimo", REPARO: "reparo", DESCARTAR: "inativo" };
+  const COND_MAP = { OTIMO: "otimo", REPARO: "reparo", DESCARTAR: "descartar" };
   const COND_REVERSE = {
     otimo: "OTIMO",
     bom: "OTIMO",
     reparo: "REPARO",
     ruim: "REPARO",
-    inativo: "DESCARTAR",
+    descartar: "DESCARTAR",
   };
 
   // ── State ─────────────────────────────────────────────────────────────────
   let isDirty = false;
   let pendingNav = null;
   let photoDataUrl = null;
+  let photoFile = null;
   const tags = [];
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
@@ -141,13 +180,15 @@
   // ── Storage ───────────────────────────────────────────────────────────────
   function getItems() {
     try {
-      return JSON.parse(localStorage.getItem("sc_items") || "[]");
+      return JSON.parse(
+        localStorage.getItem(SC.storageKey("sc_items")) || "[]",
+      );
     } catch {
       return [];
     }
   }
   function saveItems(items) {
-    localStorage.setItem("sc_items", JSON.stringify(items));
+    localStorage.setItem(SC.storageKey("sc_items"), JSON.stringify(items));
   }
 
   function _syncToBackend(item, isEdit) {
@@ -166,7 +207,7 @@
       bom: "OTIMO",
       reparo: "REPARO",
       ruim: "REPARO",
-      inativo: "DESCARTAR",
+      descartar: "DESCARTAR",
     };
 
     if (isEdit && item._backend_id) {
@@ -262,6 +303,40 @@
     });
   }
 
+  // ── Local storage helpers ─────────────────────────────────────────────────
+  function mergeUniqueStrings(list) {
+    const seen = new Set();
+    return list
+      .map((value) => String(value || "").trim())
+      .filter((value) => {
+        if (!value) return false;
+        const key = value.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function readStoredCategories() {
+    try {
+      const data = JSON.parse(localStorage.getItem("sc_categorias") || "{}");
+      if (!Array.isArray(data.categorias)) return [];
+      return data.categorias.map((c) => c.nome || "").filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  function readStoredBrands() {
+    try {
+      const data = JSON.parse(localStorage.getItem("sc_categorias") || "{}");
+      if (!Array.isArray(data.marcas)) return [];
+      return data.marcas.map((m) => m.nome || m || "").filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
   // ── Populate dropdowns ────────────────────────────────────────────────────
   function populateCategories(categories) {
     if (!categoryId) return;
@@ -285,7 +360,9 @@
 
   function populateBrands(cat, selectedBrand) {
     if (!brandId) return;
-    const brands = BRAND_DATA[cat] || [];
+    const storedBrands = readStoredBrands();
+    const staticBrands = BRAND_DATA[cat] || [];
+    const brands = mergeUniqueStrings([...staticBrands, ...storedBrands]);
     brandId.innerHTML =
       '<option value="">Selecione…</option>' +
       brands
@@ -295,21 +372,10 @@
         )
         .join("");
     brandId.disabled = !brands.length;
-    populateModels(cat, selectedBrand || "");
   }
 
-  function populateModels(cat, brand, selectedModel) {
-    if (!modelId) return;
-    const models = (MODEL_DATA[cat] || {})[brand] || [];
-    modelId.innerHTML =
-      '<option value="">Selecione…</option>' +
-      models
-        .map(
-          (m) =>
-            `<option value="${SC.escHtml(m)}"${m === selectedModel ? " selected" : ""}>${SC.escHtml(m)}</option>`,
-        )
-        .join("");
-    modelId.disabled = !models.length;
+  function populateModels() {
+    // Campo de modelo agora é digitável manualmente.
   }
 
   // ── Edit: load item ───────────────────────────────────────────────────────
@@ -333,7 +399,7 @@
         const condCodeToLegacy = {
           OTIMO: "otimo",
           REPARO: "reparo",
-          DESCARTAR: "inativo",
+          DESCARTAR: "descartar",
         };
         const item = {
           id: a.id,
@@ -347,9 +413,10 @@
           categoria: a.category_name || "",
           marca: a.product_brand || a.brand || "",
           modelo: a.product_model || a.model || "",
+          localizacao: a.localizacao || "",
           notas: "",
           tags: [],
-          foto: null,
+          foto: a.photo_url || null,
         };
         fillForm(item);
       })
@@ -379,8 +446,7 @@
       } else {
         categoryId.value = item.categoria;
         populateBrands(item.categoria, item.marca || "");
-        if (item.marca)
-          populateModels(item.categoria, item.marca, item.modelo || "");
+        if (modelId) modelId.value = item.modelo || "";
       }
     }
     if (locationId && item.localizacao) locationId.value = item.localizacao;
@@ -513,6 +579,7 @@
     const now = new Date().toISOString();
     const items = getItems();
     const qty = parseInt(quantity?.value) || 1;
+    const estimatedValueNumber = parseBRLToNumber(estimatedValue?.value);
 
     try {
       if (IS_EDIT) {
@@ -526,26 +593,43 @@
               "{}",
           ) || {};
 
+        const formData = new FormData();
+        formData.append("organization_id", user.organization_id || "");
+        formData.append("produto", productName?.value.trim() || "");
+        if (assetTag?.value?.trim()) {
+          formData.append("serial_number", assetTag.value.trim());
+        }
+        if (categoryId?.value) {
+          formData.append("categoria", categoryId.value);
+        }
+        if (brandId?.value) {
+          formData.append("marca", brandId.value);
+        }
+        if (modelId?.value) {
+          formData.append("modelo", modelId.value);
+        }
+        if (description?.value?.trim()) {
+          formData.append("descricao", description.value.trim());
+        }
+        formData.append("status", condValue);
+        formData.append("quantidade", String(qty));
+        if (Number.isFinite(estimatedValueNumber)) {
+        formData.append("valor", String(estimatedValueNumber));
+        }
+        formData.append("localizacao", locationId?.value || "");
+        if (notes?.value?.trim()) {
+          formData.append("notas", notes.value.trim());
+        }
+        if (photoFile) {
+          formData.append("photo", photoFile);
+        }
+
         fetch(`/api/items/${ITEM_ID}`, {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            organization_id: user.organization_id,
-            produto: productName?.value.trim() || "",
-            serial_number: assetTag?.value.trim() || null,
-            categoria: categoryId?.value || null,
-            marca: brandId?.value || null,
-            modelo: modelId?.value || null,
-            descricao: description?.value.trim() || null,
-            status: condValue,
-            quantidade: qty,
-            valor: parseFloat(estimatedValue?.value) || null,
-            localizacao: locationId?.value || null,
-            notas: notes?.value.trim() || null,
-          }),
+          body: formData,
         })
           .then((r) => r.json())
           .then((data) => {
@@ -575,7 +659,7 @@
           condicao: COND_MAP[condValue] || "otimo",
           total: qty,
           disponivel: qty,
-          valor: parseFloat(estimatedValue?.value) || 0,
+          valor: Number.isFinite(estimatedValueNumber) ? estimatedValueNumber : 0,
           localizacao: locationId?.value || "",
           responsavel: "",
           tags: [...tags],
@@ -686,6 +770,7 @@
       SC.toastError("Imagem muito grande. Máximo 5 MB.");
       return;
     }
+    photoFile = file;
     const reader = new FileReader();
     reader.onload = (ev) => {
       photoDataUrl = ev.target.result;
@@ -708,6 +793,7 @@
 
   function clearPhoto() {
     photoDataUrl = null;
+    photoFile = null;
     if (photoPreview) {
       photoPreview.src = "";
       photoPreview.classList.remove("is-visible");
@@ -736,7 +822,6 @@
     });
     brandId?.addEventListener("change", () => {
       setFieldError("errorBrand", "groupBrand", null, false);
-      populateModels(categoryId?.value || "", brandId.value, "");
       markDirty();
     });
     modelId?.addEventListener("change", () => markDirty());
@@ -823,8 +908,14 @@
     fetch("/api/categories", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data) => {
-        const cats = (data.categories || []).map((c) => c.name);
-        populateCategories(cats.length ? cats : ["Outros"]);
+        const apiCats = (data.categories || [])
+          .map((c) => c.name)
+          .filter(Boolean);
+        const storedCats = readStoredCategories();
+        const cats = mergeUniqueStrings([...storedCats, ...apiCats]);
+        populateCategories(
+          cats.length ? cats : storedCats.length ? storedCats : ["Outros"],
+        );
         // Se já carregou o item (edição), re-aplica a categoria
         if (IS_EDIT && categoryId && categoryId.dataset.pendingValue) {
           categoryId.value = categoryId.dataset.pendingValue;
@@ -832,22 +923,34 @@
             categoryId.value,
             categoryId.dataset.pendingBrand || "",
           );
-          if (categoryId.dataset.pendingBrand)
-            populateModels(
-              categoryId.value,
-              categoryId.dataset.pendingBrand,
-              categoryId.dataset.pendingModel || "",
-            );
+          if (modelId) modelId.value = categoryId.dataset.pendingModel || "";
           delete categoryId.dataset.pendingValue;
           delete categoryId.dataset.pendingBrand;
           delete categoryId.dataset.pendingModel;
         }
       })
-      .catch(() => populateCategories(["Outros"]));
+      .catch(() => {
+        const storedCats = readStoredCategories();
+        populateCategories(storedCats.length ? storedCats : ["Outros"]);
+      });
 
     populateLocations();
     addCharCounter(productName, 200);
     addCharCounter(description, 1000);
+
+    // Aplica máscara BRL ao campo de valor estimado
+    maskBRLInput(estimatedValue);
+
+    // Remove máscara ao enviar o formulário
+    if (form && estimatedValue) {
+      form.addEventListener("submit", function () {
+        if (estimatedValue.value) {
+          estimatedValue.value = estimatedValue.value
+            .replace(/[^\d,]/g, "")
+            .replace(",", ".");
+        }
+      });
+    }
 
     if (IS_EDIT) {
       document.title = "Editar Item — StockControl";

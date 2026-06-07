@@ -256,6 +256,7 @@
 
       .org-type-option {
         position: relative;
+        display: flex;
       }
       .org-type-option input[type="radio"] {
         position: absolute;
@@ -274,6 +275,7 @@
         cursor: pointer;
         transition: all var(--transition-fast);
         user-select: none;
+        width: 100%;
       }
 
       .org-type-label:hover {
@@ -682,7 +684,7 @@
                     </svg>
                   </div>
                   <div>
-                    <div class="org-type-text-name">Reciclador</div>
+                    <div class="org-type-text-name">Recicladora</div>
                     <div class="org-type-text-desc">Empresa de reciclagem</div>
                   </div>
                 </label>
@@ -714,8 +716,8 @@
           </div>
 
           <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="orgCnpj">CNPJ</label>
+            <div class="form-group" id="groupOrgCnpj">
+              <label class="form-label required" for="orgCnpj">CNPJ</label>
               <input
                 type="text"
                 id="orgCnpj"
@@ -723,10 +725,14 @@
                 class="form-control"
                 placeholder="00.000.000/0001-00"
                 maxlength="18"
+                required
               />
+              <span class="form-error" id="errorOrgCnpj" style="display: none"
+                >CNPJ inválido ou não encontrado na Receita Federal.</span
+              >
             </div>
-            <div class="form-group">
-              <label class="form-label" for="orgPhone">Telefone</label>
+            <div class="form-group" id="groupOrgPhone">
+              <label class="form-label required" for="orgPhone">Telefone</label>
               <input
                 type="tel"
                 id="orgPhone"
@@ -734,14 +740,18 @@
                 class="form-control"
                 placeholder="(11) 99999-9999"
                 maxlength="20"
+                required
               />
+              <span class="form-error" id="errorOrgPhone" style="display: none"
+                >Informe um telefone válido com DDD.</span
+              >
             </div>
           </div>
 
           <!-- ── Endereço via CEP ── -->
           <div class="cep-row">
             <div class="form-group" id="groupCep">
-              <label class="form-label" for="orgCep">CEP</label>
+              <label class="form-label required" for="orgCep">CEP</label>
               <div class="cep-input-wrap" id="cepInputWrap">
                 <input
                   type="text"
@@ -752,6 +762,7 @@
                   maxlength="9"
                   autocomplete="postal-code"
                   style="padding-right: 34px"
+                  required
                 />
                 <div class="cep-spinner"></div>
                 <div class="cep-status"></div>
@@ -762,14 +773,15 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="orgNum">Número</label>
+              <label class="form-label required" for="orgNum">Número</label>
               <input
-                type="text"
+                type="number"
                 id="orgNum"
                 name="numero"
                 class="form-control"
                 placeholder="Ex: 123"
                 maxlength="10"
+                required
               />
             </div>
           </div>
@@ -835,13 +847,13 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="orgComplemento">Complemento</label>
+            <label class="form-label" for="orgComplemento">Complemento (opcional)</label>
             <input
               type="text"
               id="orgComplemento"
               name="complemento"
               class="form-control"
-              placeholder="Apto, sala, bloco… (opcional)"
+              placeholder="Apto, sala, bloco…"
               maxlength="80"
             />
           </div>
@@ -905,14 +917,14 @@
                 id="adminEmail"
                 name="email"
                 class="form-control"
-                placeholder="nome@gmail.com"
+                placeholder="seu@email.com"
                 required
                 maxlength="150"
                 autocomplete="email"
               />
             </div>
             <span class="form-error" id="errorAdminEmail"
-              >Use um e-mail @gmail.com válido.</span
+              >Informe um e-mail válido.</span
             >
           </div>
 
@@ -937,7 +949,7 @@
                   id="adminPwd"
                   name="password"
                   class="form-control"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Digite a senha"
                   required
                   minlength="8"
                   style="padding-right: 44px"
@@ -996,16 +1008,16 @@
                   font-size: 0.8125rem;
                 "
               >
-                <li id="req-len" style="color: #94a3b8">
+                <li id="req-len" style="color: red; white-space: nowrap">
                   ✗ Mínimo 8 caracteres
                 </li>
-                <li id="req-upper" style="color: #94a3b8">
-                  ✗ Pelo menos 1 letra maiúscula
-                </li>
-                <li id="req-number" style="color: #94a3b8">
+                <li id="req-number" style="color: red; white-space: nowrap">
                   ✗ Pelo menos 1 número
                 </li>
-                <li id="req-special" style="color: #94a3b8">
+                <li id="req-upper" style="color: red; white-space: nowrap">
+                  ✗ Pelo menos 1 letra maiúscula
+                </li>
+                <li id="req-special" style="color: red; white-space: nowrap">
                   ✗ Pelo menos 1 caractere especial (!@#$…)
                 </li>
               </ul>
@@ -1082,7 +1094,7 @@
           </div>
 
           <!-- Terms -->
-          <div
+          <!-- <div
             class="form-group"
             style="margin-top: var(--space-2)"
             id="groupTerms"
@@ -1107,7 +1119,7 @@
             <span class="form-error" id="errorTerms"
               >Você deve aceitar os termos para continuar.</span
             >
-          </div>
+          </div> -->
 
           <button
             type="submit"
@@ -1186,21 +1198,33 @@
               id="verifyError"
               class="login-error"
               role="alert"
-              style="margin-bottom: 16px; text-align: left"
+              style="
+                display: none;
+                margin-bottom: 16px;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                text-align: center;
+              "
             >
               <svg
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
+                stroke="#dc2626"
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                style="flex-shrink: 0"
               >
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <span id="verifyErrorMsg">Código inválido ou expirado.</span>
+              <span id="verifyErrorMsg" style="color: #dc2626"
+                >Código inválido ou expirado.</span
+              >
             </div>
 
             <!-- Inputs do código -->
