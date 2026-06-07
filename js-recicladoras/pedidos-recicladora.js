@@ -43,7 +43,7 @@
 
   function isSchedulable(status) {
     const normalized = String(status || "").toLowerCase();
-    return normalized === "concluida";
+    return normalized === "aprovada";
   }
 
   function esc(value) {

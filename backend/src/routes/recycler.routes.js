@@ -15,7 +15,7 @@ router.get("/ongs/solicitacoes", async (req, res) => {
        LEFT JOIN (
          SELECT organization_id, COUNT(*) AS request_count
          FROM solicitacoes
-         WHERE status IN ('pendente', 'aprovada', 'concluida')
+         WHERE status IN ('pendente', 'aprovada')
          GROUP BY organization_id
        ) s ON s.organization_id = o.id
        LEFT JOIN (

@@ -34,7 +34,7 @@
 
   function isRequestSchedulable(status) {
     const statusLower = normalizeStatus(status);
-    return statusLower === "concluida";
+    return statusLower === "aprovada";
   }
 
   function setFormDisabled(disabled) {
@@ -200,7 +200,7 @@
 
       if (!schedulableIds.length) {
         SC.toast(
-          "Somente solicitações concluídas podem ser agendadas.",
+          "Somente solicitações aprovadas podem ser agendadas.",
           "warning",
         );
         return;
