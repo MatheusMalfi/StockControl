@@ -16,6 +16,26 @@ function maskBRLInput(input) {
   });
 }
 
+function parseBRLToNumber(value) {
+  if (value == null || value === "") return NaN;
+  if (typeof value === "number") return value;
+
+  let str = String(value).trim().replace(/[^0-9,.-]/g, "");
+  if (!str) return NaN;
+
+  const lastComma = str.lastIndexOf(",");
+  const lastDot = str.lastIndexOf(".");
+
+  if (lastComma > lastDot) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else {
+    str = str.replace(/,/g, "");
+  }
+
+  const n = Number(str);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 ("use strict");
 
 (function bootstrap() {
@@ -559,6 +579,7 @@ function maskBRLInput(input) {
     const now = new Date().toISOString();
     const items = getItems();
     const qty = parseInt(quantity?.value) || 1;
+    const estimatedValueNumber = parseBRLToNumber(estimatedValue?.value);
 
     try {
       if (IS_EDIT) {
@@ -592,8 +613,8 @@ function maskBRLInput(input) {
         }
         formData.append("status", condValue);
         formData.append("quantidade", String(qty));
-        if (estimatedValue?.value) {
-          formData.append("valor", String(parseFloat(estimatedValue.value)));
+        if (Number.isFinite(estimatedValueNumber)) {
+        formData.append("valor", String(estimatedValueNumber));
         }
         formData.append("localizacao", locationId?.value || "");
         if (notes?.value?.trim()) {
@@ -638,7 +659,7 @@ function maskBRLInput(input) {
           condicao: COND_MAP[condValue] || "otimo",
           total: qty,
           disponivel: qty,
-          valor: parseFloat(estimatedValue?.value) || 0,
+          valor: Number.isFinite(estimatedValueNumber) ? estimatedValueNumber : 0,
           localizacao: locationId?.value || "",
           responsavel: "",
           tags: [...tags],

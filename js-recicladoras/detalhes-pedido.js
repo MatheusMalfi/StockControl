@@ -81,7 +81,7 @@
   }
 
   function getItemValue(item) {
-    const totalValue = parseNumeric(
+    const estimatedValue = parseNumeric(
       item.estimated_value ??
         item.valor_estimado ??
         item.valor ??
@@ -103,16 +103,16 @@
         0,
     );
 
-    const requestQty = parseNumeric(
+    const discardQty = parseNumeric(
       item.quantity ?? item.quantidade ?? item.total ?? item.qtd ?? 1,
     );
 
-    if (!Number.isFinite(requestQty) || requestQty <= 0) return 0;
-    if (Number.isFinite(totalValue) && totalValue > 0 && Number.isFinite(availableQty) && availableQty > 0) {
-      return (totalValue / availableQty) * requestQty;
+    if (!Number.isFinite(discardQty) || discardQty <= 0) return 0;
+    if (Number.isFinite(estimatedValue) && estimatedValue > 0 && Number.isFinite(availableQty) && availableQty > 0) {
+      return (estimatedValue / availableQty) * discardQty;
     }
 
-    return Number.isFinite(totalValue) ? totalValue * requestQty : 0;
+    return Number.isFinite(estimatedValue) ? estimatedValue * discardQty : 0;
   }
 
   function getStatusColor(status) {
@@ -163,18 +163,14 @@
 
   function calculateTotals(items) {
     let totalValueValue = 0;
-    let currency = "BRL";
 
     items.forEach((item) => {
       totalValueValue += getItemValue(item);
-      if (item.currency) {
-        currency = item.currency;
-      }
     });
 
     return {
       value: totalValueValue,
-      currency,
+      currency: "BRL",
     };
   }
 
@@ -214,7 +210,7 @@
     if (productsCount) productsCount.textContent = (items || []).length;
     if (totalValue)
       totalValue.textContent = formatCurrency(totals.value, totals.currency);
-    if (valueCurrency) valueCurrency.textContent = `em ${totals.currency}`;
+    if (valueCurrency) valueCurrency.textContent = "em BRL";
 
     if (scheduleBtn && scheduleBtn2) {
       if (isApproved) {

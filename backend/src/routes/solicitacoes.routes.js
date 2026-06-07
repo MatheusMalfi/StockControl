@@ -20,6 +20,7 @@ const CREATE_TABLE = `
     revisor          VARCHAR(255) DEFAULT NULL,
     obs              TEXT         DEFAULT NULL,
     items            TEXT         DEFAULT NULL,
+    estimated_profit_total DECIMAL(12,2) DEFAULT 0,
     created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_org (organization_id)
@@ -30,20 +31,100 @@ async function ensureTable() {
   await pool.query(CREATE_TABLE);
 
   const dbName = process.env.DB_NAME || "stockcontrol";
-  const [columns] = await pool.query(
-    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'solicitacoes' AND COLUMN_NAME = 'items'",
-    [dbName],
+
+  async function ensureColumn(columnName, alterSql) {
+    const [columns] = await pool.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'solicitacoes' AND COLUMN_NAME = ?",
+      [dbName, columnName],
+    );
+
+    if (!columns.length) {
+      await pool.query(alterSql);
+    }
+  }
+
+  await ensureColumn(
+    "items",
+    "ALTER TABLE solicitacoes ADD COLUMN items TEXT DEFAULT NULL",
   );
 
-  if (!columns.length) {
-    await pool.query(
-      "ALTER TABLE solicitacoes ADD COLUMN items TEXT DEFAULT NULL",
-    );
-  }
+  await ensureColumn(
+    "estimated_profit_total",
+    "ALTER TABLE solicitacoes ADD COLUMN estimated_profit_total DECIMAL(12,2) DEFAULT 0 AFTER items",
+  );
 }
 
 function getOrgId(req) {
   return req.query.organization_id || req.body?.organization_id;
+}
+
+function parseNumber(value) {
+  if (value == null || value === "") return NaN;
+  if (typeof value === "number") return value;
+
+  let str = String(value).trim().replace(/[^0-9,.-]/g, "");
+  if (!str) return NaN;
+
+  const lastComma = str.lastIndexOf(",");
+  const lastDot = str.lastIndexOf(".");
+
+  if (lastComma > lastDot) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else {
+    str = str.replace(/,/g, "");
+  }
+
+  const n = Number(str);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function calculateItemProfit(item) {
+  const estimatedValue = parseNumber(
+    item.estimated_value ??
+      item.valor_estimado ??
+      item.valor ??
+      item.value ??
+      item.valor_total ??
+      item.total_value ??
+      0,
+  );
+
+  const quantityAvailable = parseNumber(
+    item.quantity_available ??
+      item.disponivel ??
+      item.total ??
+      item.quantity_available_stock ??
+      item.quantidade_estoque ??
+      0,
+  );
+
+  const quantityToDiscard = parseNumber(
+    item.quantidade ?? item.quantity ?? item.qtd ?? 0,
+  );
+
+  if (
+    !Number.isFinite(estimatedValue) ||
+    !Number.isFinite(quantityAvailable) ||
+    !Number.isFinite(quantityToDiscard) ||
+    quantityAvailable <= 0 ||
+    quantityToDiscard <= 0
+  ) {
+    return 0;
+  }
+
+  return (estimatedValue / quantityAvailable) * quantityToDiscard;
+}
+
+function calculateEstimatedProfitTotal(items, fallbackValue) {
+  if (Array.isArray(items) && items.length) {
+    return items.reduce((sum, item) => {
+      const profit = parseNumber(item.estimated_profit);
+      return sum + (Number.isFinite(profit) ? profit : calculateItemProfit(item));
+    }, 0);
+  }
+
+  const fallback = parseNumber(fallbackValue);
+  return Number.isFinite(fallback) ? fallback : 0;
 }
 
 /* GET /api/solicitacoes */
@@ -70,11 +151,14 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     await ensureTable();
+
     const orgId = getOrgId(req);
-    if (!orgId)
+    if (!orgId) {
       return res
         .status(400)
         .json({ message: "organization_id é obrigatório." });
+    }
+
     const {
       id,
       tipo,
@@ -87,17 +171,26 @@ router.post("/", async (req, res) => {
       data_solicitacao,
       obs,
       items,
+      estimated_profit_total,
     } = req.body;
+
     const itemsPayload = items ? JSON.stringify(items) : null;
+    const profitTotal = calculateEstimatedProfitTotal(
+      items,
+      estimated_profit_total,
+    );
+
     if (process.env.DEBUG_SOLICITACOES && items) {
       console.debug("[solicitacoes] POST payload items:", items);
     }
+
     const newId =
       id || `sol_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
     await pool.execute(
       `INSERT INTO solicitacoes
-         (id, organization_id, tipo, item, quantidade, solicitante, email, status, prioridade, data_solicitacao, obs, items)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, organization_id, tipo, item, quantidade, solicitante, email, status, prioridade, data_solicitacao, obs, items, estimated_profit_total)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newId,
         orgId,
@@ -111,8 +204,10 @@ router.post("/", async (req, res) => {
         data_solicitacao || null,
         obs || null,
         itemsPayload,
+        profitTotal,
       ],
     );
+
     res.status(201).json({ success: true, id: newId });
   } catch (err) {
     console.error("POST /api/solicitacoes:", err);
@@ -124,6 +219,7 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     await ensureTable();
+
     const {
       tipo,
       item,
@@ -135,15 +231,25 @@ router.put("/:id", async (req, res) => {
       data_solicitacao,
       obs,
       items,
+      estimated_profit_total,
     } = req.body;
+
     const itemsPayload = items ? JSON.stringify(items) : null;
+
+    const profitTotal =
+      items || estimated_profit_total !== undefined
+        ? calculateEstimatedProfitTotal(items, estimated_profit_total)
+        : null;
+
     if (process.env.DEBUG_SOLICITACOES && items) {
       console.debug("[solicitacoes] PUT payload items:", items);
     }
+
     await pool.execute(
       `UPDATE solicitacoes
        SET tipo = ?, item = ?, quantidade = ?, solicitante = ?, email = ?,
-           status = COALESCE(?, status), prioridade = ?, data_solicitacao = ?, obs = ?, items = COALESCE(?, items)
+           status = COALESCE(?, status), prioridade = ?, data_solicitacao = ?, obs = ?,
+           items = COALESCE(?, items), estimated_profit_total = COALESCE(?, estimated_profit_total)
        WHERE id = ?`,
       [
         tipo || null,
@@ -156,9 +262,11 @@ router.put("/:id", async (req, res) => {
         data_solicitacao || null,
         obs || null,
         itemsPayload,
+        profitTotal,
         req.params.id,
       ],
     );
+
     res.json({ success: true });
   } catch (err) {
     console.error("PUT /api/solicitacoes/:id:", err);
@@ -328,8 +436,46 @@ router.get("/:id/detalhes", async (req, res) => {
             ? item.valor
             : item.value != null
             ? item.value
+            : item.valor_total != null
+            ? item.valor_total
+            : item.total_value != null
+            ? item.total_value
             : null,
         currency: item.currency || item.moeda || "BRL",
+        estimated_profit:
+          item.estimated_profit != null
+            ? item.estimated_profit
+            : (() => {
+                const estimatedValue = parseFloat(
+                  item.estimated_value ??
+                    item.valor_estimado ??
+                    item.valor ??
+                    item.value ??
+                    item.valor_total ??
+                    item.total_value ??
+                    0,
+                );
+                const quantityAvailable = parseFloat(
+                  item.quantity_available ??
+                    item.disponivel ??
+                    item.total ??
+                    item.quantity ??
+                    item.quantidade ??
+                    0,
+                );
+                const quantity = parseFloat(
+                  item.quantity ?? item.quantidade ?? item.total ?? item.qtd ?? 0,
+                );
+                return Number.isFinite(estimatedValue) &&
+                  Number.isFinite(quantityAvailable) &&
+                  Number.isFinite(quantity) &&
+                  quantityAvailable > 0 &&
+                  quantity > 0
+                  ? (estimatedValue / quantityAvailable) * quantity
+                  : null;
+              })(),
+        estimated_profit_currency:
+          item.estimated_profit_currency || item.currency || item.moeda || "BRL",
         quantity: Number.isNaN(quantity) ? 1 : quantity,
         description: item.description || item.obs || item.descricao || "",
       };

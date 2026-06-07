@@ -266,8 +266,15 @@ function initSolicitacoes() {
   }
 
   function requestPayloadFromLocal(req) {
-    const user = currentUser();
-    const normalizePayloadItem = (item) => ({
+  const user = currentUser();
+
+  const normalizePayloadItem = (item) => {
+    const estimatedProfit =
+      item.estimated_profit != null
+        ? Number(item.estimated_profit)
+        : calculateItemProfit(item);
+
+    return {
       ...item,
       item_id: item.item_id || item.id || null,
       nome_item: item.nome_item || item.nome || item.item || item.tipo || "",
@@ -275,40 +282,55 @@ function initSolicitacoes() {
         item.quantity_available ??
         item.disponivel ??
         item.total ??
-        item.quantity ??
+        item.quantity_available_stock ??
         null,
       estimated_value:
         item.estimated_value ??
         item.valor_estimado ??
         item.valor ??
         item.value ??
+        item.valor_total ??
+        item.total_value ??
         null,
+      estimated_profit: Number.isFinite(estimatedProfit)
+        ? estimatedProfit
+        : 0,
+      estimated_profit_currency:
+        item.estimated_profit_currency ?? item.currency ?? item.moeda ?? "BRL",
       currency: item.currency ?? item.moeda ?? "BRL",
-    });
-
-    const payload = {
-      id: req.id,
-      organization_id: user.organization_id,
-      tipo: req.tipo || null,
-      item: req.nome_item || req.patrimonio || req.tipo || "",
-      quantidade: req.quantidade || 1,
-      solicitante: req.solicitante || currentUserName(),
-      email: user.email || null,
-      status: req.status || "pendente",
-      prioridade: req.urgencia || "media",
-      data_solicitacao: req.necessario_ate || null,
-      obs: req.justificativa || "",
-      items: Array.isArray(req.items)
-        ? req.items.map(normalizePayloadItem)
-        : null,
     };
+  };
 
-    if (payload.items) {
-      console.debug("[solicitacoes] request payload items:", payload.items);
-    }
+  const payloadItems = Array.isArray(req.items)
+    ? req.items.map(normalizePayloadItem)
+    : null;
 
-    return payload;
+  const estimatedProfitTotal = calculateRequestProfit(
+    payloadItems || req.items || [],
+  );
+
+  const payload = {
+    id: req.id,
+    organization_id: user.organization_id,
+    tipo: req.tipo || null,
+    item: req.nome_item || req.patrimonio || req.tipo || "",
+    quantidade: req.quantidade || 1,
+    solicitante: req.solicitante || currentUserName(),
+    email: user.email || null,
+    status: req.status || "pendente",
+    prioridade: req.urgencia || "media",
+    data_solicitacao: req.necessario_ate || null,
+    obs: req.justificativa || "",
+    items: payloadItems,
+    estimated_profit_total: estimatedProfitTotal,
+  };
+
+  if (payload.items) {
+    console.debug("[solicitacoes] request payload items:", payload.items);
   }
+
+  return payload;
+}
 
   // ── Date filtering ────────────────────────────────────────────────────────
   function inDateRange(r) {
@@ -812,6 +834,68 @@ function initSolicitacoes() {
     renderSelectedItems();
   }
 
+  function parseNumber(value) {
+  if (value == null || value === "") return NaN;
+  if (typeof value === "number") return value;
+
+  let str = String(value).trim().replace(/[^0-9,.-]/g, "");
+  if (!str) return NaN;
+
+  const lastComma = str.lastIndexOf(",");
+  const lastDot = str.lastIndexOf(".");
+
+  if (lastComma > lastDot) {
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else {
+    str = str.replace(/,/g, "");
+  }
+
+  const n = Number(str);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+  function calculateItemProfit(item) {
+    const estimatedValue = parseNumber(
+      item.estimated_value ??
+        item.valor_estimado ??
+        item.valor ??
+        item.value ??
+        item.valor_total ??
+        item.total_value ??
+        0,
+    );
+    const availableQty = parseNumber(
+      item.quantity_available ??
+        item.disponivel ??
+        item.total ??
+        item.quantity ??
+        item.quantidade ??
+        0,
+    );
+    const qty = parseNumber(item.quantidade ?? item.quantity ?? item.total ?? item.qtd ?? 0);
+
+    if (
+      !Number.isFinite(estimatedValue) ||
+      !Number.isFinite(availableQty) ||
+      !Number.isFinite(qty) ||
+      availableQty <= 0 ||
+      qty <= 0
+    ) {
+      return 0;
+    }
+
+    return (estimatedValue / availableQty) * qty;
+  }
+
+  function calculateRequestProfit(items) {
+  if (!Array.isArray(items)) return 0;
+
+  return items.reduce((sum, item) => {
+    const profit = parseNumber(item.estimated_profit);
+    return sum + (Number.isFinite(profit) ? profit : calculateItemProfit(item));
+  }, 0);
+}
+
   function parseRequestItems(row) {
     if (Array.isArray(row.items)) return row.items;
     if (typeof row.items === "string") {
@@ -834,20 +918,30 @@ function initSolicitacoes() {
       row.valor_estimado ??
       row.valor ??
       row.value ??
+      row.valor_total ??
+      row.total_value ??
       null;
 
-    return [
-      {
-        item_id: row.item_id || null,
-        nome_item: row.nome_item || row.item || row.tipo || "–",
-        patrimonio: row.patrimonio || "",
+    const item = {
+      item_id: row.item_id || null,
+      nome_item: row.nome_item || row.item || row.tipo || "–",
+      patrimonio: row.patrimonio || "",
+      quantidade: row.quantidade != null ? row.quantidade : 1,
+      disponivel: quantityAvailable,
+      quantity_available: quantityAvailable,
+      estimated_value: estimatedValue,
+      estimated_profit: row.estimated_profit ?? calculateItemProfit({
+        ...row,
         quantidade: row.quantidade != null ? row.quantidade : 1,
-        disponivel: quantityAvailable,
-        quantity_available: quantityAvailable,
         estimated_value: estimatedValue,
-        currency: row.currency ?? row.moeda ?? "BRL",
-      },
-    ];
+        quantity_available: quantityAvailable,
+      }),
+      currency: row.currency ?? row.moeda ?? "BRL",
+      estimated_profit_currency:
+        row.estimated_profit_currency ?? row.currency ?? row.moeda ?? "BRL",
+    };
+
+    return [item];
   }
 
   function summarizeRequestItems(items) {
@@ -874,7 +968,9 @@ function initSolicitacoes() {
   function normalizeRequestRow(row) {
     const items = parseRequestItems(row);
     const summary = summarizeRequestItems(items);
-
+    const estimatedProfitTotal = Number.isFinite(Number(row.estimated_profit_total))
+      ? Number(row.estimated_profit_total)
+      : calculateRequestProfit(items);
     return {
       id: row.id,
       item_id: row.item_id || null,
@@ -882,6 +978,7 @@ function initSolicitacoes() {
       patrimonio: summary.patrimonio,
       quantidade: summary.quantidade,
       items,
+      estimated_profit_total: estimatedProfitTotal,
       urgencia: row.urgencia || row.prioridade || "media",
       status: row.status || "pendente",
       solicitante: row.solicitante || row.email || "Usuário",
@@ -962,6 +1059,8 @@ function initSolicitacoes() {
         state.selectedItem.valor_estimado ??
         state.selectedItem.valor ??
         state.selectedItem.value ??
+        state.selectedItem.valor_total ??
+        state.selectedItem.total_value ??
         existing.estimated_value ??
         null;
       existing.currency =
@@ -969,8 +1068,11 @@ function initSolicitacoes() {
         state.selectedItem.currency ??
         state.selectedItem.moeda ??
         "BRL";
+      existing.estimated_profit = calculateItemProfit(existing);
+      existing.estimated_profit_currency =
+        existing.estimated_profit_currency ?? existing.currency;
     } else {
-      state.selectedItems.push({
+      const selectedItem = {
         item_id: state.selectedItem.id,
         nome_item: state.selectedItem.nome,
         patrimonio: state.selectedItem.patrimonio || "",
@@ -982,9 +1084,15 @@ function initSolicitacoes() {
           state.selectedItem.valor_estimado ??
           state.selectedItem.valor ??
           state.selectedItem.value ??
+          state.selectedItem.valor_total ??
+          state.selectedItem.total_value ??
           null,
         currency: state.selectedItem.currency ?? state.selectedItem.moeda ?? "BRL",
-      });
+      };
+      selectedItem.estimated_profit = calculateItemProfit(selectedItem);
+      selectedItem.estimated_profit_currency =
+        state.selectedItem.estimated_profit_currency ?? selectedItem.currency;
+      state.selectedItems.push(selectedItem);
     }
     if (reqQty) reqQty.value = "1";
     state.selectedItem = null;
@@ -1042,8 +1150,11 @@ function initSolicitacoes() {
           existing.quantidade + qty,
           currentAvailable,
         );
+        existing.estimated_profit = calculateItemProfit(existing);
+        existing.estimated_profit_currency =
+          existing.estimated_profit_currency ?? existing.currency;
       } else {
-        selectedItems.push({
+        const newItem = {
           item_id: currentItem.id,
           nome_item: currentItem.nome,
           patrimonio: currentItem.patrimonio || "",
@@ -1055,9 +1166,15 @@ function initSolicitacoes() {
             currentItem.valor_estimado ??
             currentItem.valor ??
             currentItem.value ??
+            currentItem.valor_total ??
+            currentItem.total_value ??
             null,
           currency: currentItem.currency ?? currentItem.moeda ?? "BRL",
-        });
+        };
+        newItem.estimated_profit = calculateItemProfit(newItem);
+        newItem.estimated_profit_currency =
+          currentItem.estimated_profit_currency ?? newItem.currency;
+        selectedItems.push(newItem);
       }
     }
 
@@ -1089,6 +1206,7 @@ function initSolicitacoes() {
           necessario_ate: reqNeededBy
             ? reqNeededBy.value || null
             : existing.necessario_ate || null,
+            estimated_profit_total: calculateRequestProfit(selectedItems),
         };
 
         const requiresReapproval =
@@ -1141,6 +1259,7 @@ function initSolicitacoes() {
       setor: "—",
       justificativa: just,
       necessario_ate: reqNeededBy ? reqNeededBy.value || null : null,
+      estimated_profit_total: calculateRequestProfit(selectedItems),
       created_at: new Date().toISOString(),
       revisao: null,
       revisor: null,
@@ -1350,7 +1469,11 @@ function initSolicitacoes() {
                 .map(
                   (it) => `
                     <li style="margin-bottom:.35rem;">
-                      <strong>${esc(it.nome_item)}</strong> ${esc(it.patrimonio || "")} — ${parseInt(it.quantidade, 10) || 0} un.
+                      <strong>${esc(it.nome_item)}</strong> ${esc(it.patrimonio || "")} — ${parseInt(it.quantidade, 10) || 0} un. — ${
+                        Number.isFinite(Number(it.estimated_profit)) && Number(it.estimated_profit) > 0
+                          ? SC.fmtCurrency(Number(it.estimated_profit))
+                          : "—"
+                      }
                     </li>
                   `,
                 )
@@ -1361,8 +1484,11 @@ function initSolicitacoes() {
       `
         : "";
 
-    state.detailId = id;
-    modalDetailBody.innerHTML = `
+      const estimatedProfitTotal = Number.isFinite(Number(r.estimated_profit_total))
+      ? Number(r.estimated_profit_total)
+      : calculateRequestProfit(r.items || []);
+        state.detailId = id;
+        modalDetailBody.innerHTML = `
       <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5);">
         ${staBadge(r.status)}
         ${urgBadge(r.urgencia)}
@@ -1373,6 +1499,10 @@ function initSolicitacoes() {
         ${dt("Item", `<strong>${esc(r.nome_item)}</strong>`)}
         ${dt("Patrimônio", esc(r.patrimonio || "—"))}
         ${dt("Quantidade", `<strong>${r.quantidade} un.</strong>`)}
+        ${dt(
+          "Valor estimado de lucro",
+          `<strong>${SC.fmtCurrency(estimatedProfitTotal)}</strong>`,
+        )}
         ${dt("Data", SC.fmtDateTime(r.created_at))}
         ${dt(
           "Solicitante",
