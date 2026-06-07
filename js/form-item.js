@@ -36,6 +36,14 @@ function parseBRLToNumber(value) {
   return Number.isFinite(n) ? n : NaN;
 }
 
+function formatNumberToBRL(value) {
+  const n = parseBRLToNumber(value);
+  if (!Number.isFinite(n)) return "";
+  const [integer, decimals] = n.toFixed(2).split(".");
+  const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `R$ ${formattedInteger},${decimals}`;
+}
+
 ("use strict");
 
 (function bootstrap() {
@@ -434,7 +442,7 @@ function parseBRLToNumber(value) {
     if (assetTag) assetTag.value = item.patrimonio || "";
     if (description) description.value = item.descricao || "";
     if (quantity) quantity.value = item.total ?? 1;
-    if (estimatedValue) estimatedValue.value = item.valor || "";
+    if (estimatedValue) estimatedValue.value = formatNumberToBRL(item.valor);
     if (notes) notes.value = item.notas || "";
 
     if (categoryId && item.categoria) {
@@ -849,9 +857,11 @@ function parseBRLToNumber(value) {
       summaryLocation.textContent = locationId?.value || "Sem localização";
     if (summaryCondition) {
       const val = [...condInputs].find((r) => r.checked)?.value;
-      summaryCondition.innerHTML = val
-        ? SC.conditionBadge(COND_MAP[val] || "otimo")
-        : "—";
+      if (val) {
+        summaryCondition.innerHTML = SC.conditionBadge(val);
+      } else {
+        summaryCondition.textContent = "—";
+      }
     }
   }
 
