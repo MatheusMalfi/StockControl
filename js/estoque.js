@@ -197,11 +197,12 @@
             </div>
           </div>
         </td>
-        <td>${SC.escHtml(item.category_name || "—")}</td>
-        <td>${SC.conditionBadge(item.condition_code)}</td>
-        <td style="text-align:right; font-weight:600;">${item.quantity_available ?? item.quantity ?? "—"}</td>
-        <td style="text-align:right; color:var(--color-text-muted);">${item.quantity ?? "—"}</td>
-        <td style="font-size:0.8125rem; color:var(--color-text-muted);">${SC.escHtml(item.asset_tag || "—")}</td>
+        <td style="text-align:center; font-weight:600;">${SC.escHtml(item.category_name || "—")}</td>
+        <td style="text-align:center; font-weight:600;">${SC.conditionBadge(item.condition_code)}</td>
+        <td style="text-align:center; font-weight:600;">${item.quantity_available ?? item.quantity ?? "—"}</td>
+        <td style="text-align:center; font-weight:600; color:var(--color-text-primary);">${item.quantity ?? "—"}</td>
+        <td style="text-align:center; font-weight:600; color:var(--color-text-primary);">${SC.escHtml(item.asset_tag || item.serial_number || "—")}</td>
+        
         <td class="col-actions">
           <div class="table-actions" style="display: flex; gap: 2px; align-items: center; justify-content: flex-end;">
             <button class="btn btn-ghost btn-icon btn-sm btn-view" data-id="${item.id}" data-tooltip="Ver detalhes" aria-label="Ver detalhes">
@@ -630,7 +631,7 @@
 
     const brand = item.brand || item.product_brand || item.brand_name || "";
     const model = item.model || item.product_model || item.model_name || "";
-    const brandModelText = [brand, model].filter(Boolean).join(" · ") || "—";
+    const brandModelText = [brand, model].filter(Boolean).join(" / ") || "—";
 
     return `
       ${photo}
@@ -660,7 +661,7 @@
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Localização</span>
-          <div class="detail-field-value">${SC.escHtml(item.location_name || "—")}</div>
+          <div class="detail-field-value">${SC.escHtml(item.location_name || item.localizacao || "—")}</div>
         </div>
         <div class="detail-field">
           <span class="detail-field-label">Valor Estimado</span>
@@ -808,11 +809,11 @@
             <div><div class="skeleton" style="width:160px;height:13px;margin-bottom:5px;"></div>
             <div class="skeleton" style="width:90px;height:11px;"></div></div>
           </div></td>
-          <td><div class="skeleton" style="width:80px;height:13px;"></div></td>
-          <td><div class="skeleton" style="width:60px;height:20px;border-radius:20px;"></div></td>
-          <td><div class="skeleton" style="width:30px;height:13px;margin-left:auto;"></div></td>
-          <td><div class="skeleton" style="width:30px;height:13px;margin-left:auto;"></div></td>
-          <td><div class="skeleton" style="width:70px;height:13px;"></div></td>
+          <td style="text-align:center;"><div class="skeleton" style="width:80px;height:13px;"></div></td>
+          <td style="text-align:center;"><div class="skeleton" style="width:60px;height:20px;border-radius:20px;"></div></td>
+          <td style="text-align:center;"><div class="skeleton" style="width:30px;height:13px;margin-left:auto;"></div></td>
+          <td style="text-align:center;"><div class="skeleton" style="width:30px;height:13px;margin-left:auto;"></div></td>
+          <td style="text-align:center;"><div class="skeleton" style="width:70px;height:13px;"></div></td>
           <td></td>
         </tr>`,
         )

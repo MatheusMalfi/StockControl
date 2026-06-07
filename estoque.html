@@ -41,7 +41,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      rel="stylesheet"stockBodysec
     />
     <link rel="stylesheet" href="/styles/main.css" />
     <link rel="stylesheet" href="/styles/components.css" />
@@ -165,7 +165,33 @@
       .item-card-qty {
         font-size: 0.8125rem;
         font-weight: 600;
-        color: var(--color-text-secondary);
+        color: var(--color-text-primary);
+      }
+
+      .table th,
+      .table td {
+        text-align: center;
+      }
+
+      .table .table-item-info,
+      .table .table-item-name {
+        text-align: left;
+      }
+
+      .table th:nth-child(2),
+      .table td:nth-child(2) {
+        width: 280px;
+        max-width: 280px;
+      }
+
+      .table td:nth-child(2) .table-item-info {
+        max-width: 280px;
+      }
+
+      .table-item-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       /* Quantity input inline */
@@ -510,7 +536,7 @@
                     aria-label="Selecionar todos"
                   />
                 </th>
-                <th data-sort="product_name">
+                <th data-sort="product_name" style="text-align: left">
                   <span class="th-sort"
                     >Nome
                     <svg
@@ -529,10 +555,10 @@
                 </th>
                 <th data-sort="category">Categoria</th>
                 <th data-sort="condition">Condição</th>
-                <th data-sort="quantity_available" style="text-align: right">
+                <th data-sort="quantity_available" style="text-align: center">
                   Disponível
                 </th>
-                <th data-sort="quantity" style="text-align: right">Total</th>
+                <th data-sort="quantity" style="text-align: center">Total</th>
                 <th>Patrimônio</th>
                 <th class="col-actions"></th>
               </tr>
