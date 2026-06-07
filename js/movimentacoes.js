@@ -60,22 +60,19 @@ document.addEventListener("sc:ready", function () {
         const items = Array.isArray(data)
           ? data
           : data.items || data.itens || [];
-        if (items.length) {
-          const mapped = items.map((it) => ({
-            id: it.id,
-            nome: it.product_name || it.nome || "—",
-            patrimonio: it.serial_number || it.patrimonio || "",
-            categoria: it.category_name || it.categoria || "",
-            disponivel:
-              it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
-            total: it.quantity ?? it.total ?? 0,
-            quantity_available:
-              it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
-          }));
-          dbSet(KEYS.ITEMS, mapped);
-          return mapped;
-        }
-        return [];
+        const mapped = (Array.isArray(items) ? items : []).map((it) => ({
+          id: it.id,
+          nome: it.product_name || it.nome || "—",
+          patrimonio: it.serial_number || it.patrimonio || "",
+          categoria: it.category_name || it.categoria || "",
+          disponivel:
+            it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
+          total: it.quantity ?? it.total ?? 0,
+          quantity_available:
+            it.quantity_available ?? it.disponivel ?? it.quantity ?? 0,
+        }));
+        dbSet(KEYS.ITEMS, mapped);
+        return mapped;
       })
       .catch(() => []);
   }
@@ -151,12 +148,24 @@ document.addEventListener("sc:ready", function () {
     const localMovs = dbGet(KEYS.MOVEMENTS);
     const deleted = new Set(dbGetDeleted().map(String));
     const map = new Map();
+    const serverList = Array.isArray(serverMovs) ? serverMovs : [];
+
+    // If there are no server movements, preserve only unsynced local movements.
+    if (!serverList.length) {
+      (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
+        if (isValidMovement(m) && m._local) {
+          map.set(String(m.id), m);
+        }
+      });
+      return Array.from(map.values());
+    }
+
     (Array.isArray(localMovs) ? localMovs : []).forEach((m) => {
       if (isValidMovement(m)) {
         map.set(String(m.id), m);
       }
     });
-    (Array.isArray(serverMovs) ? serverMovs : []).forEach((m) => {
+    serverList.forEach((m) => {
       const id = String(m.id);
       if (deleted.has(id)) return; // skip server entries that were deleted locally
       if (!isValidMovement(m)) return; // skip invalid server entries
@@ -1093,11 +1102,9 @@ document.addEventListener("sc:ready", function () {
           const serverMovs = Array.isArray(data)
             ? data
             : data.movimentacoes || [];
-          if (serverMovs.length) {
-            const merged = mergeMovements(serverMovs);
-            dbSet(KEYS.MOVEMENTS, merged);
-            render();
-          }
+          const merged = mergeMovements(serverMovs);
+          dbSet(KEYS.MOVEMENTS, merged);
+          render();
         })
         .catch(() => {});
     }
