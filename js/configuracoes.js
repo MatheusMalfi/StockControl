@@ -376,7 +376,7 @@ function showToast(msg, tipo = "info") {
     setTimeout(() => {
       t.classList.add("hiding");
       setTimeout(() => t.remove(), 350);
-    }, 3200);
+    }, 5000);
   }
 }
 

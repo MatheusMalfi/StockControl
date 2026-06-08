@@ -169,7 +169,7 @@
   /* ============================================================
      TOAST SYSTEM
      ============================================================ */
-  SC.toast = function (message, type = "info", duration = 4000) {
+  SC.toast = function (message, type = "info", duration = 5000) {
     const container = document.getElementById("toastContainer");
     if (!container) return;
 
@@ -222,6 +222,8 @@
     const backdrop = document.getElementById(id);
     if (!backdrop) return;
     backdrop.classList.add("is-open");
+    backdrop.style.display = "flex";
+    backdrop.style.visibility = "visible";
     document.body.style.overflow = "hidden";
     /* Focus first focusable element */
     const focusable = backdrop.querySelector(
@@ -233,7 +235,10 @@
   SC.closeModal = function (id) {
     const backdrop = document.getElementById(id);
     if (!backdrop) return;
+    console.log(`[SC.closeModal] closing modal ${id}`);
     backdrop.classList.remove("is-open");
+    backdrop.style.display = "";
+    backdrop.style.visibility = "";
     document.body.style.overflow = "";
   };
 
@@ -979,7 +984,7 @@
   SC.copyText = function (text, successMsg = "Copiado!") {
     navigator.clipboard
       .writeText(text)
-      .then(() => SC.toastSuccess(successMsg, 2000))
+      .then(() => SC.toastSuccess(successMsg, 5000))
       .catch(() => SC.toastError("Não foi possível copiar."));
   };
 
