@@ -191,7 +191,7 @@
         href: "estoque.html",
       },
       {
-        label: "Em Bom Estado",
+        label: "Em Ótimo Estado",
         value: fmt(
           items.filter((i) => i.condicao === "otimo" || i.condicao === "bom")
             .length,

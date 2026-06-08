@@ -338,8 +338,6 @@ document.addEventListener("sc:ready", function () {
     dbSet(KEYS.MOVEMENTS, movs);
   }
 
-  init();
-
   // ── Report config ──────────────────────────────────────────────────────────
   const REPORT_CFG = {
     estoque: {
@@ -637,7 +635,7 @@ document.addEventListener("sc:ready", function () {
     setKpi(
       2,
       good,
-      "Em bom estado",
+      "Em ótimo estado",
       "condição ótima/boa",
       "var(--color-success-dark)",
     );
@@ -782,8 +780,8 @@ document.addEventListener("sc:ready", function () {
     setKpi(
       2,
       good,
-      "Bom estado",
-      "em bom funcionamento",
+      "ótimo estado",
+      "em ótimo funcionamento",
       "var(--color-success-dark)",
     );
     setKpi(
@@ -1130,7 +1128,7 @@ document.addEventListener("sc:ready", function () {
   function renderBarChart(data, defaultColor) {
     if (!mainChart) return;
     if (!data.length) {
-      mainChart.innerHTML = `<div style="text-align:center;padding:var(--space-4);color:var(--color-text-muted);font-size:0.875rem;width:100%;">Sem dados para exibir.</div>`;
+      mainChart.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;align-self:center;color:var(--color-text-muted);font-size:0.875rem;">Sem dados para exibir.</div>`;
       if (chartLegend) chartLegend.innerHTML = "";
       return;
     }

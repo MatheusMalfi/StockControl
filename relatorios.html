@@ -1,390 +1,435 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>
-    (function() {
-      try {
-        var rawUser = localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user');
-        var theme = 'light';
-        if (rawUser) {
-          var user = JSON.parse(rawUser);
-          var orgId = user && user.organization_id;
-          if (orgId) {
-            var rawPrefs = localStorage.getItem('sc_preferencias_' + orgId);
-            if (rawPrefs) {
-              theme = JSON.parse(rawPrefs).tema || theme;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var rawUser =
+            localStorage.getItem("sc_user") ||
+            sessionStorage.getItem("sc_user");
+          var theme = "light";
+          if (rawUser) {
+            var user = JSON.parse(rawUser);
+            var orgId = user && user.organization_id;
+            if (orgId) {
+              var rawPrefs = localStorage.getItem("sc_preferencias_" + orgId);
+              if (rawPrefs) {
+                theme = JSON.parse(rawPrefs).tema || theme;
+              }
             }
           }
+          if (theme === "auto") {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "escuro"
+              : "claro";
+          }
+          document.documentElement.setAttribute(
+            "data-theme",
+            theme === "escuro" ? "dark" : "light",
+          );
+          document.documentElement.style.backgroundColor =
+            theme === "escuro" ? "#0f172a" : "#f8fafc";
+          document.documentElement.style.color =
+            theme === "escuro" ? "#f8fafc" : "#1e293b";
+        } catch (error) {}
+      })();
+    </script>
+    <title>Relatórios — StockControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
+    <style>
+      /* Report type card grid */
+      .report-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+      }
+
+      .report-card {
+        background: var(--color-surface);
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        padding: var(--space-5);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        user-select: none;
+      }
+
+      .report-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+      }
+
+      .report-card.active {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+      }
+
+      .report-card-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .report-card-icon svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .report-card-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.3;
+      }
+
+      .report-card-desc {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+        line-height: 1.5;
+      }
+
+      /* Report builder panel */
+      .report-builder {
+        display: none;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+      }
+
+      .report-builder.is-visible {
+        display: block;
+      }
+
+      .report-builder-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface-alt);
+        flex-wrap: wrap;
+        gap: var(--space-3);
+      }
+
+      .report-builder-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      .report-builder-title svg {
+        width: 18px;
+        height: 18px;
+        color: var(--color-primary);
+      }
+
+      .report-builder-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      /* Filters row inside builder */
+      .report-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: var(--space-4);
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface);
+      }
+
+      .report-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        min-width: 140px;
+      }
+
+      .report-filter-label {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-text-secondary);
+      }
+
+      /* Chart area */
+      .chart-area {
+        padding: var(--space-5);
+      }
+
+      .chart-placeholder {
+        width: 100%;
+        height: 280px;
+        background: var(--color-surface-alt);
+        border-radius: var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        border: 1px dashed var(--color-border);
+        color: var(--color-text-muted);
+      }
+
+      .chart-placeholder svg {
+        width: 32px;
+        height: 32px;
+      }
+
+      /* Bar chart (CSS visual) */
+      .css-bar-chart {
+        width: 100%;
+        height: 240px;
+        display: flex;
+        align-items: flex-end;
+        gap: var(--space-2);
+        padding: var(--space-2) 0;
+        border-bottom: 2px solid var(--color-border);
+        position: relative;
+      }
+
+      .css-bar-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-1);
+        height: 100%;
+      }
+
+      .css-bar-fill {
+        width: 100%;
+        max-width: 40px;
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        background: var(--color-primary);
+        transition: height 0.6s ease;
+        min-height: 4px;
+        cursor: pointer;
+        position: relative;
+      }
+
+      .css-bar-fill:hover {
+        background: var(--color-primary-dark);
+      }
+
+      .css-bar-fill .bar-tooltip {
+        position: absolute;
+        bottom: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-text-primary);
+        color: var(--color-surface);
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 3px 6px;
+        border-radius: var(--radius-sm);
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--transition-fast);
+      }
+
+      .css-bar-fill:hover .bar-tooltip {
+        opacity: 1;
+      }
+
+      .css-bar-label {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+
+      /* Multi-bar (grouped) */
+      .css-bar-fill.success {
+        background: var(--color-success);
+      }
+      .css-bar-fill.success:hover {
+        background: var(--color-success-dark);
+      }
+      .css-bar-fill.danger {
+        background: var(--color-danger);
+      }
+      .css-bar-fill.danger:hover {
+        background: var(--color-danger-dark);
+      }
+      .css-bar-fill.warning {
+        background: var(--color-warning);
+      }
+
+      /* Chart legend */
+      .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        margin-top: var(--space-3);
+      }
+
+      .chart-legend-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: 0.8125rem;
+        color: var(--color-text-secondary);
+      }
+
+      .chart-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      /* Summary table below chart */
+      .report-summary-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-3) var(--space-5);
+        border-bottom: 1px solid var(--color-border-light);
+        font-size: 0.875rem;
+      }
+
+      .report-summary-row:last-child {
+        border-bottom: none;
+      }
+
+      .report-summary-label {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        color: var(--color-text-secondary);
+      }
+
+      .report-summary-value {
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+
+      /* KPI highlight row */
+      .report-kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1px;
+        background: var(--color-border);
+        border-top: 1px solid var(--color-border);
+      }
+
+      @media (max-width: 768px) {
+        .report-kpi-row {
+          grid-template-columns: repeat(2, 1fr);
         }
-        if (theme === 'auto') {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
-        }
-        document.documentElement.setAttribute('data-theme', theme === 'escuro' ? 'dark' : 'light');
-        document.documentElement.style.backgroundColor = theme === 'escuro' ? '#0f172a' : '#f8fafc';
-        document.documentElement.style.color = theme === 'escuro' ? '#f8fafc' : '#1e293b';
-      } catch (error) {}
-    })();
-  </script>
-  <title>Relatórios — StockControl</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles/main.css" />
-  <link rel="stylesheet" href="/styles/components.css" />
-  <style>
-    /* Report type card grid */
-    .report-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: var(--space-4);
-      margin-bottom: var(--space-6);
-    }
+      }
 
-    .report-card {
-      background: var(--color-surface);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      padding: var(--space-5);
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-3);
-      user-select: none;
-    }
+      .report-kpi-cell {
+        background: var(--color-surface);
+        padding: var(--space-4) var(--space-5);
+      }
 
-    .report-card:hover {
-      border-color: var(--color-primary);
-      box-shadow: var(--shadow-md);
-    }
+      .report-kpi-cell-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--color-text-muted);
+        margin-bottom: var(--space-1);
+      }
 
-    .report-card.active {
-      border-color: var(--color-primary);
-      background: var(--color-primary-light);
-    }
+      .report-kpi-cell-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-text-primary);
+        line-height: 1.1;
+      }
 
-    .report-card-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+      .report-kpi-cell-sub {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+        margin-top: 2px;
+      }
 
-    .report-card-icon svg { width: 20px; height: 20px; }
+      /* Condition distribution visual */
+      .cond-bar {
+        width: 100%;
+        height: 10px;
+        border-radius: var(--radius-full);
+        overflow: hidden;
+        display: flex;
+        margin: var(--space-3) 0;
+      }
 
-    .report-card-title {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      line-height: 1.3;
-    }
+      .cond-bar-seg {
+        height: 100%;
+        transition: width 0.6s ease;
+      }
 
-    .report-card-desc {
-      font-size: 0.8125rem;
-      color: var(--color-text-muted);
-      line-height: 1.5;
-    }
+      /* Export format buttons */
+      .export-opts {
+        display: flex;
+        gap: var(--space-2);
+      }
 
-    /* Report builder panel */
-    .report-builder {
-      display: none;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-    }
+      .export-opt {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1-5);
+        height: 34px;
+        padding: 0 var(--space-3);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+      }
 
-    .report-builder.is-visible { display: block; }
+      .export-opt:hover {
+        border-color: var(--color-border-strong);
+        color: var(--color-text-primary);
+        background: var(--color-surface-alt);
+      }
 
-    .report-builder-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      background: var(--color-surface-alt);
-      flex-wrap: wrap;
-      gap: var(--space-3);
-    }
-
-    .report-builder-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-    }
-
-    .report-builder-title svg { width: 18px; height: 18px; color: var(--color-primary); }
-
-    .report-builder-actions {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-    }
-
-    /* Filters row inside builder */
-    .report-filters {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      gap: var(--space-4);
-      padding: var(--space-4) var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      background: var(--color-surface);
-    }
-
-    .report-filter-group {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-1);
-      min-width: 140px;
-    }
-
-    .report-filter-label {
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: var(--color-text-secondary);
-    }
-
-    /* Chart area */
-    .chart-area {
-      padding: var(--space-5);
-    }
-
-    .chart-placeholder {
-      width: 100%;
-      height: 280px;
-      background: var(--color-surface-alt);
-      border-radius: var(--radius-lg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-2);
-      border: 1px dashed var(--color-border);
-      color: var(--color-text-muted);
-    }
-
-    .chart-placeholder svg { width: 32px; height: 32px; }
-
-    /* Bar chart (CSS visual) */
-    .css-bar-chart {
-      width: 100%;
-      height: 240px;
-      display: flex;
-      align-items: flex-end;
-      gap: var(--space-2);
-      padding: var(--space-2) 0;
-      border-bottom: 2px solid var(--color-border);
-      position: relative;
-    }
-
-    .css-bar-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      gap: var(--space-1);
-      height: 100%;
-    }
-
-    .css-bar-fill {
-      width: 100%;
-      max-width: 40px;
-      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-      background: var(--color-primary);
-      transition: height 0.6s ease;
-      min-height: 4px;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .css-bar-fill:hover { background: var(--color-primary-dark); }
-
-    .css-bar-fill .bar-tooltip {
-      position: absolute;
-      bottom: calc(100% + 4px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--color-text-primary);
-      color: var(--color-surface);
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 3px 6px;
-      border-radius: var(--radius-sm);
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--transition-fast);
-    }
-
-    .css-bar-fill:hover .bar-tooltip { opacity: 1; }
-
-    .css-bar-label {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
-    }
-
-    /* Multi-bar (grouped) */
-    .css-bar-fill.success { background: var(--color-success); }
-    .css-bar-fill.success:hover { background: var(--color-success-dark); }
-    .css-bar-fill.danger  { background: var(--color-danger); }
-    .css-bar-fill.danger:hover  { background: var(--color-danger-dark); }
-    .css-bar-fill.warning { background: var(--color-warning); }
-
-    /* Chart legend */
-    .chart-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-4);
-      margin-top: var(--space-3);
-    }
-
-    .chart-legend-item {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: 0.8125rem;
-      color: var(--color-text-secondary);
-    }
-
-    .chart-legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
-
-    /* Summary table below chart */
-    .report-summary-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-3) var(--space-5);
-      border-bottom: 1px solid var(--color-border-light);
-      font-size: 0.875rem;
-    }
-
-    .report-summary-row:last-child { border-bottom: none; }
-
-    .report-summary-label {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      color: var(--color-text-secondary);
-    }
-
-    .report-summary-value {
-      font-weight: 600;
-      color: var(--color-text-primary);
-    }
-
-    /* KPI highlight row */
-    .report-kpi-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: var(--color-border);
-      border-top: 1px solid var(--color-border);
-    }
-
-    @media (max-width: 768px) {
-      .report-kpi-row { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    .report-kpi-cell {
-      background: var(--color-surface);
-      padding: var(--space-4) var(--space-5);
-    }
-
-    .report-kpi-cell-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--color-text-muted);
-      margin-bottom: var(--space-1);
-    }
-
-    .report-kpi-cell-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--color-text-primary);
-      line-height: 1.1;
-    }
-
-    .report-kpi-cell-sub {
-      font-size: 0.8125rem;
-      color: var(--color-text-muted);
-      margin-top: 2px;
-    }
-
-    /* Condition distribution visual */
-    .cond-bar {
-      width: 100%;
-      height: 10px;
-      border-radius: var(--radius-full);
-      overflow: hidden;
-      display: flex;
-      margin: var(--space-3) 0;
-    }
-
-    .cond-bar-seg {
-      height: 100%;
-      transition: width 0.6s ease;
-    }
-
-    /* Export format buttons */
-    .export-opts {
-      display: flex;
-      gap: var(--space-2);
-    }
-
-    .export-opt {
-      display: flex;
-      align-items: center;
-      gap: var(--space-1-5);
-      height: 34px;
-      padding: 0 var(--space-3);
-      font-size: 0.8125rem;
-      font-weight: 500;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      background: var(--color-surface);
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-
-    .export-opt:hover {
-      border-color: var(--color-border-strong);
-      color: var(--color-text-primary);
-      background: var(--color-surface-alt);
-    }
-
-    .export-opt svg { width: 14px; height: 14px; }
-  </style>
-</head>
-<body>
-
-  <main class="page-content">
-
+      .export-opt svg {
+        width: 14px;
+        height: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-content">
       <div class="page-header">
         <div>
           <h1 class="page-title">Relatórios</h1>
-          <p class="page-subtitle">Analise o estoque, movimentações e impacto das doações</p>
+          <p class="page-subtitle">
+            Analise o estoque, movimentações e impacto das doações
+          </p>
         </div>
       </div>
 
@@ -394,125 +439,274 @@
       </div>
 
       <div class="report-cards">
-
-        <div class="report-card active" data-report="estoque" tabindex="0" role="button">
-          <div class="report-card-icon" style="background:var(--color-primary-light);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-              <line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6"  x2="3.01" y2="6"/>
-              <line x1="3" y1="12" x2="3.01" y2="12"/>
-              <line x1="3" y1="18" x2="3.01" y2="18"/>
+        <div
+          class="report-card active"
+          data-report="estoque"
+          tabindex="0"
+          role="button"
+        >
+          <div
+            class="report-card-icon"
+            style="background: var(--color-primary-light)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-primary)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
           </div>
           <div class="report-card-title">Inventário Geral</div>
-          <div class="report-card-desc">Todos os itens com condição, quantidade e localização.</div>
+          <div class="report-card-desc">
+            Todos os itens com condição, quantidade e localização.
+          </div>
         </div>
 
-        <div class="report-card" data-report="movimentacoes" tabindex="0" role="button">
-          <div class="report-card-icon" style="background:var(--color-success-light);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-success-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        <div
+          class="report-card"
+          data-report="movimentacoes"
+          tabindex="0"
+          role="button"
+        >
+          <div
+            class="report-card-icon"
+            style="background: var(--color-success-light)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-success-dark)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="17 1 21 5 17 9" />
+              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+              <polyline points="7 23 3 19 7 15" />
+              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
             </svg>
           </div>
           <div class="report-card-title">Movimentações</div>
-          <div class="report-card-desc">Entradas e saídas por período com totais acumulados.</div>
+          <div class="report-card-desc">
+            Entradas e saídas por período com totais acumulados.
+          </div>
         </div>
 
-        <div class="report-card" data-report="condicao" tabindex="0" role="button">
-          <div class="report-card-icon" style="background:var(--color-warning-light);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-warning-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        <div
+          class="report-card"
+          data-report="condicao"
+          tabindex="0"
+          role="button"
+        >
+          <div
+            class="report-card-icon"
+            style="background: var(--color-warning-light)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-warning-dark)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
           </div>
           <div class="report-card-title">Estado dos Itens</div>
-          <div class="report-card-desc">Distribuição por condição e itens que precisam de atenção.</div>
+          <div class="report-card-desc">
+            Distribuição por condição e itens que precisam de atenção.
+          </div>
         </div>
 
-        <div class="report-card" data-report="doacoes" tabindex="0" role="button">
-          <div class="report-card-icon" style="background:#F5F3FF;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        <div
+          class="report-card"
+          data-report="doacoes"
+          tabindex="0"
+          role="button"
+        >
+          <div class="report-card-icon" style="background: #f5f3ff">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#7C3AED"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+              />
             </svg>
           </div>
           <div class="report-card-title">Doações e Impacto</div>
-          <div class="report-card-desc">Itens doados por organização e valor estimado do impacto.</div>
+          <div class="report-card-desc">
+            Itens doados por organização e valor estimado do impacto.
+          </div>
         </div>
 
-        <div class="report-card" data-report="descarte" tabindex="0" role="button">
-          <div class="report-card-icon" style="background:var(--color-danger-light);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-danger-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6"/><path d="M14 11v6"/>
+        <div
+          class="report-card"
+          data-report="descarte"
+          tabindex="0"
+          role="button"
+        >
+          <div
+            class="report-card-icon"
+            style="background: var(--color-danger-light)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-danger-dark)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
             </svg>
           </div>
           <div class="report-card-title">Descartes e Reciclagem</div>
-          <div class="report-card-desc">Histórico de descartes e ordens de reciclagem.</div>
+          <div class="report-card-desc">
+            Histórico de descartes e ordens de reciclagem.
+          </div>
         </div>
 
-        <div class="report-card" data-report="auditoria" tabindex="0" role="button">
-          <div class="report-card-icon" style="background:var(--color-surface-alt); border:1px solid var(--color-border);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
+        <div
+          class="report-card"
+          data-report="auditoria"
+          tabindex="0"
+          role="button"
+        >
+          <div
+            class="report-card-icon"
+            style="
+              background: var(--color-surface-alt);
+              border: 1px solid var(--color-border);
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-text-secondary)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
             </svg>
           </div>
           <div class="report-card-title">Log de Auditoria</div>
-          <div class="report-card-desc">Todas as ações registradas no sistema por usuário.</div>
+          <div class="report-card-desc">
+            Todas as ações registradas no sistema por usuário.
+          </div>
         </div>
-
       </div>
 
       <!-- ── Report builder ── -->
       <div class="report-builder is-visible" id="reportBuilder">
-
         <!-- Builder header (title + export) -->
         <div class="report-builder-header">
           <div class="report-builder-title" id="builderTitle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="6"  x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-              <line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6"  x2="3.01" y2="6"/>
-              <line x1="3" y1="12" x2="3.01" y2="12"/>
-              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
             Inventário Geral
           </div>
           <div class="report-builder-actions">
             <div class="export-opts">
               <button class="export-opt" id="exportCsv">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  />
+                  <polyline points="14 2 14 8 20 8" />
                 </svg>
                 CSV
               </button>
               <button class="export-opt" id="exportPdf">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
                 PDF
               </button>
               <button class="export-opt" id="printBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 6 2 18 2 18 9"/>
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                  <rect x="6" y="14" width="12" height="8"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path
+                    d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
+                  />
+                  <rect x="6" y="14" width="12" height="8" />
                 </svg>
                 Imprimir
               </button>
             </div>
             <button class="btn btn-primary btn-sm" id="generateBtn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="1 4 1 10 7 10"/>
-                <path d="M3.51 15a9 9 0 1 0 .49-4.95"/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 .49-4.95" />
               </svg>
               Gerar
             </button>
@@ -523,15 +717,29 @@
         <div class="report-filters" id="reportFilters">
           <div class="report-filter-group">
             <span class="report-filter-label">De</span>
-            <input type="date" class="form-control" id="rptFrom" style="height:36px; font-size:0.8125rem;" />
+            <input
+              type="date"
+              class="form-control"
+              id="rptFrom"
+              style="height: 36px; font-size: 0.8125rem"
+            />
           </div>
           <div class="report-filter-group">
             <span class="report-filter-label">Até</span>
-            <input type="date" class="form-control" id="rptTo" style="height:36px; font-size:0.8125rem;" />
+            <input
+              type="date"
+              class="form-control"
+              id="rptTo"
+              style="height: 36px; font-size: 0.8125rem"
+            />
           </div>
           <div class="report-filter-group" id="rptCondGroup">
             <span class="report-filter-label">Condição</span>
-            <select class="form-control" id="rptCondition" style="height:36px; font-size:0.8125rem;">
+            <select
+              class="form-control"
+              id="rptCondition"
+              style="height: 36px; font-size: 0.8125rem"
+            >
               <option value="">Todas</option>
               <option value="OTIMO">Ótimo</option>
               <option value="REPARO">Reparo</option>
@@ -540,13 +748,25 @@
           </div>
           <div class="report-filter-group" id="rptCatGroup">
             <span class="report-filter-label">Categoria</span>
-            <select class="form-control" id="rptCategory" style="height:36px; font-size:0.8125rem;">
+            <select
+              class="form-control"
+              id="rptCategory"
+              style="height: 36px; font-size: 0.8125rem"
+            >
               <option value="">Todas</option>
             </select>
           </div>
-          <div class="report-filter-group" id="rptTypeGroup" style="display:none;">
+          <div
+            class="report-filter-group"
+            id="rptTypeGroup"
+            style="display: none"
+          >
             <span class="report-filter-label">Tipo</span>
-            <select class="form-control" id="rptMovType" style="height:36px; font-size:0.8125rem;">
+            <select
+              class="form-control"
+              id="rptMovType"
+              style="height: 36px; font-size: 0.8125rem"
+            >
               <option value="">Todos</option>
               <option value="ENTRADA">Entrada</option>
               <option value="SAIDA">Saída</option>
@@ -559,84 +779,205 @@
         <!-- KPI summary row -->
         <div class="report-kpi-row" id="reportKpiRow">
           <div class="report-kpi-cell">
-            <div class="report-kpi-cell-label" id="rptKpi1Label">Total de Itens</div>
+            <div class="report-kpi-cell-label" id="rptKpi1Label">
+              Total de Itens
+            </div>
             <div class="report-kpi-cell-value" id="rptKpi1">—</div>
-            <div class="report-kpi-cell-sub" id="rptKpi1Sub">itens cadastrados</div>
+            <div class="report-kpi-cell-sub" id="rptKpi1Sub">
+              itens cadastrados
+            </div>
           </div>
           <div class="report-kpi-cell">
-            <div class="report-kpi-cell-label" id="rptKpi2Label">Em bom estado</div>
-            <div class="report-kpi-cell-value" id="rptKpi2" style="color:var(--color-success-dark);">—</div>
-            <div class="report-kpi-cell-sub" id="rptKpi2Sub">condição ótima</div>
+            <div class="report-kpi-cell-label" id="rptKpi2Label">
+              Em ótimo estado
+            </div>
+            <div
+              class="report-kpi-cell-value"
+              id="rptKpi2"
+              style="color: var(--color-success-dark)"
+            >
+              —
+            </div>
+            <div class="report-kpi-cell-sub" id="rptKpi2Sub">
+              condição ótima
+            </div>
           </div>
           <div class="report-kpi-cell">
-            <div class="report-kpi-cell-label" id="rptKpi3Label">Para reparo</div>
-            <div class="report-kpi-cell-value" id="rptKpi3" style="color:var(--color-warning-dark);">—</div>
-            <div class="report-kpi-cell-sub" id="rptKpi3Sub">precisam de atenção</div>
+            <div class="report-kpi-cell-label" id="rptKpi3Label">
+              Para reparo
+            </div>
+            <div
+              class="report-kpi-cell-value"
+              id="rptKpi3"
+              style="color: var(--color-warning-dark)"
+            >
+              —
+            </div>
+            <div class="report-kpi-cell-sub" id="rptKpi3Sub">
+              precisam de atenção
+            </div>
           </div>
           <div class="report-kpi-cell">
-            <div class="report-kpi-cell-label" id="rptKpi4Label">Para descarte</div>
-            <div class="report-kpi-cell-value" id="rptKpi4" style="color:var(--color-danger-dark);">—</div>
-            <div class="report-kpi-cell-sub" id="rptKpi4Sub">aguardando descarte</div>
+            <div class="report-kpi-cell-label" id="rptKpi4Label">
+              Para descarte
+            </div>
+            <div
+              class="report-kpi-cell-value"
+              id="rptKpi4"
+              style="color: var(--color-danger-dark)"
+            >
+              —
+            </div>
+            <div class="report-kpi-cell-sub" id="rptKpi4Sub">
+              aguardando descarte
+            </div>
           </div>
         </div>
 
         <!-- Chart area -->
         <div class="chart-area" id="chartArea">
-          <div class="section-header" style="margin-bottom:var(--space-3);">
-            <h3 class="section-title" id="chartTitle">Distribuição por Categoria</h3>
+          <div class="section-header" style="margin-bottom: var(--space-3)">
+            <h3 class="section-title" id="chartTitle">
+              Distribuição por Categoria
+            </h3>
           </div>
           <div class="css-bar-chart" id="mainChart">
             <!-- Skeleton bars -->
-            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:60%; width:100%; border-radius:var(--radius-sm);"></div></div>
-            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:85%; width:100%; border-radius:var(--radius-sm);"></div></div>
-            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:45%; width:100%; border-radius:var(--radius-sm);"></div></div>
-            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:70%; width:100%; border-radius:var(--radius-sm);"></div></div>
-            <div class="css-bar-item"><div class="css-bar-fill skeleton" style="height:30%; width:100%; border-radius:var(--radius-sm);"></div></div>
+            <div class="css-bar-item">
+              <div
+                class="css-bar-fill skeleton"
+                style="
+                  height: 60%;
+                  width: 100%;
+                  border-radius: var(--radius-sm);
+                "
+              ></div>
+            </div>
+            <div class="css-bar-item">
+              <div
+                class="css-bar-fill skeleton"
+                style="
+                  height: 85%;
+                  width: 100%;
+                  border-radius: var(--radius-sm);
+                "
+              ></div>
+            </div>
+            <div class="css-bar-item">
+              <div
+                class="css-bar-fill skeleton"
+                style="
+                  height: 45%;
+                  width: 100%;
+                  border-radius: var(--radius-sm);
+                "
+              ></div>
+            </div>
+            <div class="css-bar-item">
+              <div
+                class="css-bar-fill skeleton"
+                style="
+                  height: 70%;
+                  width: 100%;
+                  border-radius: var(--radius-sm);
+                "
+              ></div>
+            </div>
+            <div class="css-bar-item">
+              <div
+                class="css-bar-fill skeleton"
+                style="
+                  height: 30%;
+                  width: 100%;
+                  border-radius: var(--radius-sm);
+                "
+              ></div>
+            </div>
           </div>
           <div class="chart-legend" id="chartLegend"></div>
         </div>
 
         <!-- Condition bar (estoque / condicao reports) -->
-        <div id="condBarSection" style="padding:0 var(--space-5) var(--space-4);">
-          <div class="section-header" style="margin-bottom:var(--space-3);">
+        <div
+          id="condBarSection"
+          style="padding: 0 var(--space-5) var(--space-4)"
+        >
+          <div class="section-header" style="margin-bottom: var(--space-3)">
             <h3 class="section-title">Distribuição por Condição</h3>
           </div>
           <div class="cond-bar" id="condBar">
-            <div class="cond-bar-seg" id="condBarOtimo"    style="background:var(--color-success); width:0%;"></div>
-            <div class="cond-bar-seg" id="condBarReparo"   style="background:var(--color-warning); width:0%;"></div>
-            <div class="cond-bar-seg" id="condBarDescartar" style="background:var(--color-danger); width:0%;"></div>
+            <div
+              class="cond-bar-seg"
+              id="condBarOtimo"
+              style="background: var(--color-success); width: 0%"
+            ></div>
+            <div
+              class="cond-bar-seg"
+              id="condBarReparo"
+              style="background: var(--color-warning); width: 0%"
+            ></div>
+            <div
+              class="cond-bar-seg"
+              id="condBarDescartar"
+              style="background: var(--color-danger); width: 0%"
+            ></div>
           </div>
           <div class="chart-legend">
             <div class="chart-legend-item">
-              <div class="chart-legend-dot" style="background:var(--color-success);"></div>
+              <div
+                class="chart-legend-dot"
+                style="background: var(--color-success)"
+              ></div>
               Ótimo — <strong id="condPctOtimo">—</strong>
             </div>
             <div class="chart-legend-item">
-              <div class="chart-legend-dot" style="background:var(--color-warning);"></div>
+              <div
+                class="chart-legend-dot"
+                style="background: var(--color-warning)"
+              ></div>
               Reparo — <strong id="condPctReparo">—</strong>
             </div>
             <div class="chart-legend-item">
-              <div class="chart-legend-dot" style="background:var(--color-danger);"></div>
+              <div
+                class="chart-legend-dot"
+                style="background: var(--color-danger)"
+              ></div>
               Descartar — <strong id="condPctDescartar">—</strong>
             </div>
           </div>
         </div>
 
         <!-- Data table -->
-        <div class="table-wrapper" style="border:none; border-radius:0; border-top:1px solid var(--color-border);">
+        <div
+          class="table-wrapper"
+          style="
+            border: none;
+            border-radius: 0;
+            border-top: 1px solid var(--color-border);
+          "
+        >
           <table class="table" id="reportTable">
             <thead id="reportThead">
               <!-- filled by JS -->
             </thead>
             <tbody id="reportBody">
-              <tr><td colspan="8" style="text-align:center; padding:var(--space-8); color:var(--color-text-muted);">
-                Clique em <strong>Gerar</strong> para carregar o relatório.
-              </td></tr>
+              <tr>
+                <td
+                  colspan="8"
+                  style="
+                    text-align: center;
+                    padding: var(--space-8);
+                    color: var(--color-text-muted);
+                  "
+                >
+                  Clique em <strong>Gerar</strong> para carregar o relatório.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="pagination" id="reportPagination" style="display:none;">
+        <div class="pagination" id="reportPagination" style="display: none">
           <span class="pagination-info" id="rptPagInfo">—</span>
           <div class="pagination-controls" id="rptPagControls"></div>
           <div class="pagination-per-page">
@@ -648,17 +989,15 @@
             </select>
           </div>
         </div>
-
-      </div><!-- /report-builder -->
-
+      </div>
+      <!-- /report-builder -->
     </main>
-  
 
-  <!-- Toast -->
-  <div class="toast-container" id="toastContainer"></div>
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/layout.js"></script>
-  <script src="/js/main.js"></script>
-  <script src="/js/relatorios.js"></script>
-</body>
+    <script src="/js/layout.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/relatorios.js"></script>
+  </body>
 </html>
