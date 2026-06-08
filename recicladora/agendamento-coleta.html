@@ -299,7 +299,7 @@
               </div>
             </div>
 
-            <form class="schedule-form" id="scheduleForm">
+            <form class="schedule-form" id="scheduleForm" novalidate>
               <div class="form-group">
                 <label class="form-label" for="data-retirada"
                   >Data de retirada</label
@@ -317,7 +317,7 @@
                 >
               </div>
 
-              <div class="form-group">
+              <div class="form-group" id="groupObservacoes">
                 <label class="form-label" for="observacoes"
                   >Observações à empresa<span class="required">*</span></label
                 >
@@ -329,6 +329,7 @@
                   required
                   placeholder="Descreva instruções especiais, restrições de acesso, contato no local…"
                 ></textarea>
+                <span class="form-error" id="observacoesError">Informe observações à empresa.</span>
                 <span class="form-hint"
                   >Use este campo para informar detalhes importantes sobre a
                   coleta.</span

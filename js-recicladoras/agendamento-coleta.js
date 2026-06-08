@@ -18,6 +18,8 @@
     summaryQty: document.getElementById("summaryQty"),
     dateInput: document.getElementById("data-retirada"),
     obsInput: document.getElementById("observacoes"),
+    obsGroup: document.getElementById("groupObservacoes"),
+    obsError: document.getElementById("observacoesError"),
     form: document.getElementById("scheduleForm"),
   };
 
@@ -36,6 +38,17 @@
   function isRequestSchedulable(status) {
     const statusLower = normalizeStatus(status);
     return statusLower === "aprovada";
+  }
+
+  function setFieldError(groupEl, errorEl, message) {
+    if (!groupEl || !errorEl) return;
+    if (message) {
+      groupEl.classList.add("has-error");
+      errorEl.textContent = message;
+    } else {
+      groupEl.classList.remove("has-error");
+      errorEl.textContent = "";
+    }
   }
 
   function setFormDisabled(disabled) {
@@ -195,8 +208,16 @@
         return;
       }
 
+      setFieldError(elements.obsGroup, elements.obsError, "");
       if (!obs) {
-        SC.toast("A observação é obrigatória.", "warning");
+        setFieldError(
+          elements.obsGroup,
+          elements.obsError,
+          "Informe observações à empresa.",
+        );
+        if (elements.obsInput) {
+          elements.obsInput.focus();
+        }
         return;
       }
 
@@ -247,6 +268,12 @@
         console.error("Erro ao agendar:", err);
         SC.toast("Falha ao salvar agendamento.", "error");
       }
+    });
+  }
+
+  if (elements.obsInput) {
+    elements.obsInput.addEventListener("input", () => {
+      setFieldError(elements.obsGroup, elements.obsError, "");
     });
   }
 
