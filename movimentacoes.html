@@ -348,6 +348,35 @@
         background: #f5f3ff;
         color: #7c3aed;
       }
+
+      /* Movimentações table sizing */
+      .mov-table-wrapper {
+        overflow-x: auto;
+      }
+
+      #movTable {
+        table-layout: auto;
+        width: 100%;
+        min-width: 0;
+      }
+
+      #movTable th,
+      #movTable td {
+        white-space: normal;
+      }
+
+      #movTable td:first-child {
+        white-space: nowrap;
+      }
+
+      #movTable th:nth-child(4),
+      #movTable td:nth-child(4) {
+        width: auto;
+      }
+
+      #movTable .col-actions {
+        width: auto;
+      }
     </style>
   </head>
   <body>
@@ -511,10 +540,10 @@
       </div>
 
       <!-- Table -->
-      <div class="table-wrapper">
+      <div class="table-wrapper mov-table-wrapper">
         <table class="table" id="movTable">
           <thead>
-            <tr>
+            <tr style="width: full">
               <th data-sort="created_at">
                 <span class="th-sort"
                   >Data
@@ -534,9 +563,9 @@
               </th>
               <th>Tipo</th>
               <th data-sort="product_name">Item</th>
-              <th style="text-align: right">Qtd</th>
-              <th>Responsável</th>
-              <th>Origem / Destino</th>
+              <th style="text-align: center">Qtd</th>
+              <th style="text-align: center">Responsável</th>
+              <!-- <th>Origem / Destino</th> -->
               <th>Observação</th>
               <th class="col-actions"></th>
             </tr>
@@ -594,7 +623,11 @@
         <p class="empty-state-desc">
           Ajuste os filtros ou registre uma nova movimentação.
         </p>
-        <button class="btn btn-primary" id="emptyNewMovBtn">
+        <button
+          class="btn btn-primary"
+          id="emptyNewMovBtn"
+          style="margin-top: 10px"
+        >
           Nova Movimentação
         </button>
       </div>

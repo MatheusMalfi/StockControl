@@ -1,5 +1,9 @@
 "use strict";
-document.addEventListener("sc:ready", function () {
+let movInitFired = false;
+function bootMovimentacoes() {
+  if (movInitFired) return;
+  movInitFired = true;
+
   // ── Storage ───────────────────────────────────────────────────────────────
   const KEYS = {
     ITEMS: "sc_items",
@@ -449,25 +453,24 @@ document.addEventListener("sc:ready", function () {
             ? m.notas.slice(0, 45) + "…"
             : m.notas
           : "";
-        const oriDest = m.destino
-          ? `<span>${SC.escHtml(m.destino)}</span>`
-          : `<span style="color:var(--color-text-muted);">—</span>`;
+        // const oriDest = m.destino
+        //   ? `<span>${SC.escHtml(m.destino)}</span>`
+        //   : `<span style="color:var(--color-text-muted);">—</span>`;
         return `
         <tr data-id="${m.id}">
           <td style="white-space:nowrap; color:var(--color-text-secondary); font-size:0.8125rem;">${SC.fmtDateTime(m.created_at)}</td>
           <td>${typeBadgeHtml(m.tipo)}</td>
-          <td>
+          <td style="white-space:nowrap;">
             <div style="font-weight:500; color:var(--color-text-primary); font-size:0.875rem;">${SC.escHtml(m.nome)}</div>
             <div style="font-size:0.8125rem; color:var(--color-text-muted);">${SC.escHtml(m.patrimonio)}</div>
           </td>
-          <td style="text-align:right;">${qtyHtml(m.tipo, m.quantidade)}</td>
-          <td>
-            <div style="display:flex; align-items:center; gap:var(--space-2);">
+          <td style="text-align: center;">${qtyHtml(m.tipo, m.quantidade)}</td>
+          <td style="text-align: center;">
+            <div style="display:flex; align-items:center; gap:var(--space-2); min-width:0;">
               <div class="avatar" style="width:26px; height:26px; font-size:0.65rem; flex-shrink:0;">${SC.escHtml(ini)}</div>
-              <span style="font-size:0.875rem;">${SC.escHtml(m.responsavel || "—")}</span>
+              <span style="font-size:0.875rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${SC.escHtml(m.responsavel || "—")}</span>
             </div>
           </td>
-          <td style="font-size:0.875rem; color:var(--color-text-secondary);">${oriDest}</td>
           <td style="font-size:0.8125rem; color:var(--color-text-muted); max-width:180px;" title="${SC.escHtml(m.notas || "")}">${SC.escHtml(obs) || "—"}</td>
           <td class="col-actions" style="white-space:nowrap;">
             <button class="btn btn-ghost btn-sm btn-row-detail" data-id="${m.id}" title="Ver detalhes">
@@ -662,8 +665,12 @@ document.addEventListener("sc:ready", function () {
   }
 
   function wireNewMovModal() {
-    newMovBtn && newMovBtn.addEventListener("click", openNewMovModal);
-    emptyNewMovBtn && emptyNewMovBtn.addEventListener("click", openNewMovModal);
+    if (newMovBtn) {
+      newMovBtn.addEventListener("click", openNewMovModal);
+    }
+    if (emptyNewMovBtn) {
+      emptyNewMovBtn.addEventListener("click", openNewMovModal);
+    }
 
     movItemSearch &&
       movItemSearch.addEventListener(
@@ -961,7 +968,7 @@ document.addEventListener("sc:ready", function () {
     }
 
     SC.closeModal("newMovModal");
-    SC.toastSuccess("Movimentação registrada com sucesso!");
+    SC.toastSuccess("Movimentação registrada com sucesso!", 5000);
     state.page = 1;
     render();
   }
@@ -1042,7 +1049,7 @@ document.addEventListener("sc:ready", function () {
       );
       dbSet(KEYS.MOVEMENTS, movs);
       SC.closeModal("deleteMovModal");
-      SC.toastSuccess("Movimentação removida.");
+      SC.toastSuccess("Movimentação removida.", 5000);
       render();
     };
     SC.openModal("deleteMovModal");
@@ -1112,4 +1119,25 @@ document.addEventListener("sc:ready", function () {
   }
 
   init();
+}
+
+document.addEventListener("sc:ready", function () {
+  bootMovimentacoes();
 });
+
+if (
+  document.readyState === "interactive" ||
+  document.readyState === "complete"
+) {
+  bootMovimentacoes();
+} else {
+  document.addEventListener("DOMContentLoaded", function () {
+    bootMovimentacoes();
+  });
+}
+
+setTimeout(() => {
+  if (!movInitFired) {
+    bootMovimentacoes();
+  }
+}, 1000);
