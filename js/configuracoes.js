@@ -314,6 +314,23 @@ function _getOrgData() {
     return {};
   }
 }
+
+function _isRecicladoraOrg() {
+  const session = _getOrgData();
+  const orgType = (
+    session.org_type ||
+    session.organization_type ||
+    session.type ||
+    session.user?.org_type ||
+    session.user?.organization_type ||
+    ""
+  )
+    .toString()
+    .trim()
+    .toLowerCase();
+  return orgType === "recycler";
+}
+
 function _cfgApi(method, url, body) {
   const token = _cfgToken();
   return fetch(url, {
@@ -427,6 +444,13 @@ function initConfiguracoes() {
   const panels = document.querySelectorAll(".settings-panel");
 
   function activar(id, reload) {
+    const targetNav = document.querySelector(
+      `.settings-nav-item[data-panel="${id}"]`,
+    );
+    if (!targetNav || targetNav.style.display === "none") {
+      id = "perfil";
+    }
+
     panels.forEach((p) => p.classList.remove("active"));
     navItems.forEach((n) => n.classList.remove("active"));
     const p = document.getElementById("panel-" + id);
@@ -436,6 +460,21 @@ function initConfiguracoes() {
     history.replaceState(null, "", "#" + id);
     if (reload) navegarSecao(id);
   }
+
+  function aplicarVisibilidadePorTipo() {
+    if (!_isRecicladoraOrg()) return;
+
+    ["categorias", "locais"].forEach((panelId) => {
+      const navItem = document.querySelector(
+        `.settings-nav-item[data-panel="${panelId}"]`,
+      );
+      const panel = document.getElementById(`panel-${panelId}`);
+      if (navItem) navItem.style.display = "none";
+      if (panel) panel.style.display = "none";
+    });
+  }
+
+  aplicarVisibilidadePorTipo();
 
   navItems.forEach((item) =>
     item.addEventListener("click", () => activar(item.dataset.panel, true)),
