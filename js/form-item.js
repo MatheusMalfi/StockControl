@@ -274,6 +274,26 @@ function formatNumberToBRL(value) {
               all[idx]._backend_id = data.item_id;
               saveItems(all);
             }
+
+            const newEtiquetaItem = {
+              id: String(data.item_id),
+              product_name: item.nome,
+              serial_number: item.patrimonio || item.numeroSerie || item.numero_serie || '',
+              condition_code: COND_CODE[item.condicao] || 'OTIMO',
+              quantity: item.total ?? 1,
+              quantity_available: item.total ?? 1,
+              category_name: item.categoria || item.category_name || '',
+              numero_serie: item.numeroSerie || item.serie || item.numero_serie || '',
+            };
+            try {
+              localStorage.setItem(
+                'estoque_items_updated',
+                JSON.stringify({ item: newEtiquetaItem, ts: Date.now() }),
+              );
+              setTimeout(() => localStorage.removeItem('estoque_items_updated'), 1000);
+            } catch (error) {
+              console.warn('Não foi possível notificar etiquetas do novo item.', error);
+            }
           }
         })
         .catch(() => {});
@@ -644,6 +664,15 @@ function formatNumberToBRL(value) {
             if (!data.success) throw new Error(data.message || "Erro");
             isDirty = false;
             SC.toastSuccess("Item atualizado com sucesso!");
+            try {
+              localStorage.setItem(
+                'estoque_items_updated',
+                JSON.stringify({ ts: Date.now() }),
+              );
+              setTimeout(() => localStorage.removeItem('estoque_items_updated'), 1000);
+            } catch (err) {
+              console.warn('Não foi possível notificar etiquetas da atualização do item.', err);
+            }
             setTimeout(() => {
               window.location.href = "estoque.html";
             }, 900);

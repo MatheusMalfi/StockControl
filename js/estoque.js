@@ -50,14 +50,31 @@
   async function init() {
     /* Resolve org context from session */
     try {
-      _sessionUser =
-        SC.currentUser ||
-        JSON.parse(
-          localStorage.getItem("sc_user") ||
-            sessionStorage.getItem("sc_user") ||
-            "null",
-        ) ||
-        {};
+      // Prefer in-memory `SC.currentUser`. If not present, try fetching /users/me
+      if (SC.currentUser) {
+        _sessionUser = SC.currentUser;
+      } else {
+        try {
+          const data = await SC.api("/users/me");
+          _sessionUser = (data && (data.user || data)) ||
+            JSON.parse(
+              localStorage.getItem("sc_user") ||
+                sessionStorage.getItem("sc_user") ||
+                "null",
+            ) || {};
+          if (_sessionUser) {
+            // cache in SC.currentUser for consistency
+            SC.currentUser = _sessionUser;
+          }
+        } catch {
+          // fallback to stored value if API fails
+          _sessionUser = JSON.parse(
+            localStorage.getItem("sc_user") ||
+              sessionStorage.getItem("sc_user") ||
+              "null",
+          ) || {};
+        }
+      }
     } catch {
       _sessionUser = {};
     }
@@ -776,6 +793,12 @@
         state.selected.delete(String(state.discardItemId));
         updateBulkBar();
         await loadItems();
+        try {
+          localStorage.setItem('estoque_items_updated', JSON.stringify({ ts: Date.now() }));
+          setTimeout(() => localStorage.removeItem('estoque_items_updated'), 1000);
+        } catch (err) {
+          console.warn('Não foi possível notificar etiquetas do descarte.', err);
+        }
       } catch (err) {
         SC.toastError(err.message || "Erro ao descartar item.");
       } finally {

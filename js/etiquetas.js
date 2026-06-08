@@ -24,64 +24,113 @@ const Estado = {
 // ════════════════════════════════════════════════════════
 function initEtiquetas() {
   carregarPreferencias();
-  carregarItens(true);
-  carregarCategorias();
+  const user = window.SC?.currentUser;
+  if (user) {
+    Estado.orgName = user.organizationName || user.organization?.name || Estado.orgName;
+  }
   bindEventos();
   renderListaItens(Estado.itens);
   atualizarBotaoImprimir();
   agendarPreview();
-
-  requestAnimationFrame(() => carregarItens());
+  carregarItens();
+  window.addEventListener('storage', handleStorageEvent);
 }
 
 function _etiqToken() {
   return localStorage.getItem('sc_token') || sessionStorage.getItem('sc_token');
 }
 
-function carregarItens(useCacheOnly = false) {
-  const salvo = localStorage.getItem('estoque_itens');
-  Estado.itens = salvo ? JSON.parse(salvo) : [];
-  if (!salvo) localStorage.setItem('estoque_itens', JSON.stringify([]));
-  Estado.itensFiltrados = [...Estado.itens];
+function getUserFromStorage() {
+  try {
+    return JSON.parse(localStorage.getItem('sc_user') || sessionStorage.getItem('sc_user') || 'null') || null;
+  } catch {
+    return null;
+  }
+}
 
-  const user = window.SC?.currentUser;
-  if (user) {
-    Estado.orgName =
-      user.organizationName ||
-      user.organization?.name ||
-      Estado.orgName;
+function resolveOrganizationIdFromUser(user) {
+  return (
+    user?.organization_id ||
+    user?.organizationId ||
+    user?.org ||
+    user?.orgId ||
+    user?.organization?.id ||
+    ''
+  );
+}
+
+async function resolveOrganizationId() {
+  const storedUser = window.SC?.currentUser || getUserFromStorage();
+  const orgId = resolveOrganizationIdFromUser(storedUser);
+  if (orgId) return orgId;
+
+  const token = _etiqToken();
+  if (!token) return '';
+
+  if (typeof SC !== 'undefined' && typeof SC.api === 'function') {
+    try {
+      const data = await SC.api('/users/me');
+      return resolveOrganizationIdFromUser(data.user || data);
+    } catch (err) {
+      console.warn('Etiquetas: falha ao buscar usuário via SC.api /users/me', err);
+    }
   }
 
+  try {
+    const res = await fetch('/api/users/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    return resolveOrganizationIdFromUser(data.user || data);
+  } catch (err) {
+    console.warn('Etiquetas: falha ao buscar usuário via fetch /api/users/me', err);
+    return '';
+  }
+}
+
+async function carregarItens(useCacheOnly = false) {
   if (useCacheOnly) {
     return;
   }
 
-  const token = _etiqToken();
-  fetch('/api/items', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data => {
-      const itens = (Array.isArray(data) ? data : data.items || []).map(it => ({
-        id: String(it.id),
-        nome: it.nome,
-        patrimonio: it.patrimonio || '',
-        condicao: it.condicao || 'otimo',
-        qtdTotal: it.total || 0,
-        qtdDisponivel: it.disponivel || 0,
-        categoria: it.categoria || '',
-        numeroSerie: it.numero_serie || it.numeroSerie || '',
-      }));
+  mostrarSkeleton();
 
-      const atualHash = JSON.stringify(Estado.itens);
-      const novoHash = JSON.stringify(itens);
-      if (itens.length && novoHash !== atualHash) {
-        localStorage.setItem('estoque_itens', novoHash);
-        Estado.itens = itens;
-        Estado.itensFiltrados = [...itens];
-        renderListaItens(Estado.itens);
-        atualizarBotaoImprimir();
-      }
+  const orgId = await resolveOrganizationId();
+  if (!orgId) {
+    console.warn('Etiquetas: organization_id ausente. Não foi possível carregar itens.');
+    Estado.itens = [];
+    Estado.itensFiltrados = [];
+    renderListaItens(Estado.itens);
+    atualizarBotaoImprimir();
+    return;
+  }
+
+  const token = _etiqToken();
+  const endpoint = `/items?organization_id=${encodeURIComponent(orgId)}&sort=product_name:asc&limit=1000`;
+  const request =
+    typeof SC !== 'undefined' && typeof SC.api === 'function'
+      ? SC.api(endpoint)
+      : fetch(`/api${endpoint}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }).then(r => r.ok ? r.json() : Promise.reject());
+
+  request
+    .then(data => {
+      const itens = (Array.isArray(data) ? data : data.items || []).map(normalizeEtiquetaItem);
+      Estado.itens = itens;
+      Estado.itensFiltrados = [...itens];
+      localStorage.setItem('estoque_itens', JSON.stringify(itens));
+      renderListaItens(Estado.itens);
+      carregarCategorias();
+      atualizarBotaoImprimir();
+      agendarPreview();
     })
-    .catch(() => {});
+    .catch((err) => {
+      console.error('Erro ao carregar itens para etiquetas:', err);
+      Estado.itens = [];
+      Estado.itensFiltrados = [];
+      renderListaItens(Estado.itens);
+      atualizarBotaoImprimir();
+    });
 }
 
 function carregarPreferencias() {
@@ -109,9 +158,10 @@ function aplicarPreferenciasUI() {
 }
 
 function carregarCategorias() {
-  const cats = [...new Set(Estado.itens.map(i => i.categoria).filter(Boolean))].sort();
   const sel = document.getElementById('filtroCategoria');
   if (!sel) return;
+  sel.innerHTML = '<option value="">Todas as categorias</option>';
+  const cats = [...new Set(Estado.itens.map(i => i.categoria).filter(Boolean))].sort();
   cats.forEach(cat => {
     const opt = document.createElement('option');
     opt.value = cat;
@@ -141,6 +191,76 @@ function bindEventos() {
   document.getElementById('filtroCategoria')?.addEventListener('change', aplicarFiltros);
   document.getElementById('checkboxTodos')?.addEventListener('change', toggleSelecionarTodos);
 }
+
+function normalizeEtiquetaItem(item) {
+  const condicaoRaw = String(item.condition_code || item.condicao || 'otimo').toLowerCase();
+  const condicao = condicaoRaw === 'otimo' || condicaoRaw === 'bom' || condicaoRaw === 'regular' || condicaoRaw === 'reparo' || condicaoRaw === 'descarte'
+    ? condicaoRaw
+    : condicaoRaw.toLowerCase();
+
+  const brand = item.product_brand || item.brand || item.brand_name || item.marca || '';
+  const model = item.product_model || item.model || item.model_name || item.modelo || '';
+  const serial = item.serial_number || item.asset_tag || item.patrimonio || item.numero_serie || item.numeroSerie || '';
+
+  return {
+    id: String(item.id),
+    nome: item.product_name || item.nome || '',
+    patrimonio: serial,
+    condicao,
+    qtdTotal: Number(item.quantity ?? item.total ?? 0),
+    qtdDisponivel: Number(item.quantity_available ?? item.disponivel ?? item.qtdDisponivel ?? item.qtdTotal ?? 0),
+    categoria: item.category_name || item.categoria || '',
+    marca: brand,
+    modelo: model,
+    numeroSerie: serial,
+  };
+}
+
+function adicionarOuAtualizarItemEtiqueta(item, options = {}) {
+  const normalized = normalizeEtiquetaItem(item);
+  const idx = Estado.itens.findIndex((i) => i.id === normalized.id);
+  if (idx > -1) {
+    Estado.itens[idx] = normalized;
+  } else {
+    Estado.itens.unshift(normalized);
+  }
+
+  if (options.selectNew) {
+    if (!Estado.itensSelecionados.includes(normalized.id)) {
+      Estado.itensSelecionados.push(normalized.id);
+    }
+  }
+
+  Estado.itensFiltrados = [...Estado.itens];
+  localStorage.setItem('estoque_itens', JSON.stringify(Estado.itens));
+  carregarCategorias();
+  renderListaItens(Estado.itensFiltrados);
+  atualizarBotaoImprimir();
+  agendarPreview();
+}
+
+function handleStorageEvent(event) {
+  if (!event.key || event.key !== 'estoque_items_updated' || !event.newValue) {
+    return;
+  }
+  try {
+    const payload = JSON.parse(event.newValue);
+    if (payload && payload.item) {
+      adicionarOuAtualizarItemEtiqueta(payload.item, { selectNew: true });
+      showToast('Nova etiqueta adicionada a partir do estoque.', 'success');
+      return;
+    }
+  } catch (err) {
+    console.warn('Falha ao processar evento de item criado para etiqueta', err);
+  }
+
+  // Caso o payload não contenha item ou esteja vazio, recarregamos a lista completa.
+  carregarItens();
+}
+
+window.adicionarItemParaEtiquetas = function(item) {
+  adicionarOuAtualizarItemEtiqueta(item);
+};
 
 // ════════════════════════════════════════════════════════
 // 2. SKELETON LOADING
@@ -441,11 +561,17 @@ function buildPreviewEl(item) {
   const condLabel = COND_LABEL[cond] || cond;
   const sizeClass = Estado.tamanho !== 'pequena' ? ` ${Estado.tamanho}` : '';
 
-  const infoParts = [];
-  if (Estado.campos.categoria  && item.categoria)    infoParts.push(escHtml(item.categoria));
-  if (Estado.campos.quantidade)                       infoParts.push(`Qtd: ${item.qtdDisponivel ?? item.qtdTotal ?? 0}`);
-  if (Estado.campos.organizacao)                      infoParts.push(escHtml(Estado.orgName));
-  if (Estado.campos.serie      && item.numeroSerie)  infoParts.push(`S/N: ${escHtml(item.numeroSerie)}`);
+  const mainInfo = [];
+  if (Estado.campos.categoria  && item.categoria)    mainInfo.push(escHtml(item.categoria));
+  if (Estado.campos.quantidade)                       mainInfo.push(`Qtd: ${item.qtdDisponivel ?? item.qtdTotal ?? 0}`);
+  if (Estado.campos.organizacao)                      mainInfo.push(escHtml(Estado.orgName));
+
+  const brandInfo = [];
+  if (Estado.campos.serie) {
+    if (item.marca)  brandInfo.push(`Marca: ${escHtml(item.marca)}`);
+    if (item.modelo) brandInfo.push(`Modelo: ${escHtml(item.modelo)}`);
+    else if (!item.marca && item.numeroSerie) brandInfo.push(`S/N: ${escHtml(item.numeroSerie)}`);
+  }
 
   const div = document.createElement('div');
   div.className = `etiqueta-preview${sizeClass}`;
@@ -454,7 +580,8 @@ function buildPreviewEl(item) {
     <div class="preview-campos">
       <div class="preview-nome">${escHtml(item.nome || '')}</div>
       ${Estado.campos.patrimonio && item.patrimonio ? `<div class="preview-pat">${escHtml(item.patrimonio)}</div>` : ''}
-      ${infoParts.length ? `<div class="preview-info">${infoParts.join(' · ')}</div>` : ''}
+      ${mainInfo.length ? `<div class="preview-info">${mainInfo.join(' · ')}</div>` : ''}
+      ${brandInfo.length ? `<div class="preview-info preview-info--brand">${brandInfo.join(' · ')}</div>` : ''}
       ${Estado.campos.condicao ? `<span class="preview-badge badge-${cond}">${condLabel}</span>` : ''}
     </div>`;
   return div;
@@ -509,12 +636,18 @@ function buildPrintEl(item) {
   const cond      = item.condicao || 'otimo';
   const condLabel = COND_LABEL[cond] || cond;
 
-  const infoParts = [];
-  if (Estado.campos.condicao)                         infoParts.push(condLabel);
-  if (Estado.campos.categoria  && item.categoria)    infoParts.push(escHtml(item.categoria));
-  if (Estado.campos.quantidade)                       infoParts.push(`Qtd: ${item.qtdDisponivel ?? item.qtdTotal ?? 0}`);
-  if (Estado.campos.organizacao)                      infoParts.push(escHtml(Estado.orgName));
-  if (Estado.campos.serie      && item.numeroSerie)  infoParts.push(`S/N: ${escHtml(item.numeroSerie)}`);
+  const topInfo = [];
+  if (Estado.campos.condicao)                         topInfo.push(condLabel);
+  if (Estado.campos.categoria  && item.categoria)    topInfo.push(escHtml(item.categoria));
+  if (Estado.campos.quantidade)                       topInfo.push(`Qtd: ${item.qtdDisponivel ?? item.qtdTotal ?? 0}`);
+  if (Estado.campos.organizacao)                      topInfo.push(escHtml(Estado.orgName));
+
+  const brandInfo = [];
+  if (Estado.campos.serie) {
+    if (item.marca)  brandInfo.push(`Marca: ${escHtml(item.marca)}`);
+    if (item.modelo) brandInfo.push(`Modelo: ${escHtml(item.modelo)}`);
+    else if (!item.marca && item.numeroSerie) brandInfo.push(`S/N: ${escHtml(item.numeroSerie)}`);
+  }
 
   const div = document.createElement('div');
   div.className = `etiqueta-print ${Estado.tamanho}`;
@@ -523,7 +656,8 @@ function buildPrintEl(item) {
     <div class="print-campos">
       <span class="print-nome">${escHtml(item.nome || '')}</span>
       ${Estado.campos.patrimonio && item.patrimonio ? `<span class="print-pat">${escHtml(item.patrimonio)}</span>` : ''}
-      ${infoParts.length ? `<span class="print-info">${infoParts.join(' · ')}</span>` : ''}
+      ${topInfo.length ? `<div class="print-info">${topInfo.join(' · ')}</div>` : ''}
+      ${brandInfo.length ? `<div class="print-info print-info--brand">${brandInfo.join(' · ')}</div>` : ''}
     </div>`;
   return div;
 }

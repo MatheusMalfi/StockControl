@@ -9,8 +9,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 // GET /api/items?organization_id=X&search=&condition=&category=&sort=product_name:asc&page=1&limit=20
 router.get("/", async (req, res) => {
   try {
-    const { organization_id, search, condition, category, sort, page, limit } =
-      req.query;
+    const { organization_id: orgFromQuery, search, condition, category, sort, page, limit } = req.query;
+    // Prefer organization from authenticated user when available
+    const organization_id = req.user && req.user.org ? req.user.org : orgFromQuery;
     if (!organization_id) {
       return res
         .status(400)
@@ -240,6 +241,13 @@ router.post("/discard", async (req, res) => {
 // GET /api/items/:id
 router.get("/:id", async (req, res) => {
   try {
+    // Ensure organization scoping: prefer authenticated user's org, else require query param
+    const orgFromQuery = req.query.organization_id || req.body?.organization_id;
+    const organization_id = req.user && req.user.org ? req.user.org : orgFromQuery;
+    if (!organization_id) {
+      return res.status(400).json({ message: "organization_id é obrigatório." });
+    }
+
     const [rows] = await pool.query(
       `SELECT i.id, i.product_name, i.product_brand, i.product_model,
               i.serial_number, i.description, i.quantity, i.quantity_available,
@@ -256,8 +264,8 @@ router.get("/:id", async (req, res) => {
        JOIN conditions c ON c.id = i.condition_id
        LEFT JOIN categories cat ON cat.id = i.category_id
        LEFT JOIN storage_locations sl ON sl.id = i.storage_location_id
-       WHERE i.id = ? LIMIT 1`,
-      [req.params.id],
+       WHERE i.id = ? AND i.organization_id = ? LIMIT 1`,
+      [req.params.id, organization_id],
     );
 
     if (!rows.length) {
@@ -277,9 +285,16 @@ router.get("/:id", async (req, res) => {
 // GET /api/items/:id/photo
 router.get("/:id/photo", async (req, res) => {
   try {
+    // Enforce organization scoping for photo access
+    const orgFromQuery = req.query.organization_id || req.body?.organization_id;
+    const organization_id = req.user && req.user.org ? req.user.org : orgFromQuery;
+    if (!organization_id) {
+      return res.status(400).send("organization_id é obrigatório.");
+    }
+
     const [rows] = await pool.query(
-      "SELECT photo_blob FROM items WHERE id = ? LIMIT 1",
-      [req.params.id],
+      "SELECT photo_blob FROM items WHERE id = ? AND organization_id = ? LIMIT 1",
+      [req.params.id, organization_id],
     );
 
     if (!rows.length || !rows[0].photo_blob) {
