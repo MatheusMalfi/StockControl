@@ -625,10 +625,26 @@ function showToast(msg, tipo = "info") {
   el.className = `toast ${tipo}`;
   el.textContent = msg;
   container.appendChild(el);
-  setTimeout(() => {
-    el.classList.add("saindo");
-    setTimeout(() => el.remove(), 280);
-  }, 5000);
+  // animate in
+  requestAnimationFrame(() => el.classList.add("toast-visible"));
+
+  const dismiss = () => {
+    if (el.classList.contains("hiding")) return;
+    el.classList.add("hiding");
+    const fallback = setTimeout(() => {
+      if (el.parentElement) el.remove();
+    }, 5000);
+    el.addEventListener(
+      "animationend",
+      () => {
+        clearTimeout(fallback);
+        if (el.parentElement) el.remove();
+      },
+      { once: true },
+    );
+  };
+
+  setTimeout(dismiss, 5000);
 }
 
 // ════════════════════════════════════════════════════════

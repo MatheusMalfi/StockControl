@@ -193,14 +193,20 @@
 
     container.appendChild(toast);
 
-    /* Animate in */
-    requestAnimationFrame(() => toast.classList.add("toast-visible"));
-
     const dismiss = () => {
-      toast.classList.remove("toast-visible");
-      toast.addEventListener("transitionend", () => toast.remove(), {
-        once: true,
-      });
+      if (toast.classList.contains("hiding")) return;
+      toast.classList.add("hiding");
+      const fallback = setTimeout(() => {
+        if (toast.parentElement) toast.remove();
+      }, 500);
+      toast.addEventListener(
+        "animationend",
+        () => {
+          clearTimeout(fallback);
+          if (toast.parentElement) toast.remove();
+        },
+        { once: true },
+      );
     };
 
     toast.querySelector(".toast-close").addEventListener("click", dismiss);
