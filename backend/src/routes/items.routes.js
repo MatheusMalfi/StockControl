@@ -82,7 +82,13 @@ router.get("/", async (req, res) => {
     }));
 
     console.log("normalizedItems", JSON.stringify(normalizedItems));
-    res.json({ success: true, items: normalizedItems, total, page: pageNum, limit: pageSize });
+    res.json({
+      success: true,
+      items: normalizedItems,
+      total,
+      page: pageNum,
+      limit: pageSize,
+    });
   } catch (err) {
     console.error("Erro em GET /api/items:", err);
     res.status(500).json({ message: "Erro ao buscar itens." });
@@ -264,7 +270,10 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "Item não encontrado." });
     }
 
-    const item = { ...rows[0], photo_url: rows[0].has_photo ? `/api/items/${rows[0].id}/photo` : null };
+    const item = {
+      ...rows[0],
+      photo_url: rows[0].has_photo ? `/api/items/${rows[0].id}/photo` : null,
+    };
     delete item.has_photo;
 
     res.json({ success: true, item });
