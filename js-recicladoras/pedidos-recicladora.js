@@ -25,6 +25,7 @@
 
   function getStatusBadge(status) {
     const normalized = String(status || "").toLowerCase();
+    if (normalized === "aprovada") return "badge badge-teal";
     if (normalized === "concluida") return "badge badge-primary";
     if (normalized === "coleta_agendada") return "badge badge-success";
     if (normalized === "pendente") return "badge badge-warning";

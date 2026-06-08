@@ -430,6 +430,12 @@ select.form-control {
   color: var(--color-primary-dark);
 }
 
+/* Teal variant (ciano) status APROVADA - RECICLADORA */
+.badge-teal {
+  background: var(--color-teal-light, #e6fffa);
+  color: var(--color-teal-dark, #0ea5a4);
+}
+
 .badge-neutral {
   background: var(--color-surface-alt);
   color: var(--color-text-secondary);
