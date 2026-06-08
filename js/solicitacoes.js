@@ -273,7 +273,7 @@ function initSolicitacoes() {
     }
   }
 
-    function normalizeItemForRequest(item) {
+  function normalizeItemForRequest(item) {
     const available = parseNumber(
       item.quantity_available ??
         item.disponivel ??
@@ -295,11 +295,7 @@ function initSolicitacoes() {
     );
 
     const totalQty = parseNumber(
-      item.quantity ??
-        item.total ??
-        item.quantidade_estoque ??
-        available ??
-        0,
+      item.quantity ?? item.total ?? item.quantidade_estoque ?? available ?? 0,
     );
 
     return {
@@ -313,32 +309,28 @@ function initSolicitacoes() {
         item.item ??
         item.tipo ??
         "",
-      patrimonio:
-        item.serial_number ??
-        item.patrimonio ??
-        item.asset_tag ??
-        "",
+      patrimonio: item.serial_number ?? item.patrimonio ?? item.asset_tag ?? "",
       disponivel: Number.isFinite(available) ? available : 0,
       quantity_available: Number.isFinite(available) ? available : 0,
       total:
         Number.isFinite(totalQty) && totalQty > 0
           ? totalQty
           : Number.isFinite(available)
-          ? available
-          : 0,
+            ? available
+            : 0,
       quantity:
         Number.isFinite(totalQty) && totalQty > 0
           ? totalQty
           : Number.isFinite(available)
-          ? available
-          : 0,
+            ? available
+            : 0,
       estimated_value: Number.isFinite(estimatedValue) ? estimatedValue : 0,
       valor: Number.isFinite(estimatedValue) ? estimatedValue : 0,
       currency: item.currency ?? item.moeda ?? "BRL",
     };
   }
 
-    function requestPayloadFromLocal(req) {
+  function requestPayloadFromLocal(req) {
     const user = currentUser();
 
     const normalizePayloadItem = (item) => {
@@ -386,7 +378,10 @@ function initSolicitacoes() {
           : null,
         estimated_value: Number.isFinite(valorEstimado) ? valorEstimado : null,
         estimated_profit_currency:
-          item.estimated_profit_currency ?? item.currency ?? item.moeda ?? "BRL",
+          item.estimated_profit_currency ??
+          item.currency ??
+          item.moeda ??
+          "BRL",
         currency: item.currency ?? item.moeda ?? "BRL",
       };
 
@@ -759,54 +754,74 @@ function initSolicitacoes() {
     $("btnEmptyNew") &&
       $("btnEmptyNew").addEventListener("click", () => openNew());
 
-        reqItemSearch &&
+    async function loadItemSearchResults(q) {
+      const query = (q || "").trim();
+      let items = [];
+
+      if (query) {
+        const user = currentUser();
+
+        if (user.organization_id) {
+          try {
+            const params = new URLSearchParams({
+              organization_id: user.organization_id,
+              search: query,
+              page: "1",
+              limit: "8",
+            });
+
+            const data = await SC.api(`/items?${params}`);
+            const apiItems = Array.isArray(data)
+              ? data
+              : data.items || data.data || [];
+
+            items = apiItems.map(normalizeItemForRequest);
+          } catch {
+            items = [];
+          }
+        }
+
+        if (!items.length) {
+          const qLower = query.toLowerCase();
+          items = dbGet(KEYS.ITEMS)
+            .map(normalizeItemForRequest)
+            .filter(
+              (it) =>
+                (it.nome || "").toLowerCase().includes(qLower) ||
+                (it.patrimonio || "").toLowerCase().includes(qLower),
+            )
+            .slice(0, 8);
+        }
+      } else {
+        items = dbGet(KEYS.ITEMS).map(normalizeItemForRequest).slice(0, 8);
+      }
+
+      renderItemDrop(items);
+    }
+
+    reqItemSearch &&
       reqItemSearch.addEventListener(
         "input",
-        SC.debounce(async () => {
-          const q = (reqItemSearch.value || "").trim();
-          if (!q) {
-            reqItemDrop && reqItemDrop.classList.remove("is-open");
-            return;
-          }
-
-          const user = currentUser();
-          let items = [];
-
-          if (user.organization_id) {
-            try {
-              const params = new URLSearchParams({
-                organization_id: user.organization_id,
-                search: q,
-                page: "1",
-                limit: "8",
-              });
-
-              const data = await SC.api(`/items?${params}`);
-              const apiItems = Array.isArray(data)
-                ? data
-                : data.items || data.data || [];
-
-              items = apiItems.map(normalizeItemForRequest);
-            } catch {
-              items = [];
-            }
-          }
-
-          if (!items.length) {
-            const qLower = q.toLowerCase();
-            items = dbGet(KEYS.ITEMS)
-              .map(normalizeItemForRequest)
-              .filter(
-                (it) =>
-                  (it.nome || "").toLowerCase().includes(qLower) ||
-                  (it.patrimonio || "").toLowerCase().includes(qLower),
-              )
-              .slice(0, 8);
-          }
-
-          renderItemDrop(items);
+        SC.debounce(() => {
+          loadItemSearchResults(reqItemSearch.value);
         }, 250),
       );
+
+    reqItemSearch &&
+      reqItemSearch.addEventListener("focus", () => {
+        if (!reqItemSearch.value.trim()) loadItemSearchResults("");
+      });
+
+    reqItemSearch &&
+      reqItemSearch.addEventListener("click", () => {
+        if (!reqItemSearch.value.trim()) loadItemSearchResults("");
+      });
+
+    document.addEventListener("click", (event) => {
+      if (!reqItemSearchWrap || !reqItemDrop) return;
+      if (reqItemSearchWrap.contains(event.target)) return;
+      reqItemDrop.classList.remove("is-open");
+    });
 
     btnChangeItem &&
       btnChangeItem.addEventListener("click", () => {
@@ -827,6 +842,11 @@ function initSolicitacoes() {
     reqQty &&
       reqQty.addEventListener("input", () => {
         if ($("errReqQty")) $("errReqQty").style.display = "none";
+      });
+
+    reqUrgency &&
+      reqUrgency.addEventListener("change", () => {
+        if ($("errReqUrgency")) $("errReqUrgency").style.display = "none";
       });
 
     btnDetailEditRequest &&
@@ -899,14 +919,16 @@ function initSolicitacoes() {
     }
     if (reqQty) reqQty.value = "1";
     if (reqQtyHint) reqQtyHint.textContent = "Disponível: —";
-    if (reqUrgency) reqUrgency.value = "media";
+    if (reqUrgency) reqUrgency.value = "";
     if (reqJustification) reqJustification.value = "";
     if (reqNeededBy) reqNeededBy.value = "";
     if (reqFormErr) reqFormErr.style.display = "none";
-    ["errReqItem", "errReqQty", "errReqJustification"].forEach((id) => {
-      const el = $(id);
-      if (el) el.style.display = "none";
-    });
+    ["errReqItem", "errReqQty", "errReqUrgency", "errReqJustification"].forEach(
+      (id) => {
+        const el = $(id);
+        if (el) el.style.display = "none";
+      },
+    );
   }
 
   function renderItemDrop(items) {
@@ -936,7 +958,7 @@ function initSolicitacoes() {
     });
   }
 
-    function selectItem(item) {
+  function selectItem(item) {
     const normalized = normalizeItemForRequest(item);
 
     state.selectedItem = normalized;
@@ -958,26 +980,28 @@ function initSolicitacoes() {
   }
 
   function parseNumber(value) {
-  if (value == null || value === "") return NaN;
-  if (typeof value === "number") return value;
+    if (value == null || value === "") return NaN;
+    if (typeof value === "number") return value;
 
-  let str = String(value).trim().replace(/[^0-9,.-]/g, "");
-  if (!str) return NaN;
+    let str = String(value)
+      .trim()
+      .replace(/[^0-9,.-]/g, "");
+    if (!str) return NaN;
 
-  const lastComma = str.lastIndexOf(",");
-  const lastDot = str.lastIndexOf(".");
+    const lastComma = str.lastIndexOf(",");
+    const lastDot = str.lastIndexOf(".");
 
-  if (lastComma > lastDot) {
-    str = str.replace(/\./g, "").replace(",", ".");
-  } else {
-    str = str.replace(/,/g, "");
+    if (lastComma > lastDot) {
+      str = str.replace(/\./g, "").replace(",", ".");
+    } else {
+      str = str.replace(/,/g, "");
+    }
+
+    const n = Number(str);
+    return Number.isFinite(n) ? n : NaN;
   }
 
-  const n = Number(str);
-  return Number.isFinite(n) ? n : NaN;
-}
-
-    function calculateItemProfit(item) {
+  function calculateItemProfit(item) {
     const estimatedValue = parseNumber(
       item.estimated_value ??
         item.valor_estimado ??
@@ -1061,12 +1085,14 @@ function initSolicitacoes() {
       disponivel: quantityAvailable,
       quantity_available: quantityAvailable,
       estimated_value: estimatedValue,
-      estimated_profit: row.estimated_profit ?? calculateItemProfit({
-        ...row,
-        quantidade: row.quantidade != null ? row.quantidade : 1,
-        estimated_value: estimatedValue,
-        quantity_available: quantityAvailable,
-      }),
+      estimated_profit:
+        row.estimated_profit ??
+        calculateItemProfit({
+          ...row,
+          quantidade: row.quantidade != null ? row.quantidade : 1,
+          estimated_value: estimatedValue,
+          quantity_available: quantityAvailable,
+        }),
       currency: row.currency ?? row.moeda ?? "BRL",
       estimated_profit_currency:
         row.estimated_profit_currency ?? row.currency ?? row.moeda ?? "BRL",
@@ -1105,8 +1131,8 @@ function initSolicitacoes() {
       calculatedProfitTotal > 0
         ? calculatedProfitTotal
         : Number.isFinite(savedProfitTotal)
-        ? savedProfitTotal
-        : 0;
+          ? savedProfitTotal
+          : 0;
     return {
       id: row.id,
       item_id: row.item_id || null,
@@ -1223,7 +1249,8 @@ function initSolicitacoes() {
           state.selectedItem.valor_total ??
           state.selectedItem.total_value ??
           null,
-        currency: state.selectedItem.currency ?? state.selectedItem.moeda ?? "BRL",
+        currency:
+          state.selectedItem.currency ?? state.selectedItem.moeda ?? "BRL",
       };
       selectedItem.estimated_profit = calculateItemProfit(selectedItem);
       selectedItem.estimated_profit_currency =
@@ -1265,6 +1292,8 @@ function initSolicitacoes() {
         0)
       : 0;
 
+    const urg = reqUrgency ? reqUrgency.value : "";
+
     if (!hasCurrent && !selectedItems.length) {
       showErr("errReqItem", "Selecione ao menos um item.");
     }
@@ -1274,6 +1303,7 @@ function initSolicitacoes() {
         `Quantidade inválida. Disponível: ${currentAvailable}`,
       );
     }
+    if (!urg) showErr("errReqUrgency", "Urgência é obrigatória.");
     if (!just) showErr("errReqJustification", "Justificativa é obrigatória.");
     if (!ok) return;
 
@@ -1342,7 +1372,7 @@ function initSolicitacoes() {
           necessario_ate: reqNeededBy
             ? reqNeededBy.value || null
             : existing.necessario_ate || null,
-            estimated_profit_total: calculateRequestProfit(selectedItems),
+          estimated_profit_total: calculateRequestProfit(selectedItems),
         };
 
         const requiresReapproval =
@@ -1594,7 +1624,7 @@ function initSolicitacoes() {
 
     const color = avatarColor(r.solicitante);
     const ini = initials(r.solicitante);
-        const itemDetails =
+    const itemDetails =
       r.items && Array.isArray(r.items) && r.items.length > 0
         ? `
         <div style="grid-column:1/-1;">
@@ -1607,9 +1637,7 @@ function initSolicitacoes() {
                   return `
                     <li style="margin-bottom:.35rem;">
                       <strong>${esc(it.nome_item || it.nome || it.product_name || "Item")}</strong> ${esc(it.patrimonio || it.serial_number || "")} — ${parseInt(it.quantidade ?? it.quantity ?? 0, 10) || 0} un. — ${
-                        itemProfit > 0
-                          ? SC.fmtCurrency(itemProfit)
-                          : "—"
+                        itemProfit > 0 ? SC.fmtCurrency(itemProfit) : "—"
                       }
                     </li>
                   `;
@@ -1627,10 +1655,10 @@ function initSolicitacoes() {
       calculatedDetailProfit > 0
         ? calculatedDetailProfit
         : Number.isFinite(savedDetailProfit)
-        ? savedDetailProfit
-        : 0;
-        state.detailId = id;
-        modalDetailBody.innerHTML = `
+          ? savedDetailProfit
+          : 0;
+    state.detailId = id;
+    modalDetailBody.innerHTML = `
       <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5);">
         ${staBadge(r.status)}
         ${urgBadge(r.urgencia)}
