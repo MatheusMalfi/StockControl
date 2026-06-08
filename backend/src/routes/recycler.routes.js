@@ -135,17 +135,17 @@ router.get("/orders/:id", async (req, res) => {
 });
 
 // GET /api/recycler/collections/history
-// Retorna todas as solicitações com status 'coleta_agendada'
+// Retorna todas as solicitações com status 'concluida'
 router.get("/collections/history", async (req, res) => {
   try {
     const year = parseInt(req.query.year, 10);
     const [rows] = await pool.query(
-      `SELECT s.id, s.status, s.data_revisao as scheduled_date, o.name as org_name
+      `SELECT s.id, s.status, COALESCE(s.data_revisao, s.created_at) AS scheduled_date, o.name AS org_name
        FROM solicitacoes s
        JOIN organizations o ON o.id = s.organization_id
-       WHERE s.status = 'coleta_agendada'
-       ${year ? "AND YEAR(s.data_revisao) = ?" : ""}
-       ORDER BY s.data_revisao DESC`,
+       WHERE s.status = 'concluida'
+       ${year ? "AND YEAR(COALESCE(s.data_revisao, s.created_at)) = ?" : ""}
+       ORDER BY COALESCE(s.data_revisao, s.created_at) DESC`,
       year ? [year] : [],
     );
     res.json({ success: true, history: rows });
